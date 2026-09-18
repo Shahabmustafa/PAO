@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PAO – Delete Your Account</title>
+<link rel="icon" href="logo.png">
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface: #f6f7fb;
+    --text: #1b1d28;
+    --muted: #5b5f70;
+    --border: #e3e5ee;
+    --brand: #aef503;
+    --link: #2843c9;
+    --danger: #e0473e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14151c;
+      --surface: #1e2029;
+      --text: #f2f2f5;
+      --muted: #a6a9b8;
+      --border: #2c2f3b;
+      --link: #8fa3ff;
+      --danger: #ff7a70;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.65;
+  }
+  header {
+    background: var(--brand);
+    color: #000;
+    padding: 28px 16px;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 0 16px; }
+  header .wrap { display: flex; align-items: center; gap: 16px; }
+  header img { width: 64px; height: 64px; border-radius: 16px; display: block; }
+  header h1 { margin: 0; font-size: 1.5rem; line-height: 1.2; }
+  header p { margin: 2px 0 0; font-size: 0.95rem; opacity: 0.8; }
+  main { padding: 32px 0 48px; }
+  h2 { font-size: 1.15rem; margin: 32px 0 8px; }
+  ul, ol { padding-left: 22px; }
+  li { margin: 6px 0; }
+  a { color: var(--link); }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 6px 20px;
+    margin: 12px 0;
+  }
+  .warn {
+    border-left: 4px solid var(--danger);
+    background: var(--surface);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin: 16px 0;
+  }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 0.95rem; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; }
+  footer {
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 0.85rem;
+    padding: 20px 0 32px;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <img src="logo.png" alt="PAO logo">
+    <div>
+      <h1>Delete Your PAO Account</h1>
+      <p>How to delete your account and data</p>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <p>
+    You can permanently delete your <strong>PAO (پاؤ)</strong> account and its associated data at any time,
+    directly inside the app. No email or waiting period is required.
+  </p>
+
+  <h2>Steps to delete your account in the app</h2>
+  <div class="card">
+    <ol>
+      <li>Open the <strong>PAO</strong> app and sign in.</li>
+      <li>Go to <strong>Settings</strong>.</li>
+      <li>Tap <strong>Delete Account</strong>.</li>
+      <li>Read the confirmation message and tap <strong>Delete</strong> to confirm.</li>
+    </ol>
+  </div>
+  <div class="warn">
+    <strong>This action is permanent and cannot be undone.</strong>
+    Once you confirm, you are signed out and your account cannot be recovered.
+  </div>
+
+  <h2>What is deleted</h2>
+  <p>The following data is permanently deleted from our database as soon as you confirm:</p>
+  <table>
+    <tr><th>Data</th><th>Details</th></tr>
+    <tr><td>Account</td><td>Your login (email and password)</td></tr>
+    <tr><td>Profile</td><td>Name, email, phone number, bio and profile photo reference</td></tr>
+    <tr><td>Listings</td><td>All items you posted</td></tr>
+    <tr><td>Requests and messages</td><td>Requests you sent or received and the messages you sent</td></tr>
+    <tr><td>Wishlist</td><td>Items you saved</td></tr>
+    <tr><td>Feedback</td><td>Ratings and reviews you gave or received</td></tr>
+  </table>
+
+  <h2>What may be kept</h2>
+  <p>
+    Image files you uploaded (profile photo and item photos) are stored separately from your account records.
+    After deletion they are no longer linked to any account or listing, but the files themselves may remain in
+    storage for a short period. To have them removed, email us at
+    <a href="mailto:shahabmustafa18@gmail.com">shahabmustafa18@gmail.com</a> and we will delete them.
+    Apart from this, we do not retain any of your personal data after your account is deleted, unless we are
+    required to by law.
+  </p>
+
+  <h2>Can't access the app?</h2>
+  <p>
+    If you can no longer open the app or sign in, email us from the address you registered with at
+    <a href="mailto:shahabmustafa18@gmail.com?subject=PAO%20account%20deletion%20request">shahabmustafa18@gmail.com</a>
+    with the subject <em>"PAO account deletion request"</em>, and we will delete your account and data.
+  </p>
+
+  <p>See also our <a href="privacy_policy.html">Privacy Policy</a>.</p>
+</main>
+
+<footer>
+  <div class="wrap">© 2026 PAO. All rights reserved. &nbsp;·&nbsp; <a href="privacy_policy.html">Privacy Policy</a></div>
+</footer>
+</body>
+</html>
