@@ -147,20 +147,20 @@ class _AddItemViewState extends State<_AddItemView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Give something away for free',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
+                    color: context.appTextPrimary,
                   ),
                 ),
                 const SizedBox(height: 4),
-                const Text(
+                Text(
                   'Books, electronics, or anything else someone could use',
                   style: TextStyle(
                     fontSize: 14,
-                    color: AppColors.textSecondary,
+                    color: context.appTextSecondary,
                   ),
                 ),
                 const SizedBox(height: 24),

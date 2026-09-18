@@ -1,8 +1,7 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
-import '../../features/settings/presentation/screens/privacy_policy_screen.dart';
-import '../../features/settings/presentation/screens/terms_conditions_screen.dart';
+import '../utils/legal_links.dart';
 
 /// A checkbox + inline text used on the login and signup screens to make the
 /// user acknowledge the app's Terms & Conditions and Privacy Policy before
@@ -30,15 +29,9 @@ class _TermsAcceptanceCheckboxState extends State<TermsAcceptanceCheckbox> {
   void initState() {
     super.initState();
     _termsRecognizer = TapGestureRecognizer()
-      ..onTap = () => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const TermsConditionsScreen()),
-      );
+      ..onTap = () => LegalLinks.openTerms(context);
     _privacyRecognizer = TapGestureRecognizer()
-      ..onTap = () => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen()),
-      );
+      ..onTap = () => LegalLinks.openPrivacyPolicy(context);
   }
 
   @override
@@ -55,7 +48,7 @@ class _TermsAcceptanceCheckboxState extends State<TermsAcceptanceCheckbox> {
       color: AppColors.primary,
       fontWeight: FontWeight.w600,
     );
-    const textStyle = TextStyle(fontSize: 13, color: AppColors.textSecondary);
+    final textStyle = TextStyle(fontSize: 13, color: context.appTextSecondary);
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,

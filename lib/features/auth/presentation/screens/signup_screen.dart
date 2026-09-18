@@ -106,20 +106,20 @@ class _SignupViewState extends State<_SignupView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Create Account',
                   style: TextStyle(
                     fontSize: 26,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
+                    color: context.appTextPrimary,
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'Sign up to get started',
                   style: TextStyle(
                     fontSize: 14,
-                    color: AppColors.textSecondary,
+                    color: context.appTextSecondary,
                   ),
                 ),
                 const SizedBox(height: 28),
@@ -222,9 +222,9 @@ class _SignupViewState extends State<_SignupView> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text(
+                    Text(
                       'Already have an account? ',
-                      style: TextStyle(color: AppColors.textSecondary),
+                      style: TextStyle(color: context.appTextSecondary),
                     ),
                     GestureDetector(
                       onTap: () => Navigator.pop(context),

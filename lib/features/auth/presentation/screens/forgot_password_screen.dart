@@ -82,20 +82,20 @@ class _ForgotPasswordViewState extends State<_ForgotPasswordView> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                const Text(
+                Text(
                   'Forgot Password?',
                   style: TextStyle(
                     fontSize: 26,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
+                    color: context.appTextPrimary,
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   "Enter your email and we'll send you a link to reset your password.",
                   style: TextStyle(
                     fontSize: 14,
-                    color: AppColors.textSecondary,
+                    color: context.appTextSecondary,
                   ),
                 ),
                 const SizedBox(height: 32),

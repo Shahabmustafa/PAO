@@ -4,6 +4,7 @@ import '../../../../core/routes/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/theme_controller.dart';
+import '../../../../core/utils/legal_links.dart';
 import '../../../../core/widgets/app_avatar.dart';
 import '../../../../core/widgets/app_icon.dart';
 import '../../../../core/widgets/app_snackbar.dart';
@@ -16,8 +17,6 @@ import '../../domain/app_language.dart';
 import 'edit_profile_screen.dart';
 import 'help_center_screen.dart';
 import 'language_screen.dart';
-import 'privacy_policy_screen.dart';
-import 'terms_conditions_screen.dart';
 import 'theme_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -225,11 +224,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       );
                     },
                   ),
-                  _SettingsTile(
-                    icon: AppIcons.lock,
-                    label: 'Privacy & Security',
-                    onTap: () {},
-                  ),
                 ],
               ),
             ),
@@ -241,26 +235,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   _SettingsTile(
                     icon: AppIcons.description,
                     label: 'Terms & Conditions',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const TermsConditionsScreen(),
-                        ),
-                      );
-                    },
+                    onTap: () => LegalLinks.openTerms(context),
                   ),
                   _SettingsTile(
                     icon: AppIcons.privacyTip,
                     label: 'Privacy Policy',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const PrivacyPolicyScreen(),
-                        ),
-                      );
-                    },
+                    onTap: () => LegalLinks.openPrivacyPolicy(context),
                   ),
                 ],
               ),

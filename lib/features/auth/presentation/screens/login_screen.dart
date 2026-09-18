@@ -93,20 +93,20 @@ class _LoginViewState extends State<_LoginView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Welcome Back',
                   style: TextStyle(
                     fontSize: 26,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
+                    color: context.appTextPrimary,
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'Login to continue',
                   style: TextStyle(
                     fontSize: 14,
-                    color: AppColors.textSecondary,
+                    color: context.appTextSecondary,
                   ),
                 ),
                 const SizedBox(height: 32),
@@ -179,9 +179,9 @@ class _LoginViewState extends State<_LoginView> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text(
+                    Text(
                       "Don't have an account? ",
-                      style: TextStyle(color: AppColors.textSecondary),
+                      style: TextStyle(color: context.appTextSecondary),
                     ),
                     GestureDetector(
                       onTap: () {
