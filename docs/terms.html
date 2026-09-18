@@ -3,118 +3,114 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#aef503">
+<meta name="description" content="The terms that apply when you use the PAO app.">
 <title>PAO – Terms &amp; Conditions</title>
 <link rel="icon" href="logo.png">
-<style>
-  :root {
-    --bg: #ffffff;
-    --surface: #f6f7fb;
-    --text: #1b1d28;
-    --muted: #5b5f70;
-    --border: #e3e5ee;
-    --brand: #aef503;
-    --link: #2843c9;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #14151c;
-      --surface: #1e2029;
-      --text: #f2f2f5;
-      --muted: #a6a9b8;
-      --border: #2c2f3b;
-      --link: #8fa3ff;
-    }
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    background: var(--bg);
-    color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    line-height: 1.65;
-  }
-  header {
-    background: var(--brand);
-    color: #000;
-    padding: 28px 16px;
-  }
-  .wrap { max-width: 760px; margin: 0 auto; padding: 0 16px; }
-  header .wrap { display: flex; align-items: center; gap: 16px; }
-  header img { width: 64px; height: 64px; border-radius: 16px; display: block; }
-  header h1 { margin: 0; font-size: 1.5rem; line-height: 1.2; }
-  header p { margin: 2px 0 0; font-size: 0.95rem; opacity: 0.8; }
-  main { padding: 32px 0 48px; }
-  .updated { color: var(--muted); font-size: 0.9rem; margin: 0 0 24px; }
-  h2 { font-size: 1.15rem; margin: 32px 0 8px; }
-  p, li { color: var(--text); }
-  ul { padding-left: 20px; }
-  li { margin: 4px 0; }
-  a { color: var(--link); }
-  .note {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 14px 16px;
-    margin: 16px 0;
-  }
-  footer {
-    border-top: 1px solid var(--border);
-    color: var(--muted);
-    font-size: 0.85rem;
-    padding: 20px 0 32px;
-  }
-</style>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header>
+
+<header class="hero">
   <div class="wrap">
-    <img src="logo.png" alt="PAO logo">
-    <div>
-      <h1>PAO (پاؤ) – Terms &amp; Conditions</h1>
-      <p>Please read these terms before using the app.</p>
+    <nav class="tabs" aria-label="Legal pages">
+      <a href="privacy_policy.html">Privacy Policy</a>
+      <a href="terms.html" aria-current="page">Terms &amp; Conditions</a>
+      <a href="delete-account.html">Delete account</a>
+    </nav>
+    <div class="brand">
+      <img class="logo" src="logo.png" alt="PAO logo" width="76" height="76">
+      <div>
+        <h1>Terms &amp; Conditions</h1>
+        <p class="sub">PAO (پاؤ) &middot; Please read these terms before using the app</p>
+      </div>
     </div>
+    <span class="badge">Last updated: September 18, 2026</span>
   </div>
 </header>
 
-<main class="wrap">
-  <p class="updated">Last updated: September 18, 2026</p>
+<main class="wrap sheet">
+  <nav class="toc" style="margin-top:0" aria-label="Contents">
+    <b>Contents</b>
+    <div>
+      <a href="#s1"><i>1</i>Acceptance of Terms</a>
+      <a href="#s2"><i>2</i>Your Account</a>
+      <a href="#s3"><i>3</i>Listings &amp; Requests</a>
+      <a href="#s4"><i>4</i>Role of PAO</a>
+      <a href="#s5"><i>5</i>Chat &amp; Communication</a>
+      <a href="#s6"><i>6</i>Wishlist &amp; Personalization</a>
+      <a href="#s7"><i>7</i>Account Deletion</a>
+      <a href="#s8"><i>8</i>Prohibited Conduct</a>
+      <a href="#s9"><i>9</i>Limitation of Liability</a>
+      <a href="#s10"><i>10</i>Changes to These Terms</a>
+      <a href="#s11"><i>11</i>Contact Us</a>
+    </div>
+  </nav>
 
-  <h2>1. Acceptance of Terms</h2>
-  <p>By creating an account or using the PAO app, you agree to be bound by these Terms &amp; Conditions. If you do not agree with any part of these terms, please do not use the app.</p>
+  <section id="s1">
+    <h2><span class="n">1</span>Acceptance of Terms</h2>
+    <p>By creating an account or using the PAO app, you agree to be bound by these Terms &amp; Conditions. If you do not agree with any part of these terms, please do not use the app.</p>
+  </section>
 
-  <h2>2. Your Account</h2>
-  <p>You must provide accurate information when creating your profile and are responsible for keeping your login credentials secure. You are responsible for all activity that happens under your account.</p>
+  <section id="s2">
+    <h2><span class="n">2</span>Your Account</h2>
+    <p>You must provide accurate information when creating your profile and are responsible for keeping your login credentials secure. You are responsible for all activity that happens under your account.</p>
+  </section>
 
-  <h2>3. Listings &amp; Requests</h2>
-  <p>When you add an item, post a request, or interact with listings, you agree that the information you provide is accurate, truthful, and does not violate any law or the rights of others. PAO may remove any listing or request that violates these terms.</p>
+  <section id="s3">
+    <h2><span class="n">3</span>Listings &amp; Requests</h2>
+    <p>When you add an item, post a request, or interact with listings, you agree that the information you provide is accurate, truthful, and does not violate any law or the rights of others. PAO may remove any listing or request that violates these terms.</p>
+  </section>
 
-  <h2>4. Role of PAO</h2>
-  <p>PAO provides a platform that connects users to browse listings, send requests, and chat with one another. PAO is not a party to any agreement, transaction, or exchange between users and does not guarantee the accuracy, quality, safety, or legality of any listing or the conduct of any user.</p>
+  <section id="s4">
+    <h2><span class="n">4</span>Role of PAO</h2>
+    <p>PAO provides a platform that connects users to browse listings, send requests, and chat with one another. PAO is not a party to any agreement, transaction, or exchange between users and does not guarantee the accuracy, quality, safety, or legality of any listing or the conduct of any user.</p>
+  </section>
 
-  <h2>5. Chat &amp; Communication</h2>
-  <p>The in-app chat is provided to help users communicate about listings and requests. You agree not to use chat to send abusive, fraudulent, or unlawful content. Messages may be stored to provide and improve the service.</p>
+  <section id="s5">
+    <h2><span class="n">5</span>Chat &amp; Communication</h2>
+    <p>The in-app chat is provided to help users communicate about listings and requests. You agree not to use chat to send abusive, fraudulent, or unlawful content. Messages may be stored to provide and improve the service.</p>
+  </section>
 
-  <h2>6. Wishlist &amp; Personalization</h2>
-  <p>Features such as Wishlist and location-based browsing are provided for your convenience and are tied to your account. This data may be used to personalize what you see in the app.</p>
+  <section id="s6">
+    <h2><span class="n">6</span>Wishlist &amp; Personalization</h2>
+    <p>Features such as Wishlist and location-based browsing are provided for your convenience and are tied to your account. This data may be used to personalize what you see in the app.</p>
+  </section>
 
-  <h2>7. Account Deletion</h2>
-  <p>You may delete your account at any time from Settings. Deleting your account will permanently remove your profile and associated data, as described in our <a href="privacy_policy.html">Privacy Policy</a>, and this action cannot be undone.</p>
+  <section id="s7">
+    <h2><span class="n">7</span>Account Deletion</h2>
+    <p>You may delete your account at any time from Settings. Deleting your account will permanently remove your profile and associated data, as described in our <a href="privacy_policy.html">Privacy Policy</a>, and this action cannot be undone.</p>
+  </section>
 
-  <h2>8. Prohibited Conduct</h2>
-  <p>You agree not to misuse the app, including but not limited to: posting illegal or misleading listings, harassing other users, attempting to access accounts that are not yours, or interfering with the normal operation of the app.</p>
+  <section id="s8">
+    <h2><span class="n">8</span>Prohibited Conduct</h2>
+    <p>You agree not to misuse the app, including but not limited to: posting illegal or misleading listings, harassing other users, attempting to access accounts that are not yours, or interfering with the normal operation of the app.</p>
+  </section>
 
-  <h2>9. Limitation of Liability</h2>
-  <p>PAO is provided on an "as is" basis. To the fullest extent permitted by law, PAO and its team are not liable for any indirect, incidental, or consequential damages arising from your use of the app or your interactions with other users.</p>
+  <section id="s9">
+    <h2><span class="n">9</span>Limitation of Liability</h2>
+    <p>PAO is provided on an "as is" basis. To the fullest extent permitted by law, PAO and its team are not liable for any indirect, incidental, or consequential damages arising from your use of the app or your interactions with other users.</p>
+  </section>
 
-  <h2>10. Changes to These Terms</h2>
-  <p>We may update these Terms &amp; Conditions from time to time. Continued use of the app after changes are published means you accept the updated terms.</p>
+  <section id="s10">
+    <h2><span class="n">10</span>Changes to These Terms</h2>
+    <p>We may update these Terms &amp; Conditions from time to time. Continued use of the app after changes are published means you accept the updated terms.</p>
+  </section>
 
-  <h2>11. Contact Us</h2>
-  <p>If you have questions about these Terms &amp; Conditions, please reach out by email at <a href="mailto:shahabmustafa18@gmail.com">shahabmustafa18@gmail.com</a>.</p>
+  <section id="s11">
+    <h2><span class="n">11</span>Contact Us</h2>
+    <p>If you have questions about these Terms &amp; Conditions, please reach out by email at <a href="mailto:shahabmustafa18@gmail.com">shahabmustafa18@gmail.com</a>.</p>
+  </section>
 </main>
 
 <footer>
-  <div class="wrap">© 2026 PAO. All rights reserved. &nbsp;·&nbsp; <a href="privacy_policy.html">Privacy Policy</a> &nbsp;·&nbsp; <a href="delete-account.html">Delete account</a></div>
+  <nav aria-label="Legal pages">
+    <a href="privacy_policy.html">Privacy Policy</a>
+    <a href="terms.html">Terms &amp; Conditions</a>
+    <a href="delete-account.html">Delete account</a>
+  </nav>
+  <div>&copy; 2026 PAO. All rights reserved.</div>
 </footer>
+
 </body>
 </html>

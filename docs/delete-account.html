@@ -3,143 +3,97 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#aef503">
+<meta name="description" content="How to permanently delete your PAO account and data.">
 <title>PAO – Delete Your Account</title>
 <link rel="icon" href="logo.png">
-<style>
-  :root {
-    --bg: #ffffff;
-    --surface: #f6f7fb;
-    --text: #1b1d28;
-    --muted: #5b5f70;
-    --border: #e3e5ee;
-    --brand: #aef503;
-    --link: #2843c9;
-    --danger: #e0473e;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #14151c;
-      --surface: #1e2029;
-      --text: #f2f2f5;
-      --muted: #a6a9b8;
-      --border: #2c2f3b;
-      --link: #8fa3ff;
-      --danger: #ff7a70;
-    }
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    background: var(--bg);
-    color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    line-height: 1.65;
-  }
-  header {
-    background: var(--brand);
-    color: #000;
-    padding: 28px 16px;
-  }
-  .wrap { max-width: 760px; margin: 0 auto; padding: 0 16px; }
-  header .wrap { display: flex; align-items: center; gap: 16px; }
-  header img { width: 64px; height: 64px; border-radius: 16px; display: block; }
-  header h1 { margin: 0; font-size: 1.5rem; line-height: 1.2; }
-  header p { margin: 2px 0 0; font-size: 0.95rem; opacity: 0.8; }
-  main { padding: 32px 0 48px; }
-  h2 { font-size: 1.15rem; margin: 32px 0 8px; }
-  ul, ol { padding-left: 22px; }
-  li { margin: 6px 0; }
-  a { color: var(--link); }
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 6px 20px;
-    margin: 12px 0;
-  }
-  .warn {
-    border-left: 4px solid var(--danger);
-    background: var(--surface);
-    border-radius: 8px;
-    padding: 12px 16px;
-    margin: 16px 0;
-  }
-  table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 0.95rem; }
-  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
-  th { color: var(--muted); font-weight: 600; }
-  footer {
-    border-top: 1px solid var(--border);
-    color: var(--muted);
-    font-size: 0.85rem;
-    padding: 20px 0 32px;
-  }
-</style>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header>
+
+<header class="hero">
   <div class="wrap">
-    <img src="logo.png" alt="PAO logo">
-    <div>
-      <h1>Delete Your PAO Account</h1>
-      <p>How to delete your account and data</p>
+    <nav class="tabs" aria-label="Legal pages">
+      <a href="privacy_policy.html">Privacy Policy</a>
+      <a href="terms.html">Terms &amp; Conditions</a>
+      <a href="delete-account.html" aria-current="page">Delete account</a>
+    </nav>
+    <div class="brand">
+      <img class="logo" src="logo.png" alt="PAO logo" width="76" height="76">
+      <div>
+        <h1>Delete your PAO account</h1>
+        <p class="sub">PAO (پاؤ) &middot; Remove your account and data in a few taps</p>
+      </div>
     </div>
+    <span class="badge">Takes less than a minute</span>
   </div>
 </header>
 
-<main class="wrap">
-  <p>
-    You can permanently delete your <strong>PAO (پاؤ)</strong> account and its associated data at any time,
-    directly inside the app. No email or waiting period is required.
+<main class="wrap sheet">
+  <p class="lead">
+    You can permanently delete your <strong>PAO</strong> account and its associated data at any time, directly
+    inside the app. No email and no waiting period are needed.
   </p>
 
-  <h2>Steps to delete your account in the app</h2>
-  <div class="card">
-    <ol>
-      <li>Open the <strong>PAO</strong> app and sign in.</li>
-      <li>Go to <strong>Settings</strong>.</li>
-      <li>Tap <strong>Delete Account</strong>.</li>
-      <li>Read the confirmation message and tap <strong>Delete</strong> to confirm.</li>
+  <section id="steps">
+    <h2>How to delete your account</h2>
+    <ol class="steps">
+      <li><b>Open PAO and sign in</b><span>Use the account you want to delete.</span></li>
+      <li><b>Go to Settings</b><span>Tap the Settings tab in the bottom navigation bar.</span></li>
+      <li><b>Tap "Delete Account"</b><span>Scroll to the bottom of the Settings screen, just below Logout.</span></li>
+      <li><b>Confirm with "Delete"</b><span>Read the message and tap <strong>Delete</strong>. You are signed out right away.</span></li>
     </ol>
-  </div>
-  <div class="warn">
-    <strong>This action is permanent and cannot be undone.</strong>
-    Once you confirm, you are signed out and your account cannot be recovered.
-  </div>
+    <div class="warn">
+      <strong>This action is permanent and cannot be undone.</strong>
+      <p>Once you confirm, your account cannot be recovered.</p>
+    </div>
+  </section>
 
-  <h2>What is deleted</h2>
-  <p>The following data is permanently deleted from our database as soon as you confirm:</p>
-  <table>
-    <tr><th>Data</th><th>Details</th></tr>
-    <tr><td>Account</td><td>Your login (email and password)</td></tr>
-    <tr><td>Profile</td><td>Name, email, phone number, bio and profile photo reference</td></tr>
-    <tr><td>Listings</td><td>All items you posted</td></tr>
-    <tr><td>Requests and messages</td><td>Requests you sent or received and the messages you sent</td></tr>
-    <tr><td>Wishlist</td><td>Items you saved</td></tr>
-    <tr><td>Feedback</td><td>Ratings and reviews you gave or received</td></tr>
-  </table>
+  <section id="deleted">
+    <h2>What is deleted</h2>
+    <p>The following is permanently removed from our database as soon as you confirm:</p>
+    <div class="grid">
+      <div class="tile"><b>Account</b><span>Your login (email and password)</span></div>
+      <div class="tile"><b>Profile</b><span>Name, email, phone number, bio and profile photo reference</span></div>
+      <div class="tile"><b>Listings</b><span>All items you posted</span></div>
+      <div class="tile"><b>Requests and messages</b><span>Requests you sent or received and messages you sent</span></div>
+      <div class="tile"><b>Wishlist</b><span>Items you saved</span></div>
+      <div class="tile"><b>Feedback</b><span>Ratings and reviews you gave or received</span></div>
+    </div>
+  </section>
 
-  <h2>What may be kept</h2>
-  <p>
-    Image files you uploaded (profile photo and item photos) are stored separately from your account records.
-    After deletion they are no longer linked to any account or listing, but the files themselves may remain in
-    storage for a short period. To have them removed, email us at
-    <a href="mailto:shahabmustafa18@gmail.com">shahabmustafa18@gmail.com</a> and we will delete them.
-    Apart from this, we do not retain any of your personal data after your account is deleted, unless we are
-    required to by law.
-  </p>
+  <section id="kept">
+    <h2>What may be kept</h2>
+    <div class="callout">
+      <p>
+        Image files you uploaded (profile photo and item photos) are stored separately from your account records.
+        After deletion they are no longer linked to any account or listing, but the files themselves may stay in
+        storage for a short time. To have them removed, email us and we will delete them.
+      </p>
+      <p>Apart from this, we do not keep any of your personal data after deletion, unless the law requires us to.</p>
+    </div>
+  </section>
 
-  <h2>Can't access the app?</h2>
-  <p>
-    If you can no longer open the app or sign in, email us from the address you registered with at
-    <a href="mailto:shahabmustafa18@gmail.com?subject=PAO%20account%20deletion%20request">shahabmustafa18@gmail.com</a>
-    with the subject <em>"PAO account deletion request"</em>, and we will delete your account and data.
-  </p>
+  <section id="help">
+    <h2>Can't access the app?</h2>
+    <p>
+      If you can no longer open the app or sign in, email us from the address you registered with. Use the subject
+      <em>"PAO account deletion request"</em> and we will delete your account and data.
+    </p>
+    <a class="btn" href="mailto:shahabmustafa18@gmail.com?subject=PAO%20account%20deletion%20request">Email us to delete my account</a>
+  </section>
 
-  <p>See also our <a href="privacy_policy.html">Privacy Policy</a>.</p>
+  <p style="margin-top:28px">See also our <a href="privacy_policy.html">Privacy Policy</a>.</p>
 </main>
 
 <footer>
-  <div class="wrap">© 2026 PAO. All rights reserved. &nbsp;·&nbsp; <a href="privacy_policy.html">Privacy Policy</a></div>
+  <nav aria-label="Legal pages">
+    <a href="privacy_policy.html">Privacy Policy</a>
+    <a href="terms.html">Terms &amp; Conditions</a>
+    <a href="delete-account.html">Delete account</a>
+  </nav>
+  <div>&copy; 2026 PAO. All rights reserved.</div>
 </footer>
+
 </body>
 </html>

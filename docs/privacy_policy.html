@@ -3,175 +3,180 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#aef503">
+<meta name="description" content="How the PAO app collects, uses and protects your information.">
 <title>PAO – Privacy Policy</title>
 <link rel="icon" href="logo.png">
-<style>
-  :root {
-    --bg: #ffffff;
-    --surface: #f6f7fb;
-    --text: #1b1d28;
-    --muted: #5b5f70;
-    --border: #e3e5ee;
-    --brand: #aef503;
-    --link: #2843c9;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #14151c;
-      --surface: #1e2029;
-      --text: #f2f2f5;
-      --muted: #a6a9b8;
-      --border: #2c2f3b;
-      --link: #8fa3ff;
-    }
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    background: var(--bg);
-    color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    line-height: 1.65;
-  }
-  header {
-    background: var(--brand);
-    color: #000;
-    padding: 28px 16px;
-  }
-  .wrap { max-width: 760px; margin: 0 auto; padding: 0 16px; }
-  header .wrap { display: flex; align-items: center; gap: 16px; }
-  header img { width: 64px; height: 64px; border-radius: 16px; display: block; }
-  header h1 { margin: 0; font-size: 1.5rem; line-height: 1.2; }
-  header p { margin: 2px 0 0; font-size: 0.95rem; opacity: 0.8; }
-  main { padding: 32px 0 48px; }
-  .updated { color: var(--muted); font-size: 0.9rem; margin: 0 0 24px; }
-  h2 { font-size: 1.15rem; margin: 32px 0 8px; }
-  p, li { color: var(--text); }
-  ul { padding-left: 20px; }
-  li { margin: 4px 0; }
-  a { color: var(--link); }
-  .note {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 14px 16px;
-    margin: 16px 0;
-  }
-  footer {
-    border-top: 1px solid var(--border);
-    color: var(--muted);
-    font-size: 0.85rem;
-    padding: 20px 0 32px;
-  }
-</style>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header>
+
+<header class="hero">
   <div class="wrap">
-    <img src="logo.png" alt="PAO logo">
-    <div>
-      <h1>PAO (پاؤ) – Privacy Policy</h1>
-      <p>Give away what you don't need. Find what you do.</p>
+    <nav class="tabs" aria-label="Legal pages">
+      <a href="privacy_policy.html" aria-current="page">Privacy Policy</a>
+      <a href="terms.html">Terms &amp; Conditions</a>
+      <a href="delete-account.html">Delete account</a>
+    </nav>
+    <div class="brand">
+      <img class="logo" src="logo.png" alt="PAO logo" width="76" height="76">
+      <div>
+        <h1>Privacy Policy</h1>
+        <p class="sub">PAO (پاؤ) &middot; Give away what you don't need. Find what you do.</p>
+      </div>
     </div>
+    <span class="badge">Last updated: September 18, 2026</span>
   </div>
 </header>
 
-<main class="wrap">
-  <p class="updated">Last updated: September 18, 2026</p>
-
-  <p>
+<main class="wrap sheet">
+  <p class="lead">
     PAO ("we", "our", "the app") is a give-away marketplace where people post items they no longer need
     for free, browse items others are giving away, and arrange the handoff through in-app chat.
-    This policy explains what information the app collects, how it is used, and the choices you have.
+    This policy explains what the app collects, how it is used, and the choices you have.
   </p>
 
-  <h2>1. Information We Collect</h2>
-  <p>Information you provide directly:</p>
-  <ul>
-    <li><strong>Account details:</strong> your name, email address and password (the password is handled by our authentication provider and is never visible to us in readable form).</li>
-    <li><strong>Profile details:</strong> optional phone number, bio and profile photo.</li>
-    <li><strong>Listings:</strong> the photos, title, description, category, condition and province you add when you post an item.</li>
-    <li><strong>Requests and messages:</strong> requests you send for items and the chat messages you exchange with other users.</li>
-    <li><strong>Wishlist and feedback:</strong> items you save, and the star ratings and reviews you give or receive after an exchange.</li>
-  </ul>
-  <p>Information stored on your device:</p>
-  <ul>
-    <li>App preferences such as your theme (light/dark) and language.</li>
-  </ul>
-  <div class="note">
-    <strong>What we do not collect:</strong> we do not access your GPS/precise location, your contacts,
-    or your call/SMS data. We do not use advertising or analytics SDKs, and we do not show ads.
+  <div class="glance">
+    <div class="tile">
+      <div class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg></div>
+      <b>No ads or tracking</b>
+      <span>No advertising or analytics SDKs, and we never sell your data.</span>
+    </div>
+    <div class="tile">
+      <div class="ic"><svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg></div>
+      <b>No GPS or contacts</b>
+      <span>We never access your precise location or your contacts.</span>
+    </div>
+    <div class="tile">
+      <div class="ic"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/></svg></div>
+      <b>Delete anytime</b>
+      <span>Remove your account and data yourself from Settings.</span>
+    </div>
   </div>
 
-  <h2>2. Camera and Photos</h2>
-  <p>
-    The app asks for access to your camera or photo library only when you choose to take or select a photo
-    (for your profile picture or for an item you are posting). Photos are not accessed in the background.
-  </p>
+  <nav class="toc" aria-label="Contents">
+    <b>Contents</b>
+    <div>
+      <a href="#s1"><i>1</i>Information We Collect</a>
+      <a href="#s2"><i>2</i>Camera and Photos</a>
+      <a href="#s3"><i>3</i>How We Use Your Information</a>
+      <a href="#s4"><i>4</i>What Other Users Can See</a>
+      <a href="#s5"><i>5</i>Service Providers and Storage</a>
+      <a href="#s6"><i>6</i>Your Choices and Rights</a>
+      <a href="#s7"><i>7</i>Data Retention</a>
+      <a href="#s8"><i>8</i>Children's Privacy</a>
+      <a href="#s9"><i>9</i>Changes to This Policy</a>
+      <a href="#s10"><i>10</i>Contact Us</a>
+    </div>
+  </nav>
 
-  <h2>3. How We Use Your Information</h2>
-  <ul>
-    <li>Create and manage your account and sign you in.</li>
-    <li>Show your profile, display listings, and let you filter listings by province.</li>
-    <li>Let you send and receive requests and chat with other users to arrange a handoff.</li>
-    <li>Maintain your wishlist, ratings and reviews.</li>
-    <li>Remember your app settings.</li>
-  </ul>
+  <section id="s1">
+    <h2><span class="n">1</span>Information We Collect</h2>
+    <p>Information you provide directly:</p>
+    <ul>
+      <li><strong>Account details:</strong> your name, email address and password (the password is handled by our authentication provider and is never visible to us in readable form).</li>
+      <li><strong>Profile details:</strong> optional phone number, bio and profile photo.</li>
+      <li><strong>Listings:</strong> the photos, title, description, category, condition and province you add when you post an item.</li>
+      <li><strong>Requests and messages:</strong> requests you send for items and the chat messages you exchange with other users.</li>
+      <li><strong>Wishlist and feedback:</strong> items you save, and the star ratings and reviews you give or receive after an exchange.</li>
+    </ul>
+    <p>Information stored on your device:</p>
+    <ul>
+      <li>App preferences such as your theme (light/dark) and language.</li>
+    </ul>
+    <div class="callout">
+      <strong>What we do not collect:</strong> we do not access your GPS/precise location, your contacts,
+      or your call/SMS data. We do not use advertising or analytics SDKs, and we do not show ads.
+    </div>
+  </section>
 
-  <h2>4. What Other Users Can See</h2>
-  <ul>
-    <li><strong>Public to other users:</strong> your name, profile photo, the items you post (including photos and province), your donation count, and ratings/reviews.</li>
-    <li><strong>Shared with the other party only:</strong> messages in a request conversation.</li>
-    <li><strong>Private to you:</strong> your email address, phone number and bio.</li>
-  </ul>
-  <p>Please do not share sensitive personal information in listings or chat. We do not sell your personal information.</p>
+  <section id="s2">
+    <h2><span class="n">2</span>Camera and Photos</h2>
+    <p>
+      The app asks for access to your camera or photo library only when you choose to take or select a photo
+      (for your profile picture or for an item you are posting). Photos are not accessed in the background.
+    </p>
+  </section>
 
-  <h2>5. Service Providers and Data Storage</h2>
-  <p>
-    Your account and app data are stored and processed by <a href="https://supabase.com" rel="noopener">Supabase</a>,
-    our backend provider, which we use for authentication, database, file storage and real-time updates.
-    Data is sent over encrypted (HTTPS) connections. Supabase acts on our behalf and we do not share your
-    data with any other third party.
-  </p>
-  <p>
-    While we take reasonable steps to protect your data, no method of storage or transmission is 100% secure.
-  </p>
+  <section id="s3">
+    <h2><span class="n">3</span>How We Use Your Information</h2>
+    <ul>
+      <li>Create and manage your account and sign you in.</li>
+      <li>Show your profile, display listings, and let you filter listings by province.</li>
+      <li>Let you send and receive requests and chat with other users to arrange a handoff.</li>
+      <li>Maintain your wishlist, ratings and reviews.</li>
+      <li>Remember your app settings.</li>
+    </ul>
+  </section>
 
-  <h2>6. Your Choices and Rights</h2>
-  <ul>
-    <li>Review and update your profile at any time from <strong>Settings &gt; Edit Profile</strong>.</li>
-    <li>Delete your account and data from <strong>Settings &gt; Delete Account</strong>. See the
-      <a href="delete-account.html">account deletion page</a> for the steps and what is removed.</li>
-    <li>You can also contact us at any time to ask questions about, or request deletion of, your data.</li>
-  </ul>
+  <section id="s4">
+    <h2><span class="n">4</span>What Other Users Can See</h2>
+    <ul>
+      <li><strong>Public to other users:</strong> your name, profile photo, the items you post (including photos and province), your donation count, and ratings/reviews.</li>
+      <li><strong>Shared with the other party only:</strong> messages in a request conversation.</li>
+      <li><strong>Private to you:</strong> your email address, phone number and bio.</li>
+    </ul>
+    <p>Please do not share sensitive personal information in listings or chat. We do not sell your personal information.</p>
+  </section>
 
-  <h2>7. Data Retention</h2>
-  <p>
-    We keep your information for as long as your account is active. When you delete your account, your profile,
-    listings, requests, messages, wishlist and feedback are permanently removed from our database.
-  </p>
+  <section id="s5">
+    <h2><span class="n">5</span>Service Providers and Storage</h2>
+    <p>
+      Your account and app data are stored and processed by <a href="https://supabase.com" rel="noopener">Supabase</a>,
+      our backend provider, which we use for authentication, database, file storage and real-time updates.
+      Data is sent over encrypted (HTTPS) connections. Supabase acts on our behalf and we do not share your
+      data with any other third party.
+    </p>
+    <p>While we take reasonable steps to protect your data, no method of storage or transmission is 100% secure.</p>
+  </section>
 
-  <h2>8. Children's Privacy</h2>
-  <p>
-    PAO is not directed at children under 13, and we do not knowingly collect personal information from
-    children under 13. If you believe a child has provided us with personal information, contact us and we
-    will delete it.
-  </p>
+  <section id="s6">
+    <h2><span class="n">6</span>Your Choices and Rights</h2>
+    <ul>
+      <li>Review and update your profile at any time from <strong>Settings &gt; Edit Profile</strong>.</li>
+      <li>Delete your account and data from <strong>Settings &gt; Delete Account</strong>. See the
+        <a href="delete-account.html">account deletion page</a> for the steps and what is removed.</li>
+      <li>You can also contact us at any time to ask questions about, or request deletion of, your data.</li>
+    </ul>
+  </section>
 
-  <h2>9. Changes to This Policy</h2>
-  <p>
-    We may update this Privacy Policy from time to time. The latest revision date is shown at the top of this page.
-  </p>
+  <section id="s7">
+    <h2><span class="n">7</span>Data Retention</h2>
+    <p>
+      We keep your information for as long as your account is active. When you delete your account, your profile,
+      listings, requests, messages, wishlist and feedback are permanently removed from our database.
+    </p>
+  </section>
 
-  <h2>10. Contact Us</h2>
-  <p>
-    If you have questions about this Privacy Policy or how your data is handled, email us at
-    <a href="mailto:shahabmustafa18@gmail.com">shahabmustafa18@gmail.com</a>.
-  </p>
+  <section id="s8">
+    <h2><span class="n">8</span>Children's Privacy</h2>
+    <p>
+      PAO is not directed at children under 13, and we do not knowingly collect personal information from
+      children under 13. If you believe a child has provided us with personal information, contact us and we
+      will delete it.
+    </p>
+  </section>
+
+  <section id="s9">
+    <h2><span class="n">9</span>Changes to This Policy</h2>
+    <p>We may update this Privacy Policy from time to time. The latest revision date is shown at the top of this page.</p>
+  </section>
+
+  <section id="s10">
+    <h2><span class="n">10</span>Contact Us</h2>
+    <p>If you have questions about this Privacy Policy or how your data is handled, email us:</p>
+    <a class="btn" href="mailto:shahabmustafa18@gmail.com">shahabmustafa18@gmail.com</a>
+  </section>
 </main>
 
 <footer>
-  <div class="wrap">© 2026 PAO. All rights reserved. &nbsp;·&nbsp; <a href="delete-account.html">Delete account</a></div>
+  <nav aria-label="Legal pages">
+    <a href="privacy_policy.html">Privacy Policy</a>
+    <a href="terms.html">Terms &amp; Conditions</a>
+    <a href="delete-account.html">Delete account</a>
+  </nav>
+  <div>&copy; 2026 PAO. All rights reserved.</div>
 </footer>
+
 </body>
 </html>

@@ -1,0 +1,273 @@
+/* Shared styles for the PAO legal pages (privacy, terms, delete account). */
+
+:root {
+  color-scheme: light dark;
+  --lime: #aef503;
+  --lime-deep: #8fd100;
+  --ink: #14151c;
+
+  --bg: #f3f5ee;
+  --card: #ffffff;
+  --text: #1b1d28;
+  --muted: #5d6172;
+  --line: #e7e9df;
+  --tint: #f4fbd9;
+  --num: #4f7a00;
+  --link: #2843c9;
+  --danger: #c93a31;
+  --danger-bg: #fdeeec;
+  --shadow: 0 1px 2px rgba(20, 21, 28, 0.05), 0 16px 40px rgba(20, 21, 28, 0.08);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0e0f14;
+    --card: #171922;
+    --text: #f2f2f5;
+    --muted: #a5a9b9;
+    --line: #2a2d3a;
+    --tint: #1d2410;
+    --num: #aef503;
+    --link: #a3b4ff;
+    --danger: #ff8178;
+    --danger-bg: #2a1614;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 16px 40px rgba(0, 0, 0, 0.35);
+  }
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.7 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--link); text-underline-offset: 3px; }
+a:hover { text-decoration-thickness: 2px; }
+
+.wrap { max-width: 780px; margin: 0 auto; padding: 0 20px; }
+
+/* ---------- Hero ---------- */
+.hero {
+  position: relative;
+  color: var(--ink);
+  background:
+    radial-gradient(900px 300px at 85% -20%, rgba(255, 255, 255, 0.55), transparent 60%),
+    linear-gradient(160deg, #c4ff2e 0%, var(--lime) 45%, #97dc00 100%);
+  padding: 20px 0 84px;
+  border-radius: 0 0 36px 36px;
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 28px;
+}
+.tabs a {
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: rgba(20, 21, 28, 0.08);
+  transition: background 0.15s;
+}
+.tabs a:hover { background: rgba(20, 21, 28, 0.16); }
+.tabs a[aria-current="page"] { background: var(--ink); color: var(--lime); }
+
+.brand { display: flex; align-items: center; gap: 18px; }
+.logo {
+  flex: none;
+  width: 76px;
+  height: 76px;
+  border-radius: 22px;
+  display: block;
+  box-shadow: 0 10px 24px rgba(20, 21, 28, 0.28), 0 0 0 3px rgba(255, 255, 255, 0.55);
+}
+.hero h1 {
+  margin: 0;
+  font-size: clamp(1.6rem, 5.4vw, 2.3rem);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+.hero .sub { margin: 6px 0 0; font-size: 1rem; opacity: 0.78; line-height: 1.45; }
+.badge {
+  display: inline-block;
+  margin-top: 22px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: rgba(20, 21, 28, 0.85);
+  color: var(--lime);
+}
+
+/* ---------- Content sheet ---------- */
+.sheet {
+  position: relative;
+  margin: -48px auto 0;
+  background: var(--card);
+  border-radius: 28px;
+  box-shadow: var(--shadow);
+  padding: 34px 32px 40px;
+}
+.sheet > :first-child { margin-top: 0; }
+.lead { font-size: 1.08rem; color: var(--muted); margin: 0 0 24px; }
+
+section { scroll-margin-top: 20px; padding-top: 26px; margin-top: 26px; border-top: 1px solid var(--line); }
+section:first-of-type { border-top: 0; margin-top: 8px; }
+
+h2 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 12px;
+  font-size: 1.2rem;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+.n {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--lime);
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+p { margin: 0 0 12px; }
+ul { margin: 8px 0 12px; padding-left: 22px; }
+li { margin: 6px 0; }
+li::marker { color: var(--lime-deep); }
+strong { font-weight: 650; }
+
+/* ---------- Highlights ---------- */
+.glance {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+  margin: 0 0 8px;
+}
+.glance .tile { background: var(--tint); border: 1px solid var(--line); border-radius: 18px; padding: 16px; }
+.tile .ic {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: var(--lime);
+  color: var(--ink);
+  display: grid;
+  place-items: center;
+  margin-bottom: 10px;
+}
+.ic svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.tile b { display: block; font-size: 0.98rem; }
+.tile span { display: block; font-size: 0.9rem; color: var(--muted); line-height: 1.5; margin-top: 2px; }
+
+/* ---------- Table of contents ---------- */
+.toc { margin: 22px 0 0; padding: 18px 20px; border: 1px solid var(--line); border-radius: 18px; }
+.toc > b { display: block; font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+.toc div { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 2px 18px; }
+.toc a { display: flex; gap: 10px; padding: 5px 0; text-decoration: none; color: var(--text); font-size: 0.95rem; }
+.toc a:hover { color: var(--link); }
+.toc a i { font-style: normal; font-weight: 700; color: var(--num); min-width: 1.4em; }
+
+/* ---------- Callouts ---------- */
+.callout {
+  background: var(--tint);
+  border: 1px solid var(--line);
+  border-left: 5px solid var(--lime);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin: 14px 0;
+}
+.callout > :last-child { margin-bottom: 0; }
+.warn {
+  background: var(--danger-bg);
+  border: 1px solid var(--line);
+  border-left: 5px solid var(--danger);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin: 18px 0;
+}
+.warn strong { color: var(--danger); }
+.warn > :last-child { margin-bottom: 0; }
+
+/* ---------- Stepper (delete account) ---------- */
+.steps { list-style: none; margin: 16px 0 0; padding: 0; counter-reset: step; }
+.steps li { position: relative; margin: 0; padding: 0 0 24px 58px; counter-increment: step; }
+.steps li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--lime);
+  color: var(--ink);
+  font-weight: 800;
+  font-size: 1.05rem;
+  box-shadow: 0 0 0 5px var(--tint);
+}
+.steps li::after { content: ""; position: absolute; left: 20px; top: 50px; bottom: 6px; width: 2px; background: var(--line); }
+.steps li:last-child { padding-bottom: 0; }
+.steps li:last-child::after { display: none; }
+.steps b { display: block; font-size: 1.02rem; padding-top: 8px; }
+.steps span { color: var(--muted); font-size: 0.95rem; }
+
+/* ---------- What gets deleted ---------- */
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin-top: 8px; }
+.grid .tile { background: transparent; border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; }
+.grid .tile b { display: flex; align-items: center; gap: 8px; }
+.grid .tile b::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--lime-deep); flex: none; }
+
+/* ---------- Buttons ---------- */
+.btn {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 12px 22px;
+  border-radius: 14px;
+  background: var(--ink);
+  color: var(--lime);
+  font-weight: 700;
+  text-decoration: none;
+}
+.btn:hover { filter: brightness(1.15); }
+@media (prefers-color-scheme: dark) {
+  .btn { background: var(--lime); color: var(--ink); }
+}
+
+/* ---------- Footer ---------- */
+footer { text-align: center; color: var(--muted); font-size: 0.875rem; padding: 32px 20px 44px; }
+footer nav { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 18px; margin-bottom: 10px; }
+footer a { color: var(--muted); }
+footer a:hover { color: var(--link); }
+
+/* ---------- Small screens ---------- */
+@media (max-width: 560px) {
+  .wrap { padding: 0 14px; }
+  .hero { padding: 16px 0 76px; border-radius: 0 0 28px 28px; }
+  .hero .wrap { padding: 0 18px; }
+  .brand { gap: 14px; }
+  .logo { width: 62px; height: 62px; border-radius: 18px; }
+  .sheet { padding: 24px 20px 30px; border-radius: 22px; margin-top: -44px; }
+  h2 { font-size: 1.1rem; }
+  .steps li { padding-left: 54px; }
+}
+
+@media print {
+  .hero { background: none; color: #000; padding-bottom: 10px; }
+  .tabs, .toc, footer nav { display: none; }
+  .sheet { box-shadow: none; margin-top: 0; padding: 0; }
+}
