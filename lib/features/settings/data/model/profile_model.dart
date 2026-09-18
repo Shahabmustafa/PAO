@@ -1,0 +1,28 @@
+class ProfileModel {
+  const ProfileModel({
+    required this.id,
+    this.fullName,
+    this.email,
+    this.phone,
+    this.bio,
+    this.avatarUrl,
+  });
+
+  final String id;
+  final String? fullName;
+  final String? email;
+  final String? phone;
+  final String? bio;
+  final String? avatarUrl;
+
+  factory ProfileModel.fromJson(Map<String, dynamic> json) {
+    return ProfileModel(
+      id: json['id'] as String,
+      fullName: json['full_name'] as String?,
+      email: json['email'] as String?,
+      phone: json['phone'] as String?,
+      bio: json['bio'] as String?,
+      avatarUrl: json['avatar_url'] as String?,
+    );
+  }
+}
