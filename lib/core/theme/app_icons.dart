@@ -24,6 +24,7 @@ class AppIcons {
   static const String help = '$_base/help.svg';
   static const String homeOutline = '$_base/home_outline.svg';
   static const String homeFilled = '$_base/home_filled.svg';
+  static const String inbox = '$_base/inbox.svg';
   static const String info = '$_base/info.svg';
   static const String language = '$_base/language.svg';
   static const String locationPin = '$_base/location_pin.svg';

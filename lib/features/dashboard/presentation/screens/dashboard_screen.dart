@@ -6,6 +6,7 @@ import '../../../add_item/presentation/screens/add_item_screen.dart';
 import '../../../home/presentation/screens/home_screen.dart';
 import '../../../requests/presentation/screens/requests_screen.dart';
 import '../../../settings/presentation/screens/settings_screen.dart';
+import '../../../wishlist/presentation/screens/wishlist_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -19,7 +20,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   final List<Widget> _screens = const [
     HomeScreen(),
-    HomeScreen(autofocusSearch: true),
+    WishlistScreen(),
     AddItemScreen(),
     RequestsScreen(),
     SettingsScreen(),
@@ -83,8 +84,9 @@ class _FloatingNavBar extends StatelessWidget {
                 ),
                 Expanded(
                   child: _NavItem(
-                    icon: AppIcons.search,
-                    label: 'Search',
+                    icon: AppIcons.favoriteOutline,
+                    activeIcon: AppIcons.favoriteFilled,
+                    label: 'Wishlist',
                     isActive: currentIndex == 1,
                     onTap: () => onTap(1),
                   ),
@@ -92,16 +94,17 @@ class _FloatingNavBar extends StatelessWidget {
                 const SizedBox(width: 64),
                 Expanded(
                   child: _NavItem(
-                    icon: AppIcons.notifications,
-                    label: 'Inbox',
+                    icon: AppIcons.inbox,
+                    label: 'Requests',
                     isActive: currentIndex == 3,
                     onTap: () => onTap(3),
                   ),
                 ),
                 Expanded(
                   child: _NavItem(
-                    icon: AppIcons.person,
-                    label: 'Profile',
+                    icon: AppIcons.settingsOutline,
+                    activeIcon: AppIcons.settingsFilled,
+                    label: 'Settings',
                     isActive: currentIndex == 4,
                     onTap: () => onTap(4),
                   ),
