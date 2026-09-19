@@ -50,6 +50,27 @@
    flutter run
    ```
 
+## Testing
+
+```bash
+flutter test                       # unit + widget tests (offline, no Supabase needed)
+flutter test --coverage            # same, and writes coverage/lcov.info
+flutter test integration_test -d <device-id>   # end-to-end, launches the real app
+```
+
+- `test/unit/` — models, domain data, stores, repositories and providers. The
+  data layer is replaced with the hand-written fakes in `test/helpers/fakes.dart`.
+- `test/widget/` — core widgets and every screen, pumped offline against a
+  signed-out Supabase client with throwaway credentials (`test/helpers/test_app.dart`).
+- `integration_test/` — drives the real app. The signed-out flows always run.
+  The signed-in journey needs a dedicated, already-confirmed test account:
+
+  ```bash
+  flutter test integration_test -d <device-id> \
+    --dart-define=PAO_TEST_EMAIL=you@example.com \
+    --dart-define=PAO_TEST_PASSWORD=secret
+  ```
+
 ## Project Structure
 
 The app follows a feature-first structure under `lib/features/`, where each feature (e.g. `home`, `auth`, `chat`, `requests`) has its own `data/` (models, repositories, Supabase datasources) and `presentation/` (screens, providers, widgets) layers. Shared code — theming, reusable widgets, routing — lives under `lib/core/`.
