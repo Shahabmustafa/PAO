@@ -7,4 +7,5 @@ const List<String> kHomeCategories = [
   'Sports',
   'Books',
   'Toys',
+  'Other',
 ];
