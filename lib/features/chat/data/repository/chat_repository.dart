@@ -4,7 +4,7 @@ import '../model/message_model.dart';
 /// Bridges the chat data source and the presentation layer.
 class ChatRepository {
   ChatRepository({ChatRemoteDataSource? dataSource})
-      : _dataSource = dataSource ?? ChatRemoteDataSource();
+    : _dataSource = dataSource ?? ChatRemoteDataSource();
 
   final ChatRemoteDataSource _dataSource;
 
@@ -25,4 +25,7 @@ class ChatRepository {
       body: body,
     );
   }
+
+  Future<void> deleteMessage(String messageId) =>
+      _dataSource.deleteMessage(messageId);
 }

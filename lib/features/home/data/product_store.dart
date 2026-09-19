@@ -29,18 +29,15 @@ class ProductStore {
     if (_subscription != null) return;
     _subscription = (repository ?? PostRepository())
         .streamAvailablePosts()
-        .listen(
-          (posts) {
-            final remoteProducts = posts.map(_productFromPost).toList();
-            final remoteIds = remoteProducts.map((p) => p.id).toSet();
-            final localOnly = items.value
-                .where((p) => !remoteIds.contains(p.id))
-                .toList();
-            items.value = [...remoteProducts, ...localOnly];
-            isLoading.value = false;
-          },
-          onError: (_) => isLoading.value = false,
-        );
+        .listen((posts) {
+          final remoteProducts = posts.map(productFromPost).toList();
+          final remoteIds = remoteProducts.map((p) => p.id).toSet();
+          final localOnly = items.value
+              .where((p) => !remoteIds.contains(p.id))
+              .toList();
+          items.value = [...remoteProducts, ...localOnly];
+          isLoading.value = false;
+        }, onError: (_) => isLoading.value = false);
   }
 
   static void add(Product product) {
@@ -60,7 +57,7 @@ class ProductStore {
     try {
       final posts = await (repository ?? PostRepository())
           .fetchAvailablePosts();
-      final remoteProducts = posts.map(_productFromPost).toList();
+      final remoteProducts = posts.map(productFromPost).toList();
       final remoteIds = remoteProducts.map((p) => p.id).toSet();
       final localOnly = items.value
           .where((p) => !remoteIds.contains(p.id))
@@ -71,7 +68,7 @@ class ProductStore {
     }
   }
 
-  static Product _productFromPost(PostModel post) {
+  static Product productFromPost(PostModel post) {
     return Product(
       id: post.id,
       name: post.title,

@@ -39,6 +39,16 @@ class PostRemoteDataSource {
     return List<Map<String, dynamic>>.from(rows as List);
   }
 
+  /// Every post created by [userId], available or given away, newest first.
+  Future<List<Map<String, dynamic>>> fetchPostsByUser(String userId) async {
+    final rows = await _client
+        .from('posts')
+        .select()
+        .eq('user_id', userId)
+        .order('created_at', ascending: false);
+    return List<Map<String, dynamic>>.from(rows as List);
+  }
+
   /// Live Supabase Realtime stream of every available post — emits again
   /// automatically whenever a post is created, edited, or marked as given.
   Stream<List<Map<String, dynamic>>> streamAvailablePosts() {

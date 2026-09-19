@@ -23,6 +23,11 @@ class PostRepository {
     return row == null ? null : PostModel.fromJson(row);
   }
 
+  Future<List<PostModel>> fetchPostsByUser(String userId) async {
+    final rows = await _dataSource.fetchPostsByUser(userId);
+    return rows.map(PostModel.fromJson).toList();
+  }
+
   Future<List<PostModel>> fetchAvailablePosts() async {
     final rows = await _dataSource.fetchAvailablePosts();
     return rows.map(PostModel.fromJson).toList();

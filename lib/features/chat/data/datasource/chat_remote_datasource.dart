@@ -4,7 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 /// realtime stream that powers live chat.
 class ChatRemoteDataSource {
   ChatRemoteDataSource({SupabaseClient? client})
-      : _client = client ?? Supabase.instance.client;
+    : _client = client ?? Supabase.instance.client;
 
   final SupabaseClient _client;
 
@@ -26,5 +26,9 @@ class ChatRemoteDataSource {
       'sender_id': senderId,
       'body': body,
     });
+  }
+
+  Future<void> deleteMessage(String messageId) {
+    return _client.from('messages').delete().eq('id', messageId);
   }
 }
