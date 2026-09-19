@@ -73,7 +73,11 @@ class _SignupViewState extends State<_SignupView> {
 
     switch (result) {
       case SignupResult.success:
-        Navigator.pushReplacementNamed(context, AppRoutes.selectProvince);
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          AppRoutes.dashboard,
+          (route) => false,
+        );
       case SignupResult.needsEmailConfirmation:
         AppSnackbar.show(
           context,
