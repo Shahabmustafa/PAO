@@ -6,6 +6,7 @@ import '../../../settings/data/model/profile_model.dart';
 import '../../../settings/data/repository/profile_repository.dart';
 import '../../data/product_store.dart';
 import '../../domain/product.dart';
+import '../../../../core/l10n/l10n.dart';
 
 class ProductDetailProvider extends ChangeNotifier {
   ProductDetailProvider({
@@ -56,7 +57,7 @@ class ProductDetailProvider extends ChangeNotifier {
     if (ownerId == null) return false;
 
     if (isOwner) {
-      errorMessage = "You can't request your own item.";
+      errorMessage = l10nNow.cantRequestOwnItem;
       notifyListeners();
       return false;
     }
@@ -70,12 +71,12 @@ class ProductDetailProvider extends ChangeNotifier {
         ownerId: ownerId,
       );
       if (request == null) {
-        errorMessage = 'Failed to send request. Please try again.';
+        errorMessage = l10nNow.failedToSendRequest;
         return false;
       }
       return true;
     } catch (_) {
-      errorMessage = 'Failed to send request. Please try again.';
+      errorMessage = l10nNow.failedToSendRequest;
       return false;
     } finally {
       isRequesting = false;
@@ -92,7 +93,7 @@ class ProductDetailProvider extends ChangeNotifier {
       ProductStore.markAsGiven(product.id);
       return true;
     } catch (_) {
-      errorMessage = 'Failed to update. Please try again.';
+      errorMessage = l10nNow.failedToUpdate;
       return false;
     } finally {
       isMarkingGiven = false;

@@ -14,6 +14,7 @@ import '../../../home/domain/product.dart';
 import '../../data/model/request_model.dart';
 import '../../data/request_store.dart';
 import '../provider/request_tile_provider.dart';
+import '../../../../core/l10n/l10n.dart';
 
 class RequestsScreen extends StatefulWidget {
   const RequestsScreen({super.key});
@@ -37,9 +38,9 @@ class _RequestsScreenState extends State<RequestsScreen> {
       length: 2,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text(
-            'Requests',
-            style: TextStyle(fontWeight: FontWeight.bold),
+          title: Text(
+            context.l10n.requests,
+            style: const TextStyle(fontWeight: FontWeight.bold),
           ),
           bottom: PreferredSize(
             preferredSize: const Size.fromHeight(60),
@@ -71,9 +72,9 @@ class _RequestsScreenState extends State<RequestsScreen> {
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
                   ),
-                  tabs: const [
-                    Tab(text: 'Sent'),
-                    Tab(text: 'Received'),
+                  tabs: [
+                    Tab(text: context.l10n.tabSent),
+                    Tab(text: context.l10n.tabReceived),
                   ],
                 ),
               ),
@@ -99,9 +100,7 @@ class _SentRequestsTab extends StatelessWidget {
       valueListenable: RequestStore.sent,
       builder: (context, requests, _) {
         if (requests.isEmpty) {
-          return const _EmptyState(
-            message: 'Tap "Give Me" on a product to request it',
-          );
+          return _EmptyState(message: context.l10n.emptySentMessage);
         }
         return ValueListenableBuilder<List<Product>>(
           valueListenable: ProductStore.items,
@@ -144,9 +143,7 @@ class _ReceivedRequestsTab extends StatelessWidget {
       valueListenable: RequestStore.received,
       builder: (context, requests, _) {
         if (requests.isEmpty) {
-          return const _EmptyState(
-            message: 'Requests for the items you post will show up here',
-          );
+          return _EmptyState(message: context.l10n.emptyReceivedMessage);
         }
         return ValueListenableBuilder<List<Product>>(
           valueListenable: ProductStore.items,
@@ -187,13 +184,16 @@ class _RequestTile extends StatelessWidget {
   final String otherUserId;
   final bool isSentTab;
 
-  const _RequestTile({
+  // Keyed by id *and* status: the tile's provider is created once with the
+  // request it's given, so a status change (accepted / closed) has to
+  // rebuild the tile or it keeps showing the old status and buttons.
+  _RequestTile({
     required this.request,
     required this.productName,
     required this.productImageUrl,
     required this.otherUserId,
     required this.isSentTab,
-  });
+  }) : super(key: ValueKey('${request.id}:${request.status}'));
 
   @override
   Widget build(BuildContext context) {
@@ -220,7 +220,7 @@ class _RequestTileView extends StatelessWidget {
         builder: (_) => ChatScreen(
           request: provider.request,
           otherUserId: provider.otherUserId,
-          productName: provider.productName ?? 'PAO item',
+          productName: provider.productName ?? context.l10n.paoItem,
         ),
       ),
     );
@@ -234,7 +234,7 @@ class _RequestTileView extends StatelessWidget {
     if (!context.mounted || success) return;
     AppSnackbar.show(
       context,
-      provider.errorMessage ?? 'Failed to update. Please try again.',
+      provider.errorMessage ?? context.l10n.failedToUpdate,
       icon: Icons.error_outline,
       color: AppColors.error,
     );
@@ -258,16 +258,17 @@ class _RequestTileView extends StatelessWidget {
     }
   }
 
-  String _statusLabel(String status) {
+  String _statusLabel(BuildContext context, String status) {
+    final l10n = context.l10n;
     switch (status) {
       case 'accepted':
-        return 'Given to you';
+        return l10n.statusGivenToYou;
       case 'closed':
-        return 'Not selected';
+        return l10n.statusNotSelected;
       case 'declined':
-        return 'Declined';
+        return l10n.statusDeclined;
       default:
-        return 'Pending';
+        return l10n.statusPending;
     }
   }
 
@@ -314,11 +315,11 @@ class _RequestTileView extends StatelessWidget {
                   child: provider.isLoadingProduct
                       ? const AppShimmer()
                       : provider.productImageUrl != null
-                          ? AppNetworkImage(imageUrl: provider.productImageUrl!)
-                          : const Icon(
-                              Icons.inventory_2_outlined,
-                              color: AppColors.primary,
-                            ),
+                      ? AppNetworkImage(imageUrl: provider.productImageUrl!)
+                      : const Icon(
+                          Icons.inventory_2_outlined,
+                          color: AppColors.primary,
+                        ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -334,7 +335,7 @@ class _RequestTileView extends StatelessWidget {
                               ),
                             )
                           : Text(
-                              provider.productName ?? 'PAO item',
+                              provider.productName ?? context.l10n.paoItem,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
@@ -374,8 +375,14 @@ class _RequestTileView extends StatelessWidget {
                                 Expanded(
                                   child: Text(
                                     provider.isSentTab
-                                        ? 'to ${provider.profile?.fullName ?? 'PAO User'}'
-                                        : 'from ${provider.profile?.fullName ?? 'PAO User'}',
+                                        ? context.l10n.requestTo(
+                                            provider.profile?.fullName ??
+                                                context.l10n.paoUser,
+                                          )
+                                        : context.l10n.requestFrom(
+                                            provider.profile?.fullName ??
+                                                context.l10n.paoUser,
+                                          ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
@@ -393,7 +400,7 @@ class _RequestTileView extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      _statusLabel(request.status),
+                      _statusLabel(context, request.status),
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
@@ -403,6 +410,7 @@ class _RequestTileView extends StatelessWidget {
                     const SizedBox(height: 4),
                     const AppIcon(
                       AppIcons.chevronRight,
+                      mirrorInRtl: true,
                       size: 18,
                       color: AppColors.primary,
                     ),
@@ -425,7 +433,7 @@ class _RequestTileView extends StatelessWidget {
                         width: 16,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('Accept & Give'),
+                    : Text(context.l10n.acceptAndGive),
               ),
             ),
           ],
@@ -437,7 +445,7 @@ class _RequestTileView extends StatelessWidget {
               width: double.infinity,
               child: OutlinedButton(
                 onPressed: () => _onLeaveFeedbackPressed(context, provider),
-                child: const Text('Leave Feedback'),
+                child: Text(context.l10n.leaveFeedback),
               ),
             ),
           ],
@@ -475,7 +483,7 @@ class _EmptyState extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            'No requests yet',
+            context.l10n.noRequestsYet,
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,

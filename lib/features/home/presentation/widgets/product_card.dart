@@ -7,6 +7,8 @@ import '../../../wishlist/data/wishlist_store.dart';
 import '../../../wishlist/domain/wish_item.dart';
 import '../../domain/product.dart';
 import '../screens/product_detail_screen.dart';
+import '../../../../core/l10n/l10n.dart';
+import '../../domain/localized_labels.dart';
 
 class ProductCard extends StatelessWidget {
   final Product product;
@@ -61,9 +63,9 @@ class ProductCard extends StatelessWidget {
                           )
                         : _ProductInitial(product: product),
                   ),
-                  Positioned(
+                  PositionedDirectional(
                     top: 8,
-                    left: 8,
+                    start: 8,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 8,
@@ -76,7 +78,7 @@ class ProductCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        product.condition,
+                        conditionLabel(context.l10n, product.condition),
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
@@ -87,9 +89,9 @@ class ProductCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  Positioned(
+                  PositionedDirectional(
                     top: 8,
-                    right: 8,
+                    end: 8,
                     child: ValueListenableBuilder<List<WishItem>>(
                       valueListenable: WishlistStore.items,
                       builder: (context, items, _) {
@@ -133,7 +135,7 @@ class ProductCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    product.category,
+                    categoryLabel(context.l10n, product.category),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(

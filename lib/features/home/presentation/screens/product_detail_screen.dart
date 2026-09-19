@@ -17,6 +17,8 @@ import '../../../wishlist/data/wishlist_store.dart';
 import '../../../wishlist/domain/wish_item.dart';
 import '../../domain/product.dart';
 import '../provider/product_detail_provider.dart';
+import '../../../../core/l10n/l10n.dart';
+import '../../domain/localized_labels.dart';
 
 class ProductDetailScreen extends StatelessWidget {
   final Product product;
@@ -47,9 +49,9 @@ class _ProductDetailView extends StatelessWidget {
     }
   }
 
-  void _onSharePressed() {
+  void _onSharePressed(BuildContext context) {
     SharePlus.instance.share(
-      ShareParams(text: 'Check out "${product.name}" on PAO!'),
+      ShareParams(text: context.l10n.shareProduct(product.name)),
     );
   }
 
@@ -61,13 +63,13 @@ class _ProductDetailView extends StatelessWidget {
     if (success) {
       AppSnackbar.show(
         context,
-        'Requested "${product.name}" — chat with the owner anytime',
+        context.l10n.requestedProduct(product.name),
         icon: Icons.volunteer_activism,
       );
     } else {
       AppSnackbar.show(
         context,
-        provider.errorMessage ?? 'Failed to send request. Please try again.',
+        provider.errorMessage ?? context.l10n.failedToSendRequest,
         icon: Icons.error_outline,
         color: AppColors.error,
       );
@@ -91,18 +93,16 @@ class _ProductDetailView extends StatelessWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Mark as Given'),
-        content: Text(
-          'Have you given "${product.name}" to someone? It will be removed from the listing.',
-        ),
+        title: Text(context.l10n.markAsGiven),
+        content: Text(context.l10n.markAsGivenConfirm(product.name)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancel'),
+            child: Text(context.l10n.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Yes, Given'),
+            child: Text(context.l10n.yesGiven),
           ),
         ],
       ),
@@ -119,7 +119,7 @@ class _ProductDetailView extends StatelessWidget {
     } else {
       AppSnackbar.show(
         context,
-        provider.errorMessage ?? 'Failed to update. Please try again.',
+        provider.errorMessage ?? context.l10n.failedToUpdate,
         icon: Icons.error_outline,
         color: AppColors.error,
       );
@@ -136,7 +136,7 @@ class _ProductDetailView extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
           child: provider.isOwner
               ? PrimaryButton(
-                  label: 'Mark as Given',
+                  label: context.l10n.markAsGiven,
                   isLoading: provider.isMarkingGiven,
                   onPressed: () => _onMarkAsGivenPressed(context),
                 )
@@ -146,13 +146,13 @@ class _ProductDetailView extends StatelessWidget {
                     final existing = sent.where((r) => r.postId == product.id);
                     if (existing.isNotEmpty) {
                       return PrimaryButton(
-                        label: 'Message Owner',
+                        label: context.l10n.messageOwner,
                         onPressed: () =>
                             _onOpenChatPressed(context, existing.first),
                       );
                     }
                     return PrimaryButton(
-                      label: 'Give Me',
+                      label: context.l10n.giveMe,
                       isLoading: provider.isRequesting,
                       onPressed: () => _onGiveMePressed(context),
                     );
@@ -170,9 +170,9 @@ class _ProductDetailView extends StatelessWidget {
                   aspectRatio: 1,
                   child: _ProductGallery(product: product),
                 ),
-                Positioned(
+                PositionedDirectional(
                   top: 8,
-                  left: 8,
+                  start: 8,
                   child: InkWell(
                     onTap: () => Navigator.pop(context),
                     borderRadius: BorderRadius.circular(20),
@@ -191,11 +191,11 @@ class _ProductDetailView extends StatelessWidget {
                     ),
                   ),
                 ),
-                Positioned(
+                PositionedDirectional(
                   top: 8,
-                  right: 52,
+                  end: 52,
                   child: InkWell(
-                    onTap: _onSharePressed,
+                    onTap: () => _onSharePressed(context),
                     borderRadius: BorderRadius.circular(20),
                     child: Container(
                       height: 36,
@@ -212,9 +212,9 @@ class _ProductDetailView extends StatelessWidget {
                     ),
                   ),
                 ),
-                Positioned(
+                PositionedDirectional(
                   top: 8,
-                  right: 8,
+                  end: 8,
                   child: ValueListenableBuilder<List<WishItem>>(
                     valueListenable: WishlistStore.items,
                     builder: (context, items, _) {
@@ -270,7 +270,7 @@ class _ProductDetailView extends StatelessWidget {
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          product.condition,
+                          conditionLabel(context.l10n, product.condition),
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
@@ -284,7 +284,7 @@ class _ProductDetailView extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    product.category,
+                    categoryLabel(context.l10n, product.category),
                     style: TextStyle(
                       fontSize: 14,
                       color: context.appTextSecondary,
@@ -358,7 +358,7 @@ class _ProductDetailView extends StatelessWidget {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        'Posted by',
+                                        context.l10n.postedBy,
                                         style: TextStyle(
                                           fontSize: 12,
                                           color: context.appTextSecondary,
@@ -367,7 +367,7 @@ class _ProductDetailView extends StatelessWidget {
                                       const SizedBox(height: 2),
                                       Text(
                                         provider.posterProfile?.fullName ??
-                                            'PAO User',
+                                            context.l10n.paoUser,
                                         style: TextStyle(
                                           fontSize: 15,
                                           fontWeight: FontWeight.w600,
@@ -379,6 +379,7 @@ class _ProductDetailView extends StatelessWidget {
                                 ),
                                 const AppIcon(
                                   AppIcons.chevronRight,
+                                  mirrorInRtl: true,
                                   size: 18,
                                   color: AppColors.primary,
                                 ),
@@ -388,7 +389,7 @@ class _ProductDetailView extends StatelessWidget {
                   ),
                   const SizedBox(height: 20),
                   Text(
-                    'Description',
+                    context.l10n.description,
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
@@ -399,7 +400,7 @@ class _ProductDetailView extends StatelessWidget {
                   Text(
                     product.description.isNotEmpty
                         ? product.description
-                        : 'No description available for this product.',
+                        : context.l10n.noDescription,
                     style: TextStyle(
                       fontSize: 14,
                       height: 1.5,

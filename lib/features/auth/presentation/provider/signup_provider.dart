@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/utils/auth_error_message.dart';
 import '../../data/repository/auth_repository.dart';
+import '../../../../core/l10n/l10n.dart';
 
 enum SignupResult { success, needsEmailConfirmation, failure }
 
@@ -36,7 +37,7 @@ class SignupProvider extends ChangeNotifier {
       errorMessage = authErrorMessage(e);
       return SignupResult.failure;
     } catch (_) {
-      errorMessage = 'Something went wrong. Please try again.';
+      errorMessage = l10nNow.somethingWentWrong;
       return SignupResult.failure;
     } finally {
       isLoading = false;

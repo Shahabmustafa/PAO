@@ -8,6 +8,7 @@ import '../../../settings/data/model/profile_model.dart';
 import '../../../settings/data/repository/profile_repository.dart';
 import '../../data/model/message_model.dart';
 import '../../data/repository/chat_repository.dart';
+import '../../../../core/l10n/l10n.dart';
 
 class ChatProvider extends ChangeNotifier {
   ChatProvider({
@@ -17,10 +18,10 @@ class ChatProvider extends ChangeNotifier {
     AuthRepository? authRepository,
     ProfileRepository? profileRepository,
     FeedbackRepository? feedbackRepository,
-  })  : _repository = repository ?? ChatRepository(),
-        _authRepository = authRepository ?? AuthRepository(),
-        _profileRepository = profileRepository ?? ProfileRepository(),
-        _feedbackRepository = feedbackRepository ?? FeedbackRepository() {
+  }) : _repository = repository ?? ChatRepository(),
+       _authRepository = authRepository ?? AuthRepository(),
+       _profileRepository = profileRepository ?? ProfileRepository(),
+       _feedbackRepository = feedbackRepository ?? FeedbackRepository() {
     _subscribe();
     _loadOtherProfile();
     if (isRequester && request.isAccepted) _checkFeedback();
@@ -49,18 +50,23 @@ class ChatProvider extends ChangeNotifier {
   bool get isRequester => request.requesterId == currentUserId;
 
   void _subscribe() {
-    _subscription = _repository.streamMessages(request.id).listen(
-      (data) {
-        messages = data;
-        isLoading = false;
-        notifyListeners();
-      },
-      onError: (_) {
-        errorMessage = 'Failed to load messages.';
-        isLoading = false;
-        notifyListeners();
-      },
-    );
+    _subscription = _repository
+        .streamMessages(request.id)
+        .listen(
+          (data) {
+            // Oldest first, so the newest message lands at the bottom of the
+            // reversed list regardless of the order the stream emits.
+            messages = [...data]
+              ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+            isLoading = false;
+            notifyListeners();
+          },
+          onError: (_) {
+            errorMessage = l10nNow.failedToLoadMessages;
+            isLoading = false;
+            notifyListeners();
+          },
+        );
   }
 
   Future<void> _loadOtherProfile() async {
@@ -93,7 +99,7 @@ class ChatProvider extends ChangeNotifier {
       request = request.copyWith(status: 'accepted');
       return true;
     } catch (_) {
-      errorMessage = 'Failed to update. Please try again.';
+      errorMessage = l10nNow.failedToUpdate;
       return false;
     } finally {
       isAccepting = false;
@@ -121,10 +127,27 @@ class ChatProvider extends ChangeNotifier {
         body: trimmed,
       );
     } catch (_) {
-      errorMessage = 'Failed to send message.';
+      errorMessage = l10nNow.failedToSendMessage;
     } finally {
       isSending = false;
       notifyListeners();
+    }
+  }
+
+  /// Deletes one of the current user's own messages. The bubble disappears
+  /// right away and is put back if the delete fails.
+  Future<bool> deleteMessage(MessageModel message) async {
+    if (message.senderId != currentUserId) return false;
+    final previous = messages;
+    messages = messages.where((m) => m.id != message.id).toList();
+    notifyListeners();
+    try {
+      await _repository.deleteMessage(message.id);
+      return true;
+    } catch (_) {
+      messages = previous;
+      notifyListeners();
+      return false;
     }
   }
 

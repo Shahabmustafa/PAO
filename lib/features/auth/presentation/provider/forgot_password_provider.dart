@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/utils/auth_error_message.dart';
 import '../../data/repository/auth_repository.dart';
+import '../../../../core/l10n/l10n.dart';
 
 class ForgotPasswordProvider extends ChangeNotifier {
   ForgotPasswordProvider({AuthRepository? repository})
@@ -24,7 +25,7 @@ class ForgotPasswordProvider extends ChangeNotifier {
     } on AuthException catch (e) {
       errorMessage = authErrorMessage(e);
     } catch (_) {
-      errorMessage = 'Something went wrong. Please try again.';
+      errorMessage = l10nNow.somethingWentWrong;
     } finally {
       isLoading = false;
       notifyListeners();

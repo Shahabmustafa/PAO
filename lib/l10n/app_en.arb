@@ -1,0 +1,364 @@
+{
+  "@@locale": "en",
+  "appTitle": "PAO",
+  "cancel": "Cancel",
+  "delete": "Delete",
+  "submit": "Submit",
+  "apply": "Apply",
+  "reset": "Reset",
+  "continueLabel": "Continue",
+  "paoUser": "PAO User",
+  "paoItem": "PAO item",
+  "yourName": "Your Name",
+  "somethingWentWrong": "Something went wrong. Please try again.",
+  "failedToUpdate": "Failed to update. Please try again.",
+  "noInternet": "No internet connection. Please check your network and try again.",
+  "errorInvalidCredentials": "Incorrect email or password.",
+  "errorUserAlreadyExists": "An account with this email already exists.",
+  "errorEmailNotConfirmed": "Please confirm your email before logging in.",
+  "errorWeakPassword": "Please choose a stronger password.",
+  "errorRateLimited": "Too many attempts. Please wait a moment and try again.",
+  "welcomeBack": "Welcome Back",
+  "loginToContinue": "Login to continue",
+  "email": "Email",
+  "enterYourEmail": "Enter your email",
+  "emailRequired": "Email is required",
+  "enterValidEmail": "Enter a valid email",
+  "password": "Password",
+  "enterYourPassword": "Enter your password",
+  "passwordRequired": "Password is required",
+  "passwordMinLength": "Minimum 6 characters",
+  "forgotPasswordQuestion": "Forgot Password?",
+  "login": "Login",
+  "noAccountPrompt": "Don't have an account? ",
+  "signUp": "Sign Up",
+  "acceptTermsToContinue": "Please accept the Terms & Conditions and Privacy Policy to continue.",
+  "createAccount": "Create Account",
+  "signUpToGetStarted": "Sign up to get started",
+  "fullName": "Full Name",
+  "enterFullName": "Enter your full name",
+  "nameRequired": "Name is required",
+  "createPasswordHint": "Create a password",
+  "confirmPassword": "Confirm Password",
+  "reenterPassword": "Re-enter your password",
+  "passwordsDoNotMatch": "Passwords do not match",
+  "checkEmailToConfirm": "Check your email to confirm your account, then log in.",
+  "haveAccountPrompt": "Already have an account? ",
+  "forgotPasswordInstructions": "Enter your email and we'll send you a link to reset your password.",
+  "resetLinkSent": "Reset link sent! Check your inbox.",
+  "sendResetLink": "Send Reset Link",
+  "backToLogin": "Back to Login",
+  "termsAgreePrefix": "I agree to the ",
+  "termsAnd": " and ",
+  "termsAgreeSuffix": "",
+  "termsAndConditions": "Terms & Conditions",
+  "privacyPolicy": "Privacy Policy",
+  "navHome": "Home",
+  "navWishlist": "Wishlist",
+  "navRequests": "Requests",
+  "navSettings": "Settings",
+  "welcomeBackGreeting": "Welcome back 👋",
+  "searchHint": "Search...",
+  "noProductsFound": "No products found",
+  "tryDifferentSearch": "Try a different search term or clear your filters",
+  "clearSearch": "Clear search",
+  "categoryAll": "All",
+  "categoryElectronics": "Electronics",
+  "categoryFashion": "Fashion",
+  "categoryHomeLiving": "Home & Living",
+  "categoryBeauty": "Beauty",
+  "categorySports": "Sports",
+  "categoryBooks": "Books",
+  "categoryToys": "Toys",
+  "categoryOther": "Other",
+  "conditionNew": "New",
+  "conditionOld": "Old",
+  "sortNewest": "Newest",
+  "filters": "Filters",
+  "category": "Category",
+  "sortBy": "Sort By",
+  "condition": "Condition",
+  "shareProduct": "Check out \"{name}\" on PAO!",
+  "@shareProduct": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "requestedProduct": "Requested \"{name}\" — chat with the owner anytime",
+  "@requestedProduct": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "failedToSendRequest": "Failed to send request. Please try again.",
+  "cantRequestOwnItem": "You can't request your own item.",
+  "markAsGiven": "Mark as Given",
+  "markAsGivenConfirm": "Have you given \"{name}\" to someone? It will be removed from the listing.",
+  "@markAsGivenConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "yesGiven": "Yes, Given",
+  "messageOwner": "Message Owner",
+  "giveMe": "Give Me",
+  "postedBy": "Posted by",
+  "description": "Description",
+  "noDescription": "No description available for this product.",
+  "addProduct": "Add Product",
+  "giveSomethingAway": "Give something away for free",
+  "addItemSubtitle": "Books, electronics, or anything else someone could use",
+  "photos": "Photos",
+  "title": "Title",
+  "titleHint": "e.g. Wireless Headphones",
+  "titleRequired": "Title is required",
+  "describeItemHint": "Describe the item and its condition",
+  "descriptionRequired": "Description is required",
+  "postForFree": "Post for Free",
+  "addPhoto": "Add Photo",
+  "camera": "Camera",
+  "gallery": "Gallery",
+  "pleaseSelectCategory": "Please select a category",
+  "failedToPostItem": "Failed to post item.",
+  "productPosted": "Product posted for free giveaway",
+  "mustBeLoggedInToPost": "You must be logged in to post an item.",
+  "requests": "Requests",
+  "tabSent": "Sent",
+  "tabReceived": "Received",
+  "emptySentMessage": "Tap \"Give Me\" on a product to request it",
+  "emptyReceivedMessage": "Requests for the items you post will show up here",
+  "statusGivenToYou": "Given to you",
+  "statusNotSelected": "Not selected",
+  "statusDeclined": "Declined",
+  "statusPending": "Pending",
+  "requestTo": "to {name}",
+  "@requestTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "requestFrom": "from {name}",
+  "@requestFrom": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "acceptAndGive": "Accept & Give",
+  "leaveFeedback": "Leave Feedback",
+  "noRequestsYet": "No requests yet",
+  "giveThisItem": "Give this item",
+  "giveThisItemConfirm": "Give \"{name}\" to this person? Other requests for it will be closed.",
+  "@giveThisItemConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "yesGive": "Yes, Give",
+  "itemMarkedAsGiven": "Item marked as given",
+  "thanksForFeedback": "Thanks for your feedback!",
+  "acceptAndGiveThisItem": "Accept & Give This Item",
+  "receivedLeaveFeedback": "You received this — Leave Feedback",
+  "sayHello": "Say hello 👋",
+  "typeMessageHint": "Type a message...",
+  "deleteMessage": "Delete message",
+  "deleteMessageConfirm": "Delete this message? This cannot be undone.",
+  "failedToDeleteMessage": "Failed to delete message. Please try again.",
+  "failedToLoadMessages": "Failed to load messages.",
+  "failedToSendMessage": "Failed to send message.",
+  "profile": "Profile",
+  "tabPosts": "Posts",
+  "tabGivenAway": "Given Away",
+  "noPostsYet": "No posts yet.",
+  "nothingGivenAwayYet": "Nothing given away yet.",
+  "donated": "Donated",
+  "noRatings": "No ratings",
+  "reviewCount": "{count, plural, =1{1 review} other{{count} reviews}}",
+  "@reviewCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "feedback": "Feedback",
+  "noFeedbackYet": "No feedback yet.",
+  "timeMonthsAgo": "{count}mo ago",
+  "@timeMonthsAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "timeDaysAgo": "{count}d ago",
+  "@timeDaysAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "timeHoursAgo": "{count}h ago",
+  "@timeHoursAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "timeMinutesAgo": "{count}m ago",
+  "@timeMinutesAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "timeJustNow": "Just now",
+  "pleaseSelectRating": "Please select a rating",
+  "failedToSubmitFeedback": "Failed to submit feedback. Please try again.",
+  "rateThisExchange": "Rate this exchange",
+  "leaveCommentHint": "Leave a comment (optional)",
+  "wishlist": "Wishlist",
+  "wishlistEmpty": "Your wishlist is empty",
+  "wishlistEmptyHint": "Tap the Add button to save something",
+  "selectYourLocation": "Select Your Location",
+  "addAddressToFinish": "Add your address to finish setting up your account",
+  "country": "Country",
+  "countryPakistan": "Pakistan",
+  "province": "Province",
+  "selectProvinceHint": "Select your province",
+  "provinceRequired": "Province is required",
+  "city": "City",
+  "selectCityHint": "Select your city",
+  "cityRequired": "City is required",
+  "address": "Address",
+  "enterAddressHint": "Enter your address",
+  "addressRequired": "Address is required",
+  "settings": "Settings",
+  "sectionGeneral": "General",
+  "sectionLegal": "Legal",
+  "sectionSupport": "Support",
+  "editProfile": "Edit Profile",
+  "language": "Language",
+  "theme": "Theme",
+  "helpCenter": "Help Center",
+  "about": "About",
+  "logout": "Logout",
+  "deleteAccount": "Delete Account",
+  "deleteAccountConfirm": "This will permanently delete your account and all your data. This action cannot be undone.",
+  "failedToDeleteAccount": "Failed to delete account. Please try again.",
+  "themeLight": "Light",
+  "themeDark": "Dark",
+  "themeSystem": "System Default",
+  "themeLightSubtitle": "Bright background, dark text",
+  "themeDarkSubtitle": "Dark background, light text",
+  "themeSystemSubtitle": "Matches your device setting",
+  "chooseHowPaoLooks": "Choose how PAO looks",
+  "searchLanguage": "Search language",
+  "noLanguagesFound": "No languages found",
+  "languageSetTo": "Language set to {name}",
+  "@languageSetTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "failedToUpdateProfile": "Failed to update profile.",
+  "profileUpdatedConfirmEmail": "Profile updated. Check your new email to confirm the change.",
+  "profileUpdated": "Profile updated",
+  "phoneOptional": "Phone (optional)",
+  "enterPhoneHint": "Enter your phone number",
+  "bioOptional": "Bio (optional)",
+  "bioHint": "Tell us a little about yourself",
+  "saveChanges": "Save Changes",
+  "mustBeLoggedInPhoto": "You must be logged in to update your photo.",
+  "failedToUpdatePhoto": "Failed to update photo. Please try again.",
+  "mustBeLoggedInProfile": "You must be logged in to update your profile.",
+  "frequentlyAskedQuestions": "Frequently asked questions",
+  "stillNeedHelp": "Still need help?",
+  "cantFindWhatYouNeed": "Can't find what you're looking for? More ways to reach us will show up here soon.",
+  "faq1Q": "How do I give away an item?",
+  "faq1A": "Tap the purple + button on the home screen, add a few photos, a title, description, category and condition, then post it. It will show up in listings right away.",
+  "faq2Q": "How do I request an item?",
+  "faq2A": "Open any listing and tap \"Give Me\". This sends a request to the owner and lets you chat with them about it.",
+  "faq3Q": "How do I chat with the owner or requester?",
+  "faq3A": "Once a request has been sent, open it from the Inbox or tap \"Message Owner\" on the listing to start chatting.",
+  "faq4Q": "How do I accept a request for my item?",
+  "faq4A": "Open the chat for that request and tap \"Accept & Give This Item\". This marks the item as given and closes any other pending requests on it.",
+  "faq5Q": "How do I save an item to my Wishlist?",
+  "faq5A": "Tap the heart icon on any listing. You can find everything you've saved under Settings > Wishlist.",
+  "faq6Q": "Can I change the app language or theme?",
+  "faq6A": "Yes — go to Settings and open Language or Theme to switch between English and Urdu, or between light, dark, or your device's default.",
+  "faq7Q": "How do I edit my profile?",
+  "faq7A": "Go to Settings > Edit Profile to update your name, photo, and other details.",
+  "faq8Q": "How do I delete my account?",
+  "faq8A": "Go to Settings > Delete Account. This permanently removes your profile and data and cannot be undone.",
+  "faq9Q": "Is my data safe?",
+  "faq9A": "We only use your information to run the app's features. See our Privacy Policy under Settings > Legal for the full details.",
+  "legalLastUpdated": "Last updated: {date}",
+  "@legalLastUpdated": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "legalDate": "September 18, 2026",
+  "privacy1Title": "1. Information We Collect",
+  "privacy1Body": "We collect information you provide directly, such as your name, email address, profile photo, and the listings, requests, or messages you create. We also collect information generated by using the app, such as your wishlist, saved location/province, and app preferences (theme, language).",
+  "privacy2Title": "2. How We Use Your Information",
+  "privacy2Body": "We use your information to operate the app's core features: showing your profile, displaying and matching listings and requests, enabling chat between users, maintaining your wishlist, and remembering your settings.",
+  "privacy3Title": "3. Location Information",
+  "privacy3Body": "If you select a location or province, it is used to show you relevant listings and requests in your area. You can change or clear this at any time in the app.",
+  "privacy4Title": "4. Sharing With Other Users",
+  "privacy4Body": "Certain information is visible to other users as part of the app's normal operation, such as your profile name and photo on listings you post, and any messages you send through chat. We do not sell your personal information to third parties.",
+  "privacy5Title": "5. Data Storage & Security",
+  "privacy5Body": "Your account and app data are stored using Supabase, our backend service provider, with industry-standard security practices. While we take reasonable steps to protect your data, no method of storage or transmission is 100% secure.",
+  "privacy6Title": "6. Your Choices & Rights",
+  "privacy6Body": "You can review and update your profile at any time from Edit Profile in Settings. You may request deletion of your account from Settings, which permanently removes your profile, listings, wishlist, and associated data from our systems.",
+  "privacy7Title": "7. Data Retention",
+  "privacy7Body": "We keep your information for as long as your account is active or as needed to provide the app's features. Once you delete your account, your personal data is removed except where we are required to retain it by law.",
+  "privacy8Title": "8. Children's Privacy",
+  "privacy8Body": "PAO is not directed at children under 13, and we do not knowingly collect personal information from children under 13.",
+  "privacy9Title": "9. Changes to This Policy",
+  "privacy9Body": "We may update this Privacy Policy from time to time. We will reflect the latest revision date at the top of this page.",
+  "privacy10Title": "10. Contact Us",
+  "privacy10Body": "If you have questions about this Privacy Policy or how your data is handled, please reach out through the Help Center in Settings.",
+  "terms1Title": "1. Acceptance of Terms",
+  "terms1Body": "By creating an account or using the PAO app, you agree to be bound by these Terms & Conditions. If you do not agree with any part of these terms, please do not use the app.",
+  "terms2Title": "2. Your Account",
+  "terms2Body": "You must provide accurate information when creating your profile and are responsible for keeping your login credentials secure. You are responsible for all activity that happens under your account.",
+  "terms3Title": "3. Listings & Requests",
+  "terms3Body": "When you add an item, post a request, or interact with listings, you agree that the information you provide is accurate, truthful, and does not violate any law or the rights of others. PAO may remove any listing or request that violates these terms.",
+  "terms4Title": "4. Role of PAO",
+  "terms4Body": "PAO provides a platform that connects users to browse listings, send requests, and chat with one another. PAO is not a party to any agreement, transaction, or exchange between users and does not guarantee the accuracy, quality, safety, or legality of any listing or the conduct of any user.",
+  "terms5Title": "5. Chat & Communication",
+  "terms5Body": "The in-app chat is provided to help users communicate about listings and requests. You agree not to use chat to send abusive, fraudulent, or unlawful content. Messages may be stored to provide and improve the service.",
+  "terms6Title": "6. Wishlist & Personalization",
+  "terms6Body": "Features such as Wishlist and location-based browsing are provided for your convenience and are tied to your account. This data may be used to personalize what you see in the app.",
+  "terms7Title": "7. Account Deletion",
+  "terms7Body": "You may delete your account at any time from Settings. Deleting your account will permanently remove your profile and associated data, as described in our Privacy Policy, and this action cannot be undone.",
+  "terms8Title": "8. Prohibited Conduct",
+  "terms8Body": "You agree not to misuse the app, including but not limited to: posting illegal or misleading listings, harassing other users, attempting to access accounts that are not yours, or interfering with the normal operation of the app.",
+  "terms9Title": "9. Limitation of Liability",
+  "terms9Body": "PAO is provided on an \"as is\" basis. To the fullest extent permitted by law, PAO and its team are not liable for any indirect, incidental, or consequential damages arising from your use of the app or your interactions with other users.",
+  "terms10Title": "10. Changes to These Terms",
+  "terms10Body": "We may update these Terms & Conditions from time to time. Continued use of the app after changes are published means you accept the updated terms.",
+  "terms11Title": "11. Contact Us",
+  "terms11Body": "If you have questions about these Terms & Conditions, please reach out through the Help Center in Settings.",
+  "viewMyProfile": "View my profile"
+}

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_icons.dart';
 import '../../../../core/widgets/app_icon.dart';
+import '../../../../core/l10n/l10n.dart';
 
 class _Faq {
   final String question;
@@ -10,54 +11,16 @@ class _Faq {
   const _Faq(this.question, this.answer);
 }
 
-const _faqs = [
-  _Faq(
-    'How do I give away an item?',
-    'Tap the purple + button on the home screen, add a few photos, a '
-        'title, description, category and condition, then post it. It '
-        'will show up in listings right away.',
-  ),
-  _Faq(
-    'How do I request an item?',
-    'Open any listing and tap "Give Me". This sends a request to the '
-        'owner and lets you chat with them about it.',
-  ),
-  _Faq(
-    'How do I chat with the owner or requester?',
-    'Once a request has been sent, open it from the Inbox or tap '
-        '"Message Owner" on the listing to start chatting.',
-  ),
-  _Faq(
-    'How do I accept a request for my item?',
-    'Open the chat for that request and tap "Accept & Give This Item". '
-        'This marks the item as given and closes any other pending '
-        'requests on it.',
-  ),
-  _Faq(
-    'How do I save an item to my Wishlist?',
-    'Tap the heart icon on any listing. You can find everything you\'ve '
-        'saved under Settings > Wishlist.',
-  ),
-  _Faq(
-    'Can I change the app language or theme?',
-    'Yes — go to Settings and open Language or Theme to switch between '
-        'light, dark, or your device\'s default.',
-  ),
-  _Faq(
-    'How do I edit my profile?',
-    'Go to Settings > Edit Profile to update your name, photo, and '
-        'other details.',
-  ),
-  _Faq(
-    'How do I delete my account?',
-    'Go to Settings > Delete Account. This permanently removes your '
-        'profile and data and cannot be undone.',
-  ),
-  _Faq(
-    'Is my data safe?',
-    'We only use your information to run the app\'s features. See our '
-        'Privacy Policy under Settings > Legal for the full details.',
-  ),
+List<_Faq> _buildFaqs(AppLocalizations l10n) => [
+  _Faq(l10n.faq1Q, l10n.faq1A),
+  _Faq(l10n.faq2Q, l10n.faq2A),
+  _Faq(l10n.faq3Q, l10n.faq3A),
+  _Faq(l10n.faq4Q, l10n.faq4A),
+  _Faq(l10n.faq5Q, l10n.faq5A),
+  _Faq(l10n.faq6Q, l10n.faq6A),
+  _Faq(l10n.faq7Q, l10n.faq7A),
+  _Faq(l10n.faq8Q, l10n.faq8A),
+  _Faq(l10n.faq9Q, l10n.faq9A),
 ];
 
 class HelpCenterScreen extends StatefulWidget {
@@ -72,11 +35,12 @@ class _HelpCenterScreenState extends State<HelpCenterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final faqs = _buildFaqs(context.l10n);
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Help Center',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Text(
+          context.l10n.helpCenter,
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
       body: SafeArea(
@@ -84,7 +48,7 @@ class _HelpCenterScreenState extends State<HelpCenterScreen> {
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
           children: [
             Text(
-              'Frequently asked questions',
+              context.l10n.frequentlyAskedQuestions,
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
@@ -102,11 +66,11 @@ class _HelpCenterScreenState extends State<HelpCenterScreen> {
               clipBehavior: Clip.antiAlias,
               child: Column(
                 children: [
-                  for (var i = 0; i < _faqs.length; i++) ...[
+                  for (var i = 0; i < faqs.length; i++) ...[
                     if (i > 0)
                       Divider(height: 1, indent: 16, color: context.appBorder),
                     _FaqTile(
-                      faq: _faqs[i],
+                      faq: faqs[i],
                       expanded: _expandedIndex == i,
                       onTap: () {
                         setState(() {
@@ -120,7 +84,7 @@ class _HelpCenterScreenState extends State<HelpCenterScreen> {
             ),
             const SizedBox(height: 28),
             Text(
-              'Still need help?',
+              context.l10n.stillNeedHelp,
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
@@ -156,8 +120,7 @@ class _HelpCenterScreenState extends State<HelpCenterScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Can\'t find what you\'re looking for? More ways to '
-                      'reach us will show up here soon.',
+                      context.l10n.cantFindWhatYouNeed,
                       style: TextStyle(
                         fontSize: 13,
                         color: context.appTextSecondary,
@@ -209,10 +172,15 @@ class _FaqTile extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 AnimatedRotation(
-                  turns: expanded ? 0.25 : 0,
+                  turns: expanded
+                      ? (Directionality.of(context) == TextDirection.rtl
+                            ? -0.25
+                            : 0.25)
+                      : 0,
                   duration: const Duration(milliseconds: 200),
                   child: AppIcon(
                     AppIcons.chevronRight,
+                    mirrorInRtl: true,
                     size: 18,
                     color: AppColors.primary,
                   ),

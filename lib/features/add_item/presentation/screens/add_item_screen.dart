@@ -1,4 +1,4 @@
-import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -12,6 +12,8 @@ import '../../../home/data/product_store.dart';
 import '../../../home/domain/category.dart';
 import '../../../home/domain/product.dart';
 import '../provider/add_item_provider.dart';
+import '../../../../core/l10n/l10n.dart';
+import '../../../home/domain/localized_labels.dart';
 
 class AddItemScreen extends StatelessWidget {
   const AddItemScreen({super.key});
@@ -43,6 +45,12 @@ class _AddItemViewState extends State<_AddItemView> {
   String _condition = 'New';
 
   @override
+  void initState() {
+    super.initState();
+    _recoverLostImage();
+  }
+
+  @override
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
@@ -57,11 +65,30 @@ class _AddItemViewState extends State<_AddItemView> {
     );
     if (source == null) return;
 
-    final picked = await _picker.pickImage(source: source, imageQuality: 80);
+    // Cap the resolution: a full-size camera photo is decoded and
+    // re-encoded in memory, which gets the app killed on low-RAM devices.
+    final picked = await _picker.pickImage(
+      source: source,
+      imageQuality: 80,
+      maxWidth: 1600,
+      maxHeight: 1600,
+    );
     if (picked == null) return;
     final bytes = await picked.readAsBytes();
     if (!mounted) return;
     setState(() => _images[index] = bytes);
+  }
+
+  // Android may kill the app while the camera is open; the photo is then
+  // delivered on the next launch through retrieveLostData.
+  Future<void> _recoverLostImage() async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
+    final response = await _picker.retrieveLostData();
+    if (response.isEmpty || response.file == null) return;
+    final bytes = await response.file!.readAsBytes();
+    if (!mounted) return;
+    final slot = _images.indexWhere((image) => image == null);
+    setState(() => _images[slot == -1 ? 0 : slot] = bytes);
   }
 
   void _onRemoveImage(int index) {
@@ -73,7 +100,7 @@ class _AddItemViewState extends State<_AddItemView> {
     if (_selectedCategory == null) {
       AppSnackbar.show(
         context,
-        'Please select a category',
+        context.l10n.pleaseSelectCategory,
         icon: Icons.info_outline,
         color: AppColors.error,
       );
@@ -94,7 +121,7 @@ class _AddItemViewState extends State<_AddItemView> {
     if (post == null) {
       AppSnackbar.show(
         context,
-        provider.errorMessage ?? 'Failed to post item.',
+        provider.errorMessage ?? context.l10n.failedToPostItem,
         icon: Icons.error_outline,
         color: AppColors.error,
       );
@@ -125,7 +152,7 @@ class _AddItemViewState extends State<_AddItemView> {
     });
 
     if (!mounted) return;
-    AppSnackbar.show(context, 'Product posted for free giveaway');
+    AppSnackbar.show(context, context.l10n.productPosted);
   }
 
   @override
@@ -134,9 +161,9 @@ class _AddItemViewState extends State<_AddItemView> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Add Product',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Text(
+          context.l10n.addProduct,
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
       body: SafeArea(
@@ -148,7 +175,7 @@ class _AddItemViewState extends State<_AddItemView> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Give something away for free',
+                  context.l10n.giveSomethingAway,
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -157,16 +184,19 @@ class _AddItemViewState extends State<_AddItemView> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Books, electronics, or anything else someone could use',
+                  context.l10n.addItemSubtitle,
                   style: TextStyle(
                     fontSize: 14,
                     color: context.appTextSecondary,
                   ),
                 ),
                 const SizedBox(height: 24),
-                const Text(
-                  'Photos',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                Text(
+                  context.l10n.photos,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Row(
@@ -184,11 +214,11 @@ class _AddItemViewState extends State<_AddItemView> {
                 const SizedBox(height: 20),
                 CustomTextField(
                   controller: _titleController,
-                  label: 'Title',
-                  hint: 'e.g. Wireless Headphones',
+                  label: context.l10n.title,
+                  hint: context.l10n.titleHint,
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
-                      return 'Title is required';
+                      return context.l10n.titleRequired;
                     }
                     return null;
                   },
@@ -196,20 +226,23 @@ class _AddItemViewState extends State<_AddItemView> {
                 const SizedBox(height: 18),
                 CustomTextField(
                   controller: _descriptionController,
-                  label: 'Description',
-                  hint: 'Describe the item and its condition',
+                  label: context.l10n.description,
+                  hint: context.l10n.describeItemHint,
                   maxLines: 4,
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
-                      return 'Description is required';
+                      return context.l10n.descriptionRequired;
                     }
                     return null;
                   },
                 ),
                 const SizedBox(height: 18),
-                const Text(
-                  'Category',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                Text(
+                  context.l10n.category,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const SizedBox(height: 10),
                 Wrap(
@@ -220,7 +253,7 @@ class _AddItemViewState extends State<_AddItemView> {
                       .map((category) {
                         final selected = category == _selectedCategory;
                         return ChoiceChip(
-                          label: Text(category),
+                          label: Text(categoryLabel(context.l10n, category)),
                           selected: selected,
                           onSelected: (_) {
                             setState(() => _selectedCategory = category);
@@ -232,7 +265,9 @@ class _AddItemViewState extends State<_AddItemView> {
                           labelStyle: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
-                            color: selected ? AppColors.onPrimary : AppColors.primary,
+                            color: selected
+                                ? AppColors.onPrimary
+                                : context.appTextPrimary,
                           ),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(20),
@@ -244,18 +279,21 @@ class _AddItemViewState extends State<_AddItemView> {
                       .toList(),
                 ),
                 const SizedBox(height: 18),
-                const Text(
-                  'Condition',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                Text(
+                  context.l10n.condition,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const SizedBox(height: 10),
                 Row(
                   children: kProductConditions.map((condition) {
                     final selected = condition == _condition;
                     return Padding(
-                      padding: const EdgeInsets.only(right: 10),
+                      padding: const EdgeInsetsDirectional.only(end: 10),
                       child: ChoiceChip(
-                        label: Text(condition),
+                        label: Text(conditionLabel(context.l10n, condition)),
                         selected: selected,
                         onSelected: (_) =>
                             setState(() => _condition = condition),
@@ -266,7 +304,9 @@ class _AddItemViewState extends State<_AddItemView> {
                         labelStyle: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
-                          color: selected ? AppColors.onPrimary : AppColors.primary,
+                          color: selected
+                              ? AppColors.onPrimary
+                              : context.appTextPrimary,
                         ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(20),
@@ -279,7 +319,7 @@ class _AddItemViewState extends State<_AddItemView> {
                 ),
                 const SizedBox(height: 28),
                 PrimaryButton(
-                  label: 'Post for Free',
+                  label: context.l10n.postForFree,
                   isLoading: isSaving,
                   onPressed: _onSavePressed,
                 ),
@@ -322,9 +362,9 @@ class _ImageSourceSheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-          const Text(
-            'Add Photo',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          Text(
+            context.l10n.addPhoto,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 20),
           Row(
@@ -332,7 +372,7 @@ class _ImageSourceSheet extends StatelessWidget {
               Expanded(
                 child: _ImageSourceOption(
                   icon: AppIcons.camera,
-                  label: 'Camera',
+                  label: context.l10n.camera,
                   onTap: () => Navigator.pop(context, ImageSource.camera),
                 ),
               ),
@@ -341,7 +381,7 @@ class _ImageSourceSheet extends StatelessWidget {
                 child: _ImageSourceOption(
                   icon: null,
                   materialIcon: Icons.photo_library_outlined,
-                  label: 'Gallery',
+                  label: context.l10n.gallery,
                   onTap: () => Navigator.pop(context, ImageSource.gallery),
                 ),
               ),
@@ -428,9 +468,9 @@ class _ImageSlot extends StatelessWidget {
                 fit: StackFit.expand,
                 children: [
                   Image.memory(image!, fit: BoxFit.cover),
-                  Positioned(
+                  PositionedDirectional(
                     top: 6,
-                    right: 6,
+                    end: 6,
                     child: GestureDetector(
                       onTap: onRemove,
                       child: Container(
@@ -450,19 +490,22 @@ class _ImageSlot extends StatelessWidget {
                   ),
                 ],
               )
-            : const Center(
+            : Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    AppIcon(
+                    const AppIcon(
                       AppIcons.camera,
                       size: 24,
                       color: AppColors.primary,
                     ),
-                    SizedBox(height: 6),
+                    const SizedBox(height: 6),
                     Text(
-                      'Add Photo',
-                      style: TextStyle(fontSize: 11, color: AppColors.primary),
+                      context.l10n.addPhoto,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppColors.primary,
+                      ),
                     ),
                   ],
                 ),

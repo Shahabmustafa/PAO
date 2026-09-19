@@ -5,6 +5,8 @@ import '../../../../core/widgets/app_icon.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../domain/category.dart';
 import '../../domain/filter_options.dart';
+import '../../../../core/l10n/l10n.dart';
+import '../../domain/localized_labels.dart';
 
 /// Shows the filter bottom sheet and returns the chosen [FilterOptions],
 /// or null if the sheet was dismissed without applying.
@@ -81,9 +83,12 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Filters',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              Text(
+                context.l10n.filters,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               IconButton(
                 icon: const AppIcon(
@@ -101,9 +106,12 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Category',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                  Text(
+                    context.l10n.category,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   const SizedBox(height: 10),
                   Wrap(
@@ -112,7 +120,7 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                     children: kHomeCategories.map((option) {
                       final selected = option == _category;
                       return ChoiceChip(
-                        label: Text(option),
+                        label: Text(categoryLabel(context.l10n, option)),
                         selected: selected,
                         onSelected: (_) => setState(() => _category = option),
                         selectedColor: AppColors.primary,
@@ -124,7 +132,7 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                           fontWeight: FontWeight.w500,
                           color: selected
                               ? AppColors.onPrimary
-                              : AppColors.primary,
+                              : context.appTextPrimary,
                         ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(20),
@@ -135,9 +143,12 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                     }).toList(),
                   ),
                   const SizedBox(height: 24),
-                  const Text(
-                    'Sort By',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                  Text(
+                    context.l10n.sortBy,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   const SizedBox(height: 10),
                   Wrap(
@@ -146,7 +157,7 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                     children: kSortOptions.map((option) {
                       final selected = option == _sortBy;
                       return ChoiceChip(
-                        label: Text(option),
+                        label: Text(sortLabel(context.l10n, option)),
                         selected: selected,
                         onSelected: (_) => setState(() => _sortBy = option),
                         selectedColor: AppColors.primary,
@@ -158,7 +169,7 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                           fontWeight: FontWeight.w500,
                           color: selected
                               ? AppColors.onPrimary
-                              : AppColors.primary,
+                              : context.appTextPrimary,
                         ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(20),
@@ -169,9 +180,12 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                     }).toList(),
                   ),
                   const SizedBox(height: 24),
-                  const Text(
-                    'Condition',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                  Text(
+                    context.l10n.condition,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   const SizedBox(height: 10),
                   Wrap(
@@ -180,7 +194,7 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                     children: kConditionFilters.map((option) {
                       final selected = option == _condition;
                       return ChoiceChip(
-                        label: Text(option),
+                        label: Text(conditionLabel(context.l10n, option)),
                         selected: selected,
                         onSelected: (_) => setState(() => _condition = option),
                         selectedColor: AppColors.primary,
@@ -192,7 +206,7 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                           fontWeight: FontWeight.w500,
                           color: selected
                               ? AppColors.onPrimary
-                              : AppColors.primary,
+                              : context.appTextPrimary,
                         ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(20),
@@ -220,7 +234,7 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                     ),
                   ),
                   child: Text(
-                    'Reset',
+                    context.l10n.reset,
                     style: TextStyle(color: context.appTextPrimary),
                   ),
                 ),
@@ -228,7 +242,7 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
               const SizedBox(width: 12),
               Expanded(
                 child: PrimaryButton(
-                  label: 'Apply',
+                  label: context.l10n.apply,
                   onPressed: () {
                     Navigator.pop(
                       context,

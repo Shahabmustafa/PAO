@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/l10n/l10n.dart';
 
 class LegalSection {
   final String heading;
@@ -34,7 +35,7 @@ class LegalDocumentScreen extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
           children: [
             Text(
-              'Last updated: $lastUpdated',
+              context.l10n.legalLastUpdated(lastUpdated),
               style: TextStyle(fontSize: 13, color: context.appTextSecondary),
             ),
             const SizedBox(height: 20),

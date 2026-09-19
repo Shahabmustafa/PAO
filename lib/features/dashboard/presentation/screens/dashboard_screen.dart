@@ -7,6 +7,7 @@ import '../../../home/presentation/screens/home_screen.dart';
 import '../../../requests/presentation/screens/requests_screen.dart';
 import '../../../settings/presentation/screens/settings_screen.dart';
 import '../../../wishlist/presentation/screens/wishlist_screen.dart';
+import '../../../../core/l10n/l10n.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -77,7 +78,7 @@ class _FloatingNavBar extends StatelessWidget {
                   child: _NavItem(
                     icon: AppIcons.homeOutline,
                     activeIcon: AppIcons.homeFilled,
-                    label: 'Home',
+                    label: context.l10n.navHome,
                     isActive: currentIndex == 0,
                     onTap: () => onTap(0),
                   ),
@@ -86,7 +87,7 @@ class _FloatingNavBar extends StatelessWidget {
                   child: _NavItem(
                     icon: AppIcons.favoriteOutline,
                     activeIcon: AppIcons.favoriteFilled,
-                    label: 'Wishlist',
+                    label: context.l10n.navWishlist,
                     isActive: currentIndex == 1,
                     onTap: () => onTap(1),
                   ),
@@ -95,7 +96,7 @@ class _FloatingNavBar extends StatelessWidget {
                 Expanded(
                   child: _NavItem(
                     icon: AppIcons.inbox,
-                    label: 'Requests',
+                    label: context.l10n.navRequests,
                     isActive: currentIndex == 3,
                     onTap: () => onTap(3),
                   ),
@@ -104,7 +105,7 @@ class _FloatingNavBar extends StatelessWidget {
                   child: _NavItem(
                     icon: AppIcons.settingsOutline,
                     activeIcon: AppIcons.settingsFilled,
-                    label: 'Settings',
+                    label: context.l10n.navSettings,
                     isActive: currentIndex == 4,
                     onTap: () => onTap(4),
                   ),

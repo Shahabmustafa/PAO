@@ -9,6 +9,7 @@ import '../../../../core/widgets/custom_text_field.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/terms_acceptance_checkbox.dart';
 import '../provider/signup_provider.dart';
+import '../../../../core/l10n/l10n.dart';
 
 class SignupScreen extends StatelessWidget {
   const SignupScreen({super.key});
@@ -55,7 +56,7 @@ class _SignupViewState extends State<_SignupView> {
     if (!_acceptedTerms) {
       AppSnackbar.show(
         context,
-        'Please accept the Terms & Conditions and Privacy Policy to continue.',
+        context.l10n.acceptTermsToContinue,
         icon: Icons.info_outline,
         color: AppColors.error,
       );
@@ -76,7 +77,7 @@ class _SignupViewState extends State<_SignupView> {
       case SignupResult.needsEmailConfirmation:
         AppSnackbar.show(
           context,
-          'Check your email to confirm your account, then log in.',
+          context.l10n.checkEmailToConfirm,
           icon: Icons.mark_email_read_outlined,
         );
         Navigator.pop(context);
@@ -107,7 +108,7 @@ class _SignupViewState extends State<_SignupView> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Create Account',
+                  context.l10n.createAccount,
                   style: TextStyle(
                     fontSize: 26,
                     fontWeight: FontWeight.bold,
@@ -116,7 +117,7 @@ class _SignupViewState extends State<_SignupView> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Sign up to get started',
+                  context.l10n.signUpToGetStarted,
                   style: TextStyle(
                     fontSize: 14,
                     color: context.appTextSecondary,
@@ -125,11 +126,11 @@ class _SignupViewState extends State<_SignupView> {
                 const SizedBox(height: 28),
                 CustomTextField(
                   controller: _nameController,
-                  label: 'Full Name',
-                  hint: 'Enter your full name',
+                  label: context.l10n.fullName,
+                  hint: context.l10n.enterFullName,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Name is required';
+                      return context.l10n.nameRequired;
                     }
                     return null;
                   },
@@ -137,15 +138,15 @@ class _SignupViewState extends State<_SignupView> {
                 const SizedBox(height: 18),
                 CustomTextField(
                   controller: _emailController,
-                  label: 'Email',
-                  hint: 'Enter your email',
+                  label: context.l10n.email,
+                  hint: context.l10n.enterYourEmail,
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Email is required';
+                      return context.l10n.emailRequired;
                     }
                     if (!value.contains('@')) {
-                      return 'Enter a valid email';
+                      return context.l10n.enterValidEmail;
                     }
                     return null;
                   },
@@ -153,8 +154,8 @@ class _SignupViewState extends State<_SignupView> {
                 const SizedBox(height: 18),
                 CustomTextField(
                   controller: _passwordController,
-                  label: 'Password',
-                  hint: 'Create a password',
+                  label: context.l10n.password,
+                  hint: context.l10n.createPasswordHint,
                   obscureText: _obscurePassword,
                   suffixIcon: IconButton(
                     icon: AppIcon(
@@ -170,10 +171,10 @@ class _SignupViewState extends State<_SignupView> {
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Password is required';
+                      return context.l10n.passwordRequired;
                     }
                     if (value.length < 6) {
-                      return 'Minimum 6 characters';
+                      return context.l10n.passwordMinLength;
                     }
                     return null;
                   },
@@ -181,8 +182,8 @@ class _SignupViewState extends State<_SignupView> {
                 const SizedBox(height: 18),
                 CustomTextField(
                   controller: _confirmPasswordController,
-                  label: 'Confirm Password',
-                  hint: 'Re-enter your password',
+                  label: context.l10n.confirmPassword,
+                  hint: context.l10n.reenterPassword,
                   obscureText: _obscureConfirmPassword,
                   suffixIcon: IconButton(
                     icon: AppIcon(
@@ -200,7 +201,7 @@ class _SignupViewState extends State<_SignupView> {
                   ),
                   validator: (value) {
                     if (value != _passwordController.text) {
-                      return 'Passwords do not match';
+                      return context.l10n.passwordsDoNotMatch;
                     }
                     return null;
                   },
@@ -214,7 +215,7 @@ class _SignupViewState extends State<_SignupView> {
                 ),
                 const SizedBox(height: 8),
                 PrimaryButton(
-                  label: 'Sign Up',
+                  label: context.l10n.signUp,
                   isLoading: isLoading,
                   onPressed: _onSignupPressed,
                 ),
@@ -223,14 +224,14 @@ class _SignupViewState extends State<_SignupView> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      'Already have an account? ',
+                      context.l10n.haveAccountPrompt,
                       style: TextStyle(color: context.appTextSecondary),
                     ),
                     GestureDetector(
                       onTap: () => Navigator.pop(context),
-                      child: const Text(
-                        'Login',
-                        style: TextStyle(
+                      child: Text(
+                        context.l10n.login,
+                        style: const TextStyle(
                           color: AppColors.primary,
                           fontWeight: FontWeight.bold,
                         ),

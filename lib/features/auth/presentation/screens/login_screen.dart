@@ -9,6 +9,7 @@ import '../../../../core/widgets/custom_text_field.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/terms_acceptance_checkbox.dart';
 import '../provider/login_provider.dart';
+import '../../../../core/l10n/l10n.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -50,7 +51,7 @@ class _LoginViewState extends State<_LoginView> {
     if (!_acceptedTerms) {
       AppSnackbar.show(
         context,
-        'Please accept the Terms & Conditions and Privacy Policy to continue.',
+        context.l10n.acceptTermsToContinue,
         icon: Icons.info_outline,
         color: AppColors.error,
       );
@@ -94,7 +95,7 @@ class _LoginViewState extends State<_LoginView> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Welcome Back',
+                  context.l10n.welcomeBack,
                   style: TextStyle(
                     fontSize: 26,
                     fontWeight: FontWeight.bold,
@@ -103,7 +104,7 @@ class _LoginViewState extends State<_LoginView> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Login to continue',
+                  context.l10n.loginToContinue,
                   style: TextStyle(
                     fontSize: 14,
                     color: context.appTextSecondary,
@@ -112,15 +113,15 @@ class _LoginViewState extends State<_LoginView> {
                 const SizedBox(height: 32),
                 CustomTextField(
                   controller: _emailController,
-                  label: 'Email',
-                  hint: 'Enter your email',
+                  label: context.l10n.email,
+                  hint: context.l10n.enterYourEmail,
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Email is required';
+                      return context.l10n.emailRequired;
                     }
                     if (!value.contains('@')) {
-                      return 'Enter a valid email';
+                      return context.l10n.enterValidEmail;
                     }
                     return null;
                   },
@@ -128,8 +129,8 @@ class _LoginViewState extends State<_LoginView> {
                 const SizedBox(height: 18),
                 CustomTextField(
                   controller: _passwordController,
-                  label: 'Password',
-                  hint: 'Enter your password',
+                  label: context.l10n.password,
+                  hint: context.l10n.enterYourPassword,
                   obscureText: _obscurePassword,
                   suffixIcon: IconButton(
                     icon: AppIcon(
@@ -145,21 +146,21 @@ class _LoginViewState extends State<_LoginView> {
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Password is required';
+                      return context.l10n.passwordRequired;
                     }
                     if (value.length < 6) {
-                      return 'Minimum 6 characters';
+                      return context.l10n.passwordMinLength;
                     }
                     return null;
                   },
                 ),
                 Align(
-                  alignment: Alignment.centerRight,
+                  alignment: AlignmentDirectional.centerEnd,
                   child: TextButton(
                     onPressed: () {
                       Navigator.pushNamed(context, AppRoutes.forgotPassword);
                     },
-                    child: const Text('Forgot Password?'),
+                    child: Text(context.l10n.forgotPasswordQuestion),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -171,7 +172,7 @@ class _LoginViewState extends State<_LoginView> {
                 ),
                 const SizedBox(height: 8),
                 PrimaryButton(
-                  label: 'Login',
+                  label: context.l10n.login,
                   isLoading: isLoading,
                   onPressed: _onLoginPressed,
                 ),
@@ -180,16 +181,16 @@ class _LoginViewState extends State<_LoginView> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      "Don't have an account? ",
+                      context.l10n.noAccountPrompt,
                       style: TextStyle(color: context.appTextSecondary),
                     ),
                     GestureDetector(
                       onTap: () {
                         Navigator.pushNamed(context, AppRoutes.signup);
                       },
-                      child: const Text(
-                        'Sign Up',
-                        style: TextStyle(
+                      child: Text(
+                        context.l10n.signUp,
+                        style: const TextStyle(
                           color: AppColors.primary,
                           fontWeight: FontWeight.bold,
                         ),

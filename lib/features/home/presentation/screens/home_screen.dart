@@ -8,11 +8,13 @@ import '../../../../core/widgets/app_avatar.dart';
 import '../../../../core/widgets/app_icon.dart';
 import '../../../../core/widgets/app_shimmer.dart';
 import '../../../auth/data/repository/auth_repository.dart';
+import '../../../profile/presentation/screens/user_profile_screen.dart';
 import '../../data/product_store.dart';
 import '../../domain/product.dart';
 import '../provider/home_provider.dart';
 import '../widgets/filter_bottom_sheet.dart';
 import '../widgets/product_card.dart';
+import '../../../../core/l10n/l10n.dart';
 
 class HomeScreen extends StatelessWidget {
   final bool autofocusSearch;
@@ -102,9 +104,22 @@ class _HomeViewState extends State<_HomeView> {
                                 return Row(
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
-                                    AppAvatar(
-                                      radius: 24,
-                                      imageUrl: currentUser?.avatarUrl,
+                                    GestureDetector(
+                                      onTap: currentUser == null
+                                          ? null
+                                          : () => Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (_) =>
+                                                    UserProfileScreen(
+                                                      userId: currentUser.id,
+                                                    ),
+                                              ),
+                                            ),
+                                      child: AppAvatar(
+                                        radius: 24,
+                                        imageUrl: currentUser?.avatarUrl,
+                                      ),
                                     ),
                                     const SizedBox(width: 12),
                                     Expanded(
@@ -113,7 +128,7 @@ class _HomeViewState extends State<_HomeView> {
                                             CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            'Welcome back 👋',
+                                            context.l10n.welcomeBackGreeting,
                                             style: TextStyle(
                                               fontSize: 13,
                                               fontWeight: FontWeight.w500,
@@ -123,7 +138,7 @@ class _HomeViewState extends State<_HomeView> {
                                           const SizedBox(height: 2),
                                           Text(
                                             currentUser?.fullName ??
-                                                'Your Name',
+                                                context.l10n.yourName,
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
                                             style: TextStyle(
@@ -166,9 +181,9 @@ class _HomeViewState extends State<_HomeView> {
                                     controller: _searchController,
                                     focusNode: _searchFocusNode,
                                     onChanged: homeProvider.onSearchChanged,
-                                    decoration: const InputDecoration(
-                                      hintText: 'Search...',
-                                      prefixIcon: Padding(
+                                    decoration: InputDecoration(
+                                      hintText: context.l10n.searchHint,
+                                      prefixIcon: const Padding(
                                         padding: EdgeInsets.all(12),
                                         child: AppIcon(
                                           AppIcons.search,
@@ -225,7 +240,7 @@ class _HomeViewState extends State<_HomeView> {
                                   ),
                                   const SizedBox(height: 16),
                                   Text(
-                                    'No products found',
+                                    context.l10n.noProductsFound,
                                     style: TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w600,
@@ -234,7 +249,7 @@ class _HomeViewState extends State<_HomeView> {
                                   ),
                                   const SizedBox(height: 6),
                                   Text(
-                                    'Try a different search term or clear your filters',
+                                    context.l10n.tryDifferentSearch,
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
                                       fontSize: 13,
@@ -251,7 +266,7 @@ class _HomeViewState extends State<_HomeView> {
                                       style: TextButton.styleFrom(
                                         foregroundColor: AppColors.primary,
                                       ),
-                                      child: const Text('Clear search'),
+                                      child: Text(context.l10n.clearSearch),
                                     ),
                                   ],
                                 ],
@@ -377,9 +392,9 @@ class _FilterButton extends StatelessWidget {
               ),
             ),
             if (activeCount > 0)
-              Positioned(
+              PositionedDirectional(
                 top: -4,
-                right: -4,
+                end: -4,
                 child: Container(
                   padding: const EdgeInsets.all(4),
                   decoration: const BoxDecoration(

@@ -3,38 +3,46 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/theme_controller.dart';
 import '../../../../core/widgets/app_icon.dart';
+import '../../../../core/l10n/l10n.dart';
 
 class ThemeScreen extends StatelessWidget {
   const ThemeScreen({super.key});
 
   static const _options = [
-    (
-      mode: ThemeMode.light,
-      title: 'Light',
-      subtitle: 'Bright background, dark text',
-      icon: AppIcons.lightMode,
-    ),
-    (
-      mode: ThemeMode.dark,
-      title: 'Dark',
-      subtitle: 'Dark background, light text',
-      icon: AppIcons.darkMode,
-    ),
-    (
-      mode: ThemeMode.system,
-      title: 'System Default',
-      subtitle: 'Matches your device setting',
-      icon: AppIcons.settingsSuggest,
-    ),
+    (mode: ThemeMode.light, icon: AppIcons.lightMode),
+    (mode: ThemeMode.dark, icon: AppIcons.darkMode),
+    (mode: ThemeMode.system, icon: AppIcons.settingsSuggest),
   ];
+
+  static String _title(BuildContext context, ThemeMode mode) {
+    switch (mode) {
+      case ThemeMode.light:
+        return context.l10n.themeLight;
+      case ThemeMode.dark:
+        return context.l10n.themeDark;
+      case ThemeMode.system:
+        return context.l10n.themeSystem;
+    }
+  }
+
+  static String _subtitle(BuildContext context, ThemeMode mode) {
+    switch (mode) {
+      case ThemeMode.light:
+        return context.l10n.themeLightSubtitle;
+      case ThemeMode.dark:
+        return context.l10n.themeDarkSubtitle;
+      case ThemeMode.system:
+        return context.l10n.themeSystemSubtitle;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Theme',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Text(
+          context.l10n.theme,
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
       body: SafeArea(
@@ -45,7 +53,7 @@ class ThemeScreen extends StatelessWidget {
               padding: const EdgeInsets.all(20),
               children: [
                 Text(
-                  'Choose how PAO looks',
+                  context.l10n.chooseHowPaoLooks,
                   style: TextStyle(
                     fontSize: 14,
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -55,8 +63,8 @@ class ThemeScreen extends StatelessWidget {
                 for (final option in _options) ...[
                   _ThemeOptionCard(
                     icon: option.icon,
-                    title: option.title,
-                    subtitle: option.subtitle,
+                    title: _title(context, option.mode),
+                    subtitle: _subtitle(context, option.mode),
                     selected: currentMode == option.mode,
                     onTap: () => ThemeController.setThemeMode(option.mode),
                   ),

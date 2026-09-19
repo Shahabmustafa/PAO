@@ -7,6 +7,7 @@ import '../../../../core/widgets/app_snackbar.dart';
 import '../../../../core/widgets/custom_text_field.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../provider/forgot_password_provider.dart';
+import '../../../../core/l10n/l10n.dart';
 
 class ForgotPasswordScreen extends StatelessWidget {
   const ForgotPasswordScreen({super.key});
@@ -83,7 +84,7 @@ class _ForgotPasswordViewState extends State<_ForgotPasswordView> {
                 ),
                 const SizedBox(height: 20),
                 Text(
-                  'Forgot Password?',
+                  context.l10n.forgotPasswordQuestion,
                   style: TextStyle(
                     fontSize: 26,
                     fontWeight: FontWeight.bold,
@@ -92,7 +93,7 @@ class _ForgotPasswordViewState extends State<_ForgotPasswordView> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  "Enter your email and we'll send you a link to reset your password.",
+                  context.l10n.forgotPasswordInstructions,
                   style: TextStyle(
                     fontSize: 14,
                     color: context.appTextSecondary,
@@ -101,15 +102,15 @@ class _ForgotPasswordViewState extends State<_ForgotPasswordView> {
                 const SizedBox(height: 32),
                 CustomTextField(
                   controller: _emailController,
-                  label: 'Email',
-                  hint: 'Enter your email',
+                  label: context.l10n.email,
+                  hint: context.l10n.enterYourEmail,
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Email is required';
+                      return context.l10n.emailRequired;
                     }
                     if (!value.contains('@')) {
-                      return 'Enter a valid email';
+                      return context.l10n.enterValidEmail;
                     }
                     return null;
                   },
@@ -122,18 +123,21 @@ class _ForgotPasswordViewState extends State<_ForgotPasswordView> {
                       color: Colors.green.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Row(
+                    child: Row(
                       children: [
-                        AppIcon(
+                        const AppIcon(
                           AppIcons.checkCircle,
                           color: Colors.green,
                           size: 20,
                         ),
-                        SizedBox(width: 8),
+                        const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'Reset link sent! Check your inbox.',
-                            style: TextStyle(color: Colors.green, fontSize: 13),
+                            context.l10n.resetLinkSent,
+                            style: const TextStyle(
+                              color: Colors.green,
+                              fontSize: 13,
+                            ),
                           ),
                         ),
                       ],
@@ -142,7 +146,7 @@ class _ForgotPasswordViewState extends State<_ForgotPasswordView> {
                 ],
                 const SizedBox(height: 28),
                 PrimaryButton(
-                  label: 'Send Reset Link',
+                  label: context.l10n.sendResetLink,
                   isLoading: state.isLoading,
                   onPressed: _onResetPressed,
                 ),
@@ -150,9 +154,9 @@ class _ForgotPasswordViewState extends State<_ForgotPasswordView> {
                 Center(
                   child: GestureDetector(
                     onTap: () => Navigator.pop(context),
-                    child: const Text(
-                      'Back to Login',
-                      style: TextStyle(
+                    child: Text(
+                      context.l10n.backToLogin,
+                      style: const TextStyle(
                         color: AppColors.primary,
                         fontWeight: FontWeight.bold,
                       ),

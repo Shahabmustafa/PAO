@@ -7,7 +7,9 @@ import '../../../../core/widgets/app_snackbar.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../feedback/presentation/widgets/feedback_dialog.dart';
 import '../../../requests/data/model/request_model.dart';
+import '../../data/model/message_model.dart';
 import '../provider/chat_provider.dart';
+import '../../../../core/l10n/l10n.dart';
 
 class ChatScreen extends StatelessWidget {
   final RequestModel request;
@@ -59,18 +61,16 @@ class _ChatViewState extends State<_ChatView> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Give this item'),
-        content: Text(
-          'Give "${widget.productName}" to this person? Other requests for it will be closed.',
-        ),
+        title: Text(context.l10n.giveThisItem),
+        content: Text(context.l10n.giveThisItemConfirm(widget.productName)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancel'),
+            child: Text(context.l10n.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Yes, Give'),
+            child: Text(context.l10n.yesGive),
           ),
         ],
       ),
@@ -83,15 +83,51 @@ class _ChatViewState extends State<_ChatView> {
     if (!context.mounted) return;
 
     if (success) {
-      AppSnackbar.show(context, 'Item marked as given');
+      AppSnackbar.show(context, context.l10n.itemMarkedAsGiven);
     } else {
       AppSnackbar.show(
         context,
-        provider.errorMessage ?? 'Failed to update. Please try again.',
+        provider.errorMessage ?? context.l10n.failedToUpdate,
         icon: Icons.error_outline,
         color: AppColors.error,
       );
     }
+  }
+
+  Future<void> _onDeleteMessagePressed(
+    BuildContext context,
+    MessageModel message,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(context.l10n.deleteMessage),
+        content: Text(context.l10n.deleteMessageConfirm),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(context.l10n.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(
+              context.l10n.delete,
+              style: const TextStyle(color: AppColors.error),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    final deleted = await context.read<ChatProvider>().deleteMessage(message);
+    if (deleted || !context.mounted) return;
+    AppSnackbar.show(
+      context,
+      context.l10n.failedToDeleteMessage,
+      icon: Icons.error_outline,
+      color: AppColors.error,
+    );
   }
 
   Future<void> _onLeaveFeedbackPressed(BuildContext context) async {
@@ -107,7 +143,7 @@ class _ChatViewState extends State<_ChatView> {
     );
     if (submitted == true && context.mounted) {
       provider.markFeedbackGiven();
-      AppSnackbar.show(context, 'Thanks for your feedback!');
+      AppSnackbar.show(context, context.l10n.thanksForFeedback);
     }
   }
 
@@ -126,7 +162,10 @@ class _ChatViewState extends State<_ChatView> {
                     height: 32,
                     borderRadius: BorderRadius.all(Radius.circular(16)),
                   )
-                : AppAvatar(radius: 16, imageUrl: provider.otherProfile?.avatarUrl),
+                : AppAvatar(
+                    radius: 16,
+                    imageUrl: provider.otherProfile?.avatarUrl,
+                  ),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
@@ -140,7 +179,7 @@ class _ChatViewState extends State<_ChatView> {
                           borderRadius: BorderRadius.all(Radius.circular(4)),
                         )
                       : Text(
-                          provider.otherProfile?.fullName ?? 'PAO User',
+                          provider.otherProfile?.fullName ?? context.l10n.paoUser,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(fontSize: 15),
@@ -171,7 +210,7 @@ class _ChatViewState extends State<_ChatView> {
                 padding: const EdgeInsets.all(12),
                 color: AppColors.primary.withValues(alpha: 0.08),
                 child: PrimaryButton(
-                  label: 'Accept & Give This Item',
+                  label: context.l10n.acceptAndGiveThisItem,
                   isLoading: provider.isAccepting,
                   onPressed: () => _onAcceptPressed(context),
                 ),
@@ -184,7 +223,7 @@ class _ChatViewState extends State<_ChatView> {
                 padding: const EdgeInsets.all(12),
                 color: Colors.green.withValues(alpha: 0.08),
                 child: PrimaryButton(
-                  label: 'You received this — Leave Feedback',
+                  label: context.l10n.receivedLeaveFeedback,
                   onPressed: () => _onLeaveFeedbackPressed(context),
                 ),
               ),
@@ -192,80 +231,86 @@ class _ChatViewState extends State<_ChatView> {
               child: provider.isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : provider.messages.isEmpty
-                      ? Center(
-                          child: Text(
-                            'Say hello 👋',
-                            style: TextStyle(color: context.appTextSecondary),
-                          ),
-                        )
-                      : ListView.builder(
-                          reverse: true,
-                          padding: const EdgeInsets.all(16),
-                          itemCount: provider.messages.length,
-                          itemBuilder: (context, index) {
-                            final message = provider
-                                .messages[provider.messages.length - 1 - index];
-                            final isMine = message.senderId == currentUserId;
-                            return Align(
-                              alignment: isMine
-                                  ? Alignment.centerRight
-                                  : Alignment.centerLeft,
-                              child: Container(
-                                margin: const EdgeInsets.symmetric(vertical: 4),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                  vertical: 10,
-                                ),
-                                constraints: BoxConstraints(
-                                  maxWidth:
-                                      MediaQuery.of(context).size.width * 0.75,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: isMine
-                                      ? AppColors.primary
-                                      : context.appSurface,
-                                  border: isMine
-                                      ? null
-                                      : Border.all(color: context.appBorder),
-                                  borderRadius: BorderRadius.only(
-                                    topLeft: const Radius.circular(16),
-                                    topRight: const Radius.circular(16),
-                                    bottomLeft:
-                                        Radius.circular(isMine ? 16 : 4),
-                                    bottomRight:
-                                        Radius.circular(isMine ? 4 : 16),
-                                  ),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      message.body,
-                                      style: TextStyle(
-                                        fontSize: 14.5,
-                                        height: 1.3,
-                                        color: isMine
-                                            ? Colors.white
-                                            : context.appTextPrimary,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      _formatTime(message.createdAt),
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        color: isMine
-                                            ? Colors.white.withValues(alpha: 0.7)
-                                            : context.appTextSecondary,
-                                      ),
-                                    ),
-                                  ],
+                  ? Center(
+                      child: Text(
+                        context.l10n.sayHello,
+                        style: TextStyle(color: context.appTextSecondary),
+                      ),
+                    )
+                  : ListView.builder(
+                      reverse: true,
+                      padding: const EdgeInsets.all(16),
+                      itemCount: provider.messages.length,
+                      itemBuilder: (context, index) {
+                        final message = provider
+                            .messages[provider.messages.length - 1 - index];
+                        final isMine = message.senderId == currentUserId;
+                        return Align(
+                          alignment: isMine
+                              ? AlignmentDirectional.centerEnd
+                              : AlignmentDirectional.centerStart,
+                          child: GestureDetector(
+                            onLongPress: isMine
+                                ? () =>
+                                      _onDeleteMessagePressed(context, message)
+                                : null,
+                            child: Container(
+                              margin: const EdgeInsets.symmetric(vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 10,
+                              ),
+                              constraints: BoxConstraints(
+                                maxWidth:
+                                    MediaQuery.of(context).size.width * 0.75,
+                              ),
+                              decoration: BoxDecoration(
+                                color: isMine
+                                    ? AppColors.primary
+                                    : context.appSurface,
+                                border: isMine
+                                    ? null
+                                    : Border.all(color: context.appBorder),
+                                borderRadius: BorderRadiusDirectional.only(
+                                  topStart: const Radius.circular(16),
+                                  topEnd: const Radius.circular(16),
+                                  bottomStart: Radius.circular(isMine ? 16 : 4),
+                                  bottomEnd: Radius.circular(isMine ? 4 : 16),
                                 ),
                               ),
-                            );
-                          },
-                        ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    message.body,
+                                    style: TextStyle(
+                                      fontSize: 14.5,
+                                      height: 1.3,
+                                      color: isMine
+                                          ? AppColors.onPrimary
+                                          : context.appTextPrimary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    _formatTime(message.createdAt),
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: isMine
+                                          ? AppColors.onPrimary.withValues(
+                                              alpha: 0.6,
+                                            )
+                                          : context.appTextSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
             ),
             SafeArea(
               top: false,
@@ -277,8 +322,8 @@ class _ChatViewState extends State<_ChatView> {
                       child: TextField(
                         controller: _messageController,
                         textCapitalization: TextCapitalization.sentences,
-                        decoration: const InputDecoration(
-                          hintText: 'Type a message...',
+                        decoration: InputDecoration(
+                          hintText: context.l10n.typeMessageHint,
                         ),
                         onSubmitted: (value) {
                           context.read<ChatProvider>().sendMessage(value);
@@ -291,8 +336,8 @@ class _ChatViewState extends State<_ChatView> {
                       icon: const Icon(Icons.send, color: AppColors.primary),
                       onPressed: () {
                         context.read<ChatProvider>().sendMessage(
-                              _messageController.text,
-                            );
+                          _messageController.text,
+                        );
                         _messageController.clear();
                       },
                     ),

@@ -11,6 +11,7 @@ import '../../../../core/widgets/custom_text_field.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../auth/data/repository/auth_repository.dart';
 import '../provider/edit_profile_provider.dart';
+import '../../../../core/l10n/l10n.dart';
 
 class EditProfileScreen extends StatelessWidget {
   const EditProfileScreen({super.key});
@@ -111,7 +112,7 @@ class _EditProfileViewState extends State<_EditProfileView> {
     if (!success) {
       AppSnackbar.show(
         context,
-        provider.errorMessage ?? 'Failed to update profile.',
+        provider.errorMessage ?? context.l10n.failedToUpdateProfile,
         icon: Icons.error_outline,
         color: AppColors.error,
       );
@@ -121,8 +122,8 @@ class _EditProfileViewState extends State<_EditProfileView> {
     AppSnackbar.show(
       context,
       provider.emailChangeNeedsConfirmation
-          ? 'Profile updated. Check your new email to confirm the change.'
-          : 'Profile updated',
+          ? context.l10n.profileUpdatedConfirmEmail
+          : context.l10n.profileUpdated,
     );
     Navigator.pop(context);
   }
@@ -137,9 +138,9 @@ class _EditProfileViewState extends State<_EditProfileView> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Edit Profile',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Text(
+          context.l10n.editProfile,
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
       body: SafeArea(
@@ -170,9 +171,9 @@ class _EditProfileViewState extends State<_EditProfileView> {
                                     )
                                   : null,
                             ),
-                            Positioned(
+                            PositionedDirectional(
                               bottom: 0,
-                              right: 0,
+                              end: 0,
                               child: Container(
                                 height: 32,
                                 width: 32,
@@ -205,11 +206,11 @@ class _EditProfileViewState extends State<_EditProfileView> {
                       const SizedBox(height: 32),
                       CustomTextField(
                         controller: _nameController,
-                        label: 'Full Name',
-                        hint: 'Enter your full name',
+                        label: context.l10n.fullName,
+                        hint: context.l10n.enterFullName,
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
-                            return 'Name is required';
+                            return context.l10n.nameRequired;
                           }
                           return null;
                         },
@@ -217,15 +218,15 @@ class _EditProfileViewState extends State<_EditProfileView> {
                       const SizedBox(height: 18),
                       CustomTextField(
                         controller: _emailController,
-                        label: 'Email',
-                        hint: 'Enter your email',
+                        label: context.l10n.email,
+                        hint: context.l10n.enterYourEmail,
                         keyboardType: TextInputType.emailAddress,
                         validator: (value) {
                           if (value == null || value.isEmpty) {
-                            return 'Email is required';
+                            return context.l10n.emailRequired;
                           }
                           if (!value.contains('@')) {
-                            return 'Enter a valid email';
+                            return context.l10n.enterValidEmail;
                           }
                           return null;
                         },
@@ -233,19 +234,19 @@ class _EditProfileViewState extends State<_EditProfileView> {
                       const SizedBox(height: 18),
                       CustomTextField(
                         controller: _phoneController,
-                        label: 'Phone (optional)',
-                        hint: 'Enter your phone number',
+                        label: context.l10n.phoneOptional,
+                        hint: context.l10n.enterPhoneHint,
                         keyboardType: TextInputType.phone,
                       ),
                       const SizedBox(height: 18),
                       CustomTextField(
                         controller: _bioController,
-                        label: 'Bio (optional)',
-                        hint: 'Tell us a little about yourself',
+                        label: context.l10n.bioOptional,
+                        hint: context.l10n.bioHint,
                       ),
                       const SizedBox(height: 28),
                       PrimaryButton(
-                        label: 'Save Changes',
+                        label: context.l10n.saveChanges,
                         isLoading: isSaving,
                         onPressed: _onSavePressed,
                       ),

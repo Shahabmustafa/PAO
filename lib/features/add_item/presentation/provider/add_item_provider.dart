@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import '../../../auth/data/repository/auth_repository.dart';
 import '../../data/model/post_model.dart';
 import '../../data/repository/post_repository.dart';
+import '../../../../core/l10n/l10n.dart';
 
 class AddItemProvider extends ChangeNotifier {
   AddItemProvider({PostRepository? repository, AuthRepository? authRepository})
@@ -23,7 +24,7 @@ class AddItemProvider extends ChangeNotifier {
   }) async {
     final userId = _authRepository.currentUser?.id;
     if (userId == null) {
-      errorMessage = 'You must be logged in to post an item.';
+      errorMessage = l10nNow.mustBeLoggedInToPost;
       notifyListeners();
       return null;
     }
@@ -42,7 +43,7 @@ class AddItemProvider extends ChangeNotifier {
         images: images,
       );
     } catch (_) {
-      errorMessage = 'Something went wrong. Please try again.';
+      errorMessage = l10nNow.somethingWentWrong;
       return null;
     } finally {
       isLoading = false;

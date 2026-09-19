@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/utils/auth_error_message.dart';
 import '../../data/repository/auth_repository.dart';
+import '../../../../core/l10n/l10n.dart';
 
 class LoginProvider extends ChangeNotifier {
   LoginProvider({AuthRepository? repository})
@@ -24,7 +25,7 @@ class LoginProvider extends ChangeNotifier {
       errorMessage = authErrorMessage(e);
       return false;
     } catch (_) {
-      errorMessage = 'Something went wrong. Please try again.';
+      errorMessage = l10nNow.somethingWentWrong;
       return false;
     } finally {
       isLoading = false;

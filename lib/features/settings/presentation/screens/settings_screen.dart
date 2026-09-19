@@ -9,6 +9,7 @@ import '../../../../core/widgets/app_avatar.dart';
 import '../../../../core/widgets/app_icon.dart';
 import '../../../../core/widgets/app_snackbar.dart';
 import '../../../auth/data/repository/auth_repository.dart';
+import '../../../profile/presentation/screens/user_profile_screen.dart';
 import '../../../requests/data/request_store.dart';
 import '../../../wishlist/data/wishlist_store.dart';
 import '../../../wishlist/presentation/screens/wishlist_screen.dart';
@@ -18,6 +19,7 @@ import 'edit_profile_screen.dart';
 import 'help_center_screen.dart';
 import 'language_screen.dart';
 import 'theme_screen.dart';
+import '../../../../core/l10n/l10n.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -33,20 +35,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Delete Account'),
-        content: const Text(
-          'This will permanently delete your account and all your data. This action cannot be undone.',
-        ),
+        title: Text(context.l10n.deleteAccount),
+        content: Text(context.l10n.deleteAccountConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancel'),
+            child: Text(context.l10n.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text(
-              'Delete',
-              style: TextStyle(color: AppColors.error),
+            child: Text(
+              context.l10n.delete,
+              style: const TextStyle(color: AppColors.error),
             ),
           ),
         ],
@@ -77,21 +77,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
       Navigator.pop(context);
       AppSnackbar.show(
         context,
-        'Failed to delete account. Please try again.',
+        context.l10n.failedToDeleteAccount,
         icon: Icons.error_outline,
         color: AppColors.error,
       );
     }
   }
 
-  String _themeModeLabel(ThemeMode mode) {
+  String _themeModeLabel(BuildContext context, ThemeMode mode) {
     switch (mode) {
       case ThemeMode.light:
-        return 'Light';
+        return context.l10n.themeLight;
       case ThemeMode.dark:
-        return 'Dark';
+        return context.l10n.themeDark;
       case ThemeMode.system:
-        return 'System Default';
+        return context.l10n.themeSystem;
     }
   }
 
@@ -99,9 +99,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Settings',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Text(
+          context.l10n.settings,
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
       body: SafeArea(
@@ -113,43 +113,78 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: _SettingsCard(
                 children: [
                   Padding(
-                    padding: const EdgeInsets.all(16),
+                    padding: EdgeInsets.zero,
                     child: StreamBuilder<AuthState>(
                       stream: _authRepository.authStateChanges,
                       builder: (context, _) {
                         final currentUser = _authRepository.currentUser;
-                        return Row(
-                          children: [
-                            AppAvatar(
-                              radius: 30,
-                              imageUrl: currentUser?.avatarUrl,
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    currentUser?.fullName ?? 'Your Name',
-                                    style: TextStyle(
-                                      fontSize: 17,
-                                      fontWeight: FontWeight.bold,
-                                      color: context.appTextPrimary,
+                        return InkWell(
+                          onTap: currentUser == null
+                              ? null
+                              : () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => UserProfileScreen(
+                                      userId: currentUser.id,
                                     ),
                                   ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    currentUser?.email ??
-                                        'your.email@example.com',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: context.appTextSecondary,
-                                    ),
+                                ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Row(
+                              children: [
+                                AppAvatar(
+                                  radius: 30,
+                                  imageUrl: currentUser?.avatarUrl,
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        currentUser?.fullName ??
+                                            context.l10n.yourName,
+                                        style: TextStyle(
+                                          fontSize: 17,
+                                          fontWeight: FontWeight.bold,
+                                          color: context.appTextPrimary,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        currentUser?.email ??
+                                            'your.email@example.com',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: context.appTextSecondary,
+                                        ),
+                                      ),
+                                      if (currentUser != null) ...[
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          context.l10n.viewMyProfile,
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                            color: AppColors.primary,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
                                   ),
-                                ],
-                              ),
+                                ),
+                                if (currentUser != null)
+                                  const AppIcon(
+                                    AppIcons.chevronRight,
+                                    mirrorInRtl: true,
+                                    size: 20,
+                                    color: AppColors.primary,
+                                  ),
+                              ],
                             ),
-                          ],
+                          ),
                         );
                       },
                     ),
@@ -158,14 +193,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
             const SizedBox(height: 24),
-            const _SettingsSectionLabel('General'),
+            _SettingsSectionLabel(context.l10n.sectionGeneral),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: _SettingsCard(
                 children: [
                   _SettingsTile(
                     icon: AppIcons.person,
-                    label: 'Edit Profile',
+                    label: context.l10n.editProfile,
                     onTap: () async {
                       await Navigator.push(
                         context,
@@ -178,7 +213,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   _SettingsTile(
                     icon: AppIcons.favoriteOutline,
-                    label: 'Wishlist',
+                    label: context.l10n.wishlist,
                     onTap: () {
                       Navigator.push(
                         context,
@@ -193,8 +228,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     builder: (context, language, _) {
                       return _SettingsTile(
                         icon: AppIcons.language,
-                        label: 'Language',
-                        value: language.name,
+                        label: context.l10n.language,
+                        value: language.nativeName,
                         onTap: () {
                           Navigator.push(
                             context,
@@ -211,8 +246,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     builder: (context, mode, _) {
                       return _SettingsTile(
                         icon: AppIcons.darkMode,
-                        label: 'Theme',
-                        value: _themeModeLabel(mode),
+                        label: context.l10n.theme,
+                        value: _themeModeLabel(context, mode),
                         onTap: () {
                           Navigator.push(
                             context,
@@ -227,32 +262,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ],
               ),
             ),
-            const _SettingsSectionLabel('Legal'),
+            _SettingsSectionLabel(context.l10n.sectionLegal),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: _SettingsCard(
                 children: [
                   _SettingsTile(
                     icon: AppIcons.description,
-                    label: 'Terms & Conditions',
+                    label: context.l10n.termsAndConditions,
                     onTap: () => LegalLinks.openTerms(context),
                   ),
                   _SettingsTile(
                     icon: AppIcons.privacyTip,
-                    label: 'Privacy Policy',
+                    label: context.l10n.privacyPolicy,
                     onTap: () => LegalLinks.openPrivacyPolicy(context),
                   ),
                 ],
               ),
             ),
-            const _SettingsSectionLabel('Support'),
+            _SettingsSectionLabel(context.l10n.sectionSupport),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: _SettingsCard(
                 children: [
                   _SettingsTile(
                     icon: AppIcons.help,
-                    label: 'Help Center',
+                    label: context.l10n.helpCenter,
                     onTap: () {
                       Navigator.push(
                         context,
@@ -264,7 +299,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   _SettingsTile(
                     icon: AppIcons.info,
-                    label: 'About',
+                    label: context.l10n.about,
                     value: 'v1.0.0',
                     onTap: () {},
                   ),
@@ -278,7 +313,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 children: [
                   _SettingsTile(
                     icon: AppIcons.logout,
-                    label: 'Logout',
+                    label: context.l10n.logout,
                     iconColor: AppColors.error,
                     labelColor: AppColors.error,
                     onTap: () async {
@@ -295,7 +330,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   _SettingsTile(
                     icon: AppIcons.delete,
-                    label: 'Delete Account',
+                    label: context.l10n.deleteAccount,
                     iconColor: AppColors.error,
                     labelColor: AppColors.error,
                     onTap: () => _confirmDeleteAccount(context),
@@ -349,8 +384,7 @@ class _SettingsCard extends StatelessWidget {
       child: Column(
         children: [
           for (var i = 0; i < children.length; i++) ...[
-            if (i > 0)
-              Divider(height: 1, indent: 56, color: context.appBorder),
+            if (i > 0) Divider(height: 1, indent: 56, color: context.appBorder),
             children[i],
           ],
         ],
@@ -401,6 +435,7 @@ class _SettingsTile extends StatelessWidget {
           ],
           const AppIcon(
             AppIcons.chevronRight,
+            mirrorInRtl: true,
             size: 20,
             color: AppColors.primary,
           ),

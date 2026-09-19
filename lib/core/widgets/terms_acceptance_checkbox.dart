@@ -2,6 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../utils/legal_links.dart';
+import '../l10n/l10n.dart';
 
 /// A checkbox + inline text used on the login and signup screens to make the
 /// user acknowledge the app's Terms & Conditions and Privacy Policy before
@@ -70,18 +71,19 @@ class _TermsAcceptanceCheckboxState extends State<TermsAcceptanceCheckbox> {
               text: TextSpan(
                 style: textStyle,
                 children: [
-                  const TextSpan(text: 'I agree to the '),
+                  TextSpan(text: context.l10n.termsAgreePrefix),
                   TextSpan(
-                    text: 'Terms & Conditions',
+                    text: context.l10n.termsAndConditions,
                     style: linkStyle,
                     recognizer: _termsRecognizer,
                   ),
-                  const TextSpan(text: ' and '),
+                  TextSpan(text: context.l10n.termsAnd),
                   TextSpan(
-                    text: 'Privacy Policy',
+                    text: context.l10n.privacyPolicy,
                     style: linkStyle,
                     recognizer: _privacyRecognizer,
                   ),
+                  TextSpan(text: context.l10n.termsAgreeSuffix),
                 ],
               ),
             ),

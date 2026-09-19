@@ -1,15 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_avatar.dart';
 import '../../../../core/widgets/app_shimmer.dart';
+import '../../../add_item/data/model/post_model.dart';
 import '../../../add_item/data/repository/post_repository.dart';
 import '../../../feedback/data/model/feedback_model.dart';
 import '../../../feedback/data/repository/feedback_repository.dart';
+import '../../../home/data/product_store.dart';
+import '../../../home/domain/product.dart';
+import '../../../home/presentation/widgets/product_card.dart';
 import '../../../settings/data/model/profile_model.dart';
 import '../../../settings/data/repository/profile_repository.dart';
+import '../../../../core/l10n/l10n.dart';
 
-/// Public profile of a user: name/photo, how many items they've donated,
-/// their overall feedback rating, and the list of feedback they've received.
+/// Profile of a user: name/photo, how many items they've donated, their
+/// overall feedback rating, and tabs for the items they've posted, the
+/// items they've given away, and the feedback they've received.
 class UserProfileScreen extends StatefulWidget {
   final String userId;
 
@@ -27,6 +34,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   bool _isLoading = true;
   ProfileModel? _profile;
   int _donatedCount = 0;
+  List<Product> _posted = const [];
+  List<Product> _givenAway = const [];
   List<FeedbackModel> _feedback = const [];
   Map<String, ProfileModel> _reviewerProfiles = const {};
 
@@ -42,10 +51,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         _profileRepository.fetchPublicProfile(widget.userId),
         _postRepository.fetchDonatedCount(widget.userId),
         _feedbackRepository.fetchForUser(widget.userId),
+        _postRepository.fetchPostsByUser(widget.userId),
       ]);
       final profile = results[0] as ProfileModel?;
       final donatedCount = results[1] as int;
       final feedback = results[2] as List<FeedbackModel>;
+      final products = (results[3] as List<PostModel>)
+          .map(ProductStore.productFromPost)
+          .toList();
 
       final reviewerIds = feedback.map((f) => f.fromUserId).toSet().toList();
       final reviewerProfiles = await _profileRepository.fetchPublicProfiles(
@@ -56,6 +69,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       setState(() {
         _profile = profile;
         _donatedCount = donatedCount;
+        _posted = products.where((p) => !p.isGiven).toList();
+        _givenAway = products.where((p) => p.isGiven).toList();
         _feedback = feedback;
         _reviewerProfiles = reviewerProfiles;
         _isLoading = false;
@@ -76,81 +91,189 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Profile',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Text(
+          context.l10n.profile,
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
       body: SafeArea(
         child: _isLoading
             ? const _UserProfileShimmer()
-            : ListView(
-                padding: const EdgeInsets.all(20),
-                children: [
-                  Center(
-                    child: Column(
-                      children: [
-                        AppAvatar(radius: 44, imageUrl: _profile?.avatarUrl),
-                        const SizedBox(height: 12),
-                        Text(
-                          _profile?.fullName ?? 'PAO User',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: context.appTextPrimary,
+            : DefaultTabController(
+                length: 3,
+                child: NestedScrollView(
+                  headerSliverBuilder: (context, _) => [
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          children: [
+                            AppAvatar(
+                              radius: 44,
+                              imageUrl: _profile?.avatarUrl,
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              _profile?.fullName ?? context.l10n.paoUser,
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: context.appTextPrimary,
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _StatCard(
+                                    value: '$_donatedCount',
+                                    label: context.l10n.donated,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: _StatCard(
+                                    value: _feedback.isEmpty
+                                        ? '—'
+                                        : _averageRating.toStringAsFixed(1),
+                                    label: _feedback.isEmpty
+                                        ? context.l10n.noRatings
+                                        : context.l10n.reviewCount(
+                                            _feedback.length,
+                                          ),
+                                    icon: _feedback.isEmpty
+                                        ? null
+                                        : Icons.star_rounded,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    SliverPersistentHeader(
+                      pinned: true,
+                      delegate: _TabBarDelegate(
+                        background: context.appBackground,
+                        tabBar: TabBar(
+                          indicatorColor: AppColors.primary,
+                          labelColor: context.appTextPrimary,
+                          unselectedLabelColor: context.appTextSecondary,
+                          dividerColor: context.appBorder,
+                          labelStyle: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
                           ),
+                          tabs: [
+                            Tab(text: context.l10n.tabPosts),
+                            Tab(text: context.l10n.tabGivenAway),
+                            Tab(text: context.l10n.feedback),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 24),
-                  Row(
+                  ],
+                  body: TabBarView(
                     children: [
-                      Expanded(
-                        child: _StatCard(
-                          value: '$_donatedCount',
-                          label: 'Donated',
-                        ),
+                      _ProductsTab(
+                        products: _posted,
+                        emptyText: context.l10n.noPostsYet,
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _StatCard(
-                          value: _feedback.isEmpty
-                              ? '—'
-                              : _averageRating.toStringAsFixed(1),
-                          label: _feedback.isEmpty
-                              ? 'No ratings'
-                              : '${_feedback.length} review${_feedback.length == 1 ? '' : 's'}',
-                          icon: _feedback.isEmpty ? null : Icons.star_rounded,
-                        ),
+                      _ProductsTab(
+                        products: _givenAway,
+                        emptyText: context.l10n.nothingGivenAwayYet,
+                      ),
+                      _FeedbackTab(
+                        feedback: _feedback,
+                        reviewerProfiles: _reviewerProfiles,
                       ),
                     ],
                   ),
-                  const SizedBox(height: 28),
-                  Text(
-                    'Feedback',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: context.appTextPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  if (_feedback.isEmpty)
-                    Text(
-                      'No feedback yet.',
-                      style: TextStyle(color: context.appTextSecondary),
-                    )
-                  else
-                    for (var i = 0; i < _feedback.length; i++) ...[
-                      if (i > 0) const SizedBox(height: 12),
-                      _FeedbackTile(
-                        feedback: _feedback[i],
-                        reviewer: _reviewerProfiles[_feedback[i].fromUserId],
-                      ),
-                    ],
-                ],
+                ),
               ),
+      ),
+    );
+  }
+}
+
+class _TabBarDelegate extends SliverPersistentHeaderDelegate {
+  final TabBar tabBar;
+  final Color background;
+
+  const _TabBarDelegate({required this.tabBar, required this.background});
+
+  @override
+  double get minExtent => tabBar.preferredSize.height;
+
+  @override
+  double get maxExtent => tabBar.preferredSize.height;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return Container(color: background, child: tabBar);
+  }
+
+  @override
+  bool shouldRebuild(_TabBarDelegate oldDelegate) {
+    return oldDelegate.tabBar != tabBar || oldDelegate.background != background;
+  }
+}
+
+class _ProductsTab extends StatelessWidget {
+  final List<Product> products;
+  final String emptyText;
+
+  const _ProductsTab({required this.products, required this.emptyText});
+
+  @override
+  Widget build(BuildContext context) {
+    if (products.isEmpty) {
+      return Center(
+        child: Text(
+          emptyText,
+          style: TextStyle(color: context.appTextSecondary),
+        ),
+      );
+    }
+    return MasonryGridView.count(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+      crossAxisCount: 2,
+      mainAxisSpacing: 14,
+      crossAxisSpacing: 12,
+      itemCount: products.length,
+      itemBuilder: (context, index) => ProductCard(product: products[index]),
+    );
+  }
+}
+
+class _FeedbackTab extends StatelessWidget {
+  final List<FeedbackModel> feedback;
+  final Map<String, ProfileModel> reviewerProfiles;
+
+  const _FeedbackTab({required this.feedback, required this.reviewerProfiles});
+
+  @override
+  Widget build(BuildContext context) {
+    if (feedback.isEmpty) {
+      return Center(
+        child: Text(
+          context.l10n.noFeedbackYet,
+          style: TextStyle(color: context.appTextSecondary),
+        ),
+      );
+    }
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+      itemCount: feedback.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
+      itemBuilder: (context, index) => _FeedbackTile(
+        feedback: feedback[index],
+        reviewer: reviewerProfiles[feedback[index].fromUserId],
       ),
     );
   }
@@ -208,13 +331,14 @@ class _FeedbackTile extends StatelessWidget {
 
   const _FeedbackTile({required this.feedback, required this.reviewer});
 
-  String _timeAgo(DateTime date) {
+  String _timeAgo(BuildContext context, DateTime date) {
+    final l10n = context.l10n;
     final diff = DateTime.now().difference(date);
-    if (diff.inDays >= 30) return '${(diff.inDays / 30).floor()}mo ago';
-    if (diff.inDays >= 1) return '${diff.inDays}d ago';
-    if (diff.inHours >= 1) return '${diff.inHours}h ago';
-    if (diff.inMinutes >= 1) return '${diff.inMinutes}m ago';
-    return 'Just now';
+    if (diff.inDays >= 30) return l10n.timeMonthsAgo((diff.inDays / 30).floor());
+    if (diff.inDays >= 1) return l10n.timeDaysAgo(diff.inDays);
+    if (diff.inHours >= 1) return l10n.timeHoursAgo(diff.inHours);
+    if (diff.inMinutes >= 1) return l10n.timeMinutesAgo(diff.inMinutes);
+    return l10n.timeJustNow;
   }
 
   @override
@@ -235,7 +359,7 @@ class _FeedbackTile extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  reviewer?.fullName ?? 'PAO User',
+                  reviewer?.fullName ?? context.l10n.paoUser,
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -244,11 +368,8 @@ class _FeedbackTile extends StatelessWidget {
                 ),
               ),
               Text(
-                _timeAgo(feedback.createdAt),
-                style: TextStyle(
-                  fontSize: 11,
-                  color: context.appTextSecondary,
-                ),
+                _timeAgo(context, feedback.createdAt),
+                style: TextStyle(fontSize: 11, color: context.appTextSecondary),
               ),
             ],
           ),

@@ -1,0 +1,908 @@
+// ignore: unused_import
+import 'package:intl/intl.dart' as intl;
+import 'app_localizations.dart';
+
+// ignore_for_file: type=lint
+
+/// The translations for Urdu (`ur`).
+class AppLocalizationsUr extends AppLocalizations {
+  AppLocalizationsUr([String locale = 'ur']) : super(locale);
+
+  @override
+  String get appTitle => 'PAO';
+
+  @override
+  String get cancel => 'منسوخ کریں';
+
+  @override
+  String get delete => 'حذف کریں';
+
+  @override
+  String get submit => 'جمع کریں';
+
+  @override
+  String get apply => 'لاگو کریں';
+
+  @override
+  String get reset => 'ری سیٹ';
+
+  @override
+  String get continueLabel => 'جاری رکھیں';
+
+  @override
+  String get paoUser => 'PAO صارف';
+
+  @override
+  String get paoItem => 'PAO آئٹم';
+
+  @override
+  String get yourName => 'آپ کا نام';
+
+  @override
+  String get somethingWentWrong =>
+      'کچھ غلط ہو گیا۔ براہِ کرم دوبارہ کوشش کریں۔';
+
+  @override
+  String get failedToUpdate =>
+      'اپ ڈیٹ کرنے میں ناکامی۔ براہِ کرم دوبارہ کوشش کریں۔';
+
+  @override
+  String get noInternet =>
+      'انٹرنیٹ کنکشن نہیں ہے۔ براہِ کرم اپنا نیٹ ورک چیک کریں اور دوبارہ کوشش کریں۔';
+
+  @override
+  String get errorInvalidCredentials => 'ای میل یا پاس ورڈ غلط ہے۔';
+
+  @override
+  String get errorUserAlreadyExists =>
+      'اس ای میل کے ساتھ اکاؤنٹ پہلے سے موجود ہے۔';
+
+  @override
+  String get errorEmailNotConfirmed =>
+      'لاگ اِن کرنے سے پہلے اپنی ای میل کی تصدیق کریں۔';
+
+  @override
+  String get errorWeakPassword => 'براہِ کرم زیادہ مضبوط پاس ورڈ منتخب کریں۔';
+
+  @override
+  String get errorRateLimited =>
+      'بہت زیادہ کوششیں ہو چکی ہیں۔ براہِ کرم کچھ دیر انتظار کریں اور دوبارہ کوشش کریں۔';
+
+  @override
+  String get welcomeBack => 'خوش آمدید';
+
+  @override
+  String get loginToContinue => 'جاری رکھنے کے لیے لاگ اِن کریں';
+
+  @override
+  String get email => 'ای میل';
+
+  @override
+  String get enterYourEmail => 'اپنی ای میل درج کریں';
+
+  @override
+  String get emailRequired => 'ای میل درکار ہے';
+
+  @override
+  String get enterValidEmail => 'درست ای میل درج کریں';
+
+  @override
+  String get password => 'پاس ورڈ';
+
+  @override
+  String get enterYourPassword => 'اپنا پاس ورڈ درج کریں';
+
+  @override
+  String get passwordRequired => 'پاس ورڈ درکار ہے';
+
+  @override
+  String get passwordMinLength => 'کم از کم 6 حروف';
+
+  @override
+  String get forgotPasswordQuestion => 'پاس ورڈ بھول گئے؟';
+
+  @override
+  String get login => 'لاگ اِن';
+
+  @override
+  String get noAccountPrompt => 'اکاؤنٹ نہیں ہے؟ ';
+
+  @override
+  String get signUp => 'سائن اپ';
+
+  @override
+  String get acceptTermsToContinue =>
+      'جاری رکھنے کے لیے شرائط و ضوابط اور رازداری کی پالیسی قبول کریں۔';
+
+  @override
+  String get createAccount => 'اکاؤنٹ بنائیں';
+
+  @override
+  String get signUpToGetStarted => 'شروع کرنے کے لیے سائن اپ کریں';
+
+  @override
+  String get fullName => 'پورا نام';
+
+  @override
+  String get enterFullName => 'اپنا پورا نام درج کریں';
+
+  @override
+  String get nameRequired => 'نام درکار ہے';
+
+  @override
+  String get createPasswordHint => 'پاس ورڈ بنائیں';
+
+  @override
+  String get confirmPassword => 'پاس ورڈ کی تصدیق کریں';
+
+  @override
+  String get reenterPassword => 'اپنا پاس ورڈ دوبارہ درج کریں';
+
+  @override
+  String get passwordsDoNotMatch => 'پاس ورڈ مماثل نہیں ہیں';
+
+  @override
+  String get checkEmailToConfirm =>
+      'اپنے اکاؤنٹ کی تصدیق کے لیے ای میل چیک کریں، پھر لاگ اِن کریں۔';
+
+  @override
+  String get haveAccountPrompt => 'پہلے سے اکاؤنٹ ہے؟ ';
+
+  @override
+  String get forgotPasswordInstructions =>
+      'اپنی ای میل درج کریں، ہم آپ کو پاس ورڈ ری سیٹ کرنے کا لنک بھیجیں گے۔';
+
+  @override
+  String get resetLinkSent =>
+      'ری سیٹ لنک بھیج دیا گیا! اپنا اِن باکس چیک کریں۔';
+
+  @override
+  String get sendResetLink => 'ری سیٹ لنک بھیجیں';
+
+  @override
+  String get backToLogin => 'لاگ اِن پر واپس جائیں';
+
+  @override
+  String get termsAgreePrefix => 'میں ';
+
+  @override
+  String get termsAnd => ' اور ';
+
+  @override
+  String get termsAgreeSuffix => ' سے متفق ہوں';
+
+  @override
+  String get termsAndConditions => 'شرائط و ضوابط';
+
+  @override
+  String get privacyPolicy => 'رازداری کی پالیسی';
+
+  @override
+  String get navHome => 'ہوم';
+
+  @override
+  String get navWishlist => 'پسندیدہ';
+
+  @override
+  String get navRequests => 'درخواستیں';
+
+  @override
+  String get navSettings => 'سیٹنگز';
+
+  @override
+  String get welcomeBackGreeting => 'خوش آمدید 👋';
+
+  @override
+  String get searchHint => 'تلاش کریں...';
+
+  @override
+  String get noProductsFound => 'کوئی پروڈکٹ نہیں ملی';
+
+  @override
+  String get tryDifferentSearch => 'کوئی دوسرا لفظ تلاش کریں یا فلٹرز ہٹا دیں';
+
+  @override
+  String get clearSearch => 'تلاش صاف کریں';
+
+  @override
+  String get categoryAll => 'تمام';
+
+  @override
+  String get categoryElectronics => 'الیکٹرانکس';
+
+  @override
+  String get categoryFashion => 'فیشن';
+
+  @override
+  String get categoryHomeLiving => 'گھر اور رہن سہن';
+
+  @override
+  String get categoryBeauty => 'خوبصورتی';
+
+  @override
+  String get categorySports => 'کھیل';
+
+  @override
+  String get categoryBooks => 'کتابیں';
+
+  @override
+  String get categoryToys => 'کھلونے';
+
+  @override
+  String get categoryOther => 'دیگر';
+
+  @override
+  String get conditionNew => 'نیا';
+
+  @override
+  String get conditionOld => 'پرانا';
+
+  @override
+  String get sortNewest => 'نیا ترین';
+
+  @override
+  String get filters => 'فلٹرز';
+
+  @override
+  String get category => 'زمرہ';
+
+  @override
+  String get sortBy => 'ترتیب';
+
+  @override
+  String get condition => 'حالت';
+
+  @override
+  String shareProduct(String name) {
+    return 'PAO پر \"$name\" دیکھیں!';
+  }
+
+  @override
+  String requestedProduct(String name) {
+    return '\"$name\" کی درخواست بھیج دی گئی — آپ کسی بھی وقت مالک سے چیٹ کر سکتے ہیں';
+  }
+
+  @override
+  String get failedToSendRequest =>
+      'درخواست بھیجنے میں ناکامی۔ براہِ کرم دوبارہ کوشش کریں۔';
+
+  @override
+  String get cantRequestOwnItem => 'آپ اپنی ہی چیز کی درخواست نہیں کر سکتے۔';
+
+  @override
+  String get markAsGiven => 'دی ہوئی نشان زد کریں';
+
+  @override
+  String markAsGivenConfirm(String name) {
+    return 'کیا آپ نے \"$name\" کسی کو دے دی ہے؟ اسے فہرست سے ہٹا دیا جائے گا۔';
+  }
+
+  @override
+  String get yesGiven => 'جی، دے دی';
+
+  @override
+  String get messageOwner => 'مالک کو پیغام بھیجیں';
+
+  @override
+  String get giveMe => 'مجھے دیں';
+
+  @override
+  String get postedBy => 'پوسٹ کرنے والا';
+
+  @override
+  String get description => 'تفصیل';
+
+  @override
+  String get noDescription => 'اس پروڈکٹ کی کوئی تفصیل دستیاب نہیں۔';
+
+  @override
+  String get addProduct => 'پروڈکٹ شامل کریں';
+
+  @override
+  String get giveSomethingAway => 'کوئی چیز مفت میں دیں';
+
+  @override
+  String get addItemSubtitle =>
+      'کتابیں، الیکٹرانکس، یا کوئی بھی ایسی چیز جو کسی کے کام آ سکے';
+
+  @override
+  String get photos => 'تصاویر';
+
+  @override
+  String get title => 'عنوان';
+
+  @override
+  String get titleHint => 'مثلاً وائرلیس ہیڈ فون';
+
+  @override
+  String get titleRequired => 'عنوان درکار ہے';
+
+  @override
+  String get describeItemHint => 'چیز اور اس کی حالت بیان کریں';
+
+  @override
+  String get descriptionRequired => 'تفصیل درکار ہے';
+
+  @override
+  String get postForFree => 'مفت پوسٹ کریں';
+
+  @override
+  String get addPhoto => 'تصویر شامل کریں';
+
+  @override
+  String get camera => 'کیمرا';
+
+  @override
+  String get gallery => 'گیلری';
+
+  @override
+  String get pleaseSelectCategory => 'براہِ کرم زمرہ منتخب کریں';
+
+  @override
+  String get failedToPostItem => 'چیز پوسٹ کرنے میں ناکامی۔';
+
+  @override
+  String get productPosted => 'پروڈکٹ مفت دینے کے لیے پوسٹ ہو گئی';
+
+  @override
+  String get mustBeLoggedInToPost =>
+      'چیز پوسٹ کرنے کے لیے لاگ اِن ہونا ضروری ہے۔';
+
+  @override
+  String get requests => 'درخواستیں';
+
+  @override
+  String get tabSent => 'بھیجی گئی';
+
+  @override
+  String get tabReceived => 'موصول شدہ';
+
+  @override
+  String get emptySentMessage =>
+      'کسی پروڈکٹ کی درخواست کے لیے اس پر \"مجھے دیں\" دبائیں';
+
+  @override
+  String get emptyReceivedMessage =>
+      'آپ کی پوسٹ کی گئی چیزوں کی درخواستیں یہاں نظر آئیں گی';
+
+  @override
+  String get statusGivenToYou => 'آپ کو دے دی گئی';
+
+  @override
+  String get statusNotSelected => 'منتخب نہیں ہوئی';
+
+  @override
+  String get statusDeclined => 'مسترد';
+
+  @override
+  String get statusPending => 'زیر التوا';
+
+  @override
+  String requestTo(String name) {
+    return '$name کو';
+  }
+
+  @override
+  String requestFrom(String name) {
+    return '$name کی طرف سے';
+  }
+
+  @override
+  String get acceptAndGive => 'قبول کریں اور دیں';
+
+  @override
+  String get leaveFeedback => 'رائے دیں';
+
+  @override
+  String get noRequestsYet => 'ابھی کوئی درخواست نہیں';
+
+  @override
+  String get giveThisItem => 'یہ چیز دیں';
+
+  @override
+  String giveThisItemConfirm(String name) {
+    return 'کیا \"$name\" اس شخص کو دینی ہے؟ اس کی باقی درخواستیں بند کر دی جائیں گی۔';
+  }
+
+  @override
+  String get yesGive => 'جی، دیں';
+
+  @override
+  String get itemMarkedAsGiven => 'چیز دی ہوئی نشان زد ہو گئی';
+
+  @override
+  String get thanksForFeedback => 'آپ کی رائے کا شکریہ!';
+
+  @override
+  String get acceptAndGiveThisItem => 'قبول کریں اور یہ چیز دیں';
+
+  @override
+  String get receivedLeaveFeedback => 'آپ کو یہ مل گئی — رائے دیں';
+
+  @override
+  String get sayHello => 'سلام کہیں 👋';
+
+  @override
+  String get typeMessageHint => 'پیغام لکھیں...';
+
+  @override
+  String get deleteMessage => 'پیغام حذف کریں';
+
+  @override
+  String get deleteMessageConfirm =>
+      'کیا یہ پیغام حذف کرنا ہے؟ اس عمل کو واپس نہیں کیا جا سکتا۔';
+
+  @override
+  String get failedToDeleteMessage =>
+      'پیغام حذف کرنے میں ناکامی۔ براہِ کرم دوبارہ کوشش کریں۔';
+
+  @override
+  String get failedToLoadMessages => 'پیغامات لوڈ کرنے میں ناکامی۔';
+
+  @override
+  String get failedToSendMessage => 'پیغام بھیجنے میں ناکامی۔';
+
+  @override
+  String get profile => 'پروفائل';
+
+  @override
+  String get tabPosts => 'پوسٹس';
+
+  @override
+  String get tabGivenAway => 'دی گئی چیزیں';
+
+  @override
+  String get noPostsYet => 'ابھی کوئی پوسٹ نہیں۔';
+
+  @override
+  String get nothingGivenAwayYet => 'ابھی تک کوئی چیز نہیں دی گئی۔';
+
+  @override
+  String get donated => 'عطیہ کیا';
+
+  @override
+  String get noRatings => 'کوئی ریٹنگ نہیں';
+
+  @override
+  String reviewCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count جائزے',
+      one: '1 جائزہ',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get feedback => 'رائے';
+
+  @override
+  String get noFeedbackYet => 'ابھی کوئی رائے نہیں۔';
+
+  @override
+  String timeMonthsAgo(int count) {
+    return '$count ماہ پہلے';
+  }
+
+  @override
+  String timeDaysAgo(int count) {
+    return '$count دن پہلے';
+  }
+
+  @override
+  String timeHoursAgo(int count) {
+    return '$count گھنٹے پہلے';
+  }
+
+  @override
+  String timeMinutesAgo(int count) {
+    return '$count منٹ پہلے';
+  }
+
+  @override
+  String get timeJustNow => 'ابھی ابھی';
+
+  @override
+  String get pleaseSelectRating => 'براہِ کرم ریٹنگ منتخب کریں';
+
+  @override
+  String get failedToSubmitFeedback =>
+      'رائے جمع کرانے میں ناکامی۔ براہِ کرم دوبارہ کوشش کریں۔';
+
+  @override
+  String get rateThisExchange => 'اس لین دین کو ریٹ کریں';
+
+  @override
+  String get leaveCommentHint => 'تبصرہ لکھیں (اختیاری)';
+
+  @override
+  String get wishlist => 'پسندیدہ';
+
+  @override
+  String get wishlistEmpty => 'آپ کی پسندیدہ فہرست خالی ہے';
+
+  @override
+  String get wishlistEmptyHint => 'کچھ محفوظ کرنے کے لیے شامل کریں بٹن دبائیں';
+
+  @override
+  String get selectYourLocation => 'اپنا مقام منتخب کریں';
+
+  @override
+  String get addAddressToFinish =>
+      'اپنا اکاؤنٹ مکمل کرنے کے لیے اپنا پتا شامل کریں';
+
+  @override
+  String get country => 'ملک';
+
+  @override
+  String get countryPakistan => 'پاکستان';
+
+  @override
+  String get province => 'صوبہ';
+
+  @override
+  String get selectProvinceHint => 'اپنا صوبہ منتخب کریں';
+
+  @override
+  String get provinceRequired => 'صوبہ درکار ہے';
+
+  @override
+  String get city => 'شہر';
+
+  @override
+  String get selectCityHint => 'اپنا شہر منتخب کریں';
+
+  @override
+  String get cityRequired => 'شہر درکار ہے';
+
+  @override
+  String get address => 'پتا';
+
+  @override
+  String get enterAddressHint => 'اپنا پتا درج کریں';
+
+  @override
+  String get addressRequired => 'پتا درکار ہے';
+
+  @override
+  String get settings => 'سیٹنگز';
+
+  @override
+  String get sectionGeneral => 'عمومی';
+
+  @override
+  String get sectionLegal => 'قانونی';
+
+  @override
+  String get sectionSupport => 'معاونت';
+
+  @override
+  String get editProfile => 'پروفائل میں ترمیم';
+
+  @override
+  String get language => 'زبان';
+
+  @override
+  String get theme => 'تھیم';
+
+  @override
+  String get helpCenter => 'مدد مرکز';
+
+  @override
+  String get about => 'ایپ کے بارے میں';
+
+  @override
+  String get logout => 'لاگ آؤٹ';
+
+  @override
+  String get deleteAccount => 'اکاؤنٹ حذف کریں';
+
+  @override
+  String get deleteAccountConfirm =>
+      'اس سے آپ کا اکاؤنٹ اور آپ کا تمام ڈیٹا مستقل طور پر حذف ہو جائے گا۔ اس عمل کو واپس نہیں کیا جا سکتا۔';
+
+  @override
+  String get failedToDeleteAccount =>
+      'اکاؤنٹ حذف کرنے میں ناکامی۔ براہِ کرم دوبارہ کوشش کریں۔';
+
+  @override
+  String get themeLight => 'لائٹ';
+
+  @override
+  String get themeDark => 'ڈارک';
+
+  @override
+  String get themeSystem => 'سسٹم ڈیفالٹ';
+
+  @override
+  String get themeLightSubtitle => 'روشن پس منظر، گہرا متن';
+
+  @override
+  String get themeDarkSubtitle => 'گہرا پس منظر، ہلکا متن';
+
+  @override
+  String get themeSystemSubtitle => 'آپ کے ڈیوائس کی سیٹنگ کے مطابق';
+
+  @override
+  String get chooseHowPaoLooks => 'منتخب کریں کہ PAO کیسا نظر آئے';
+
+  @override
+  String get searchLanguage => 'زبان تلاش کریں';
+
+  @override
+  String get noLanguagesFound => 'کوئی زبان نہیں ملی';
+
+  @override
+  String languageSetTo(String name) {
+    return 'زبان $name پر سیٹ ہو گئی';
+  }
+
+  @override
+  String get failedToUpdateProfile => 'پروفائل اپ ڈیٹ کرنے میں ناکامی۔';
+
+  @override
+  String get profileUpdatedConfirmEmail =>
+      'پروفائل اپ ڈیٹ ہو گیا۔ تبدیلی کی تصدیق کے لیے اپنی نئی ای میل چیک کریں۔';
+
+  @override
+  String get profileUpdated => 'پروفائل اپ ڈیٹ ہو گیا';
+
+  @override
+  String get phoneOptional => 'فون (اختیاری)';
+
+  @override
+  String get enterPhoneHint => 'اپنا فون نمبر درج کریں';
+
+  @override
+  String get bioOptional => 'تعارف (اختیاری)';
+
+  @override
+  String get bioHint => 'ہمیں اپنے بارے میں کچھ بتائیں';
+
+  @override
+  String get saveChanges => 'تبدیلیاں محفوظ کریں';
+
+  @override
+  String get mustBeLoggedInPhoto =>
+      'تصویر اپ ڈیٹ کرنے کے لیے لاگ اِن ہونا ضروری ہے۔';
+
+  @override
+  String get failedToUpdatePhoto =>
+      'تصویر اپ ڈیٹ کرنے میں ناکامی۔ براہِ کرم دوبارہ کوشش کریں۔';
+
+  @override
+  String get mustBeLoggedInProfile =>
+      'پروفائل اپ ڈیٹ کرنے کے لیے لاگ اِن ہونا ضروری ہے۔';
+
+  @override
+  String get frequentlyAskedQuestions => 'اکثر پوچھے جانے والے سوالات';
+
+  @override
+  String get stillNeedHelp => 'مزید مدد چاہیے؟';
+
+  @override
+  String get cantFindWhatYouNeed =>
+      'جو آپ ڈھونڈ رہے ہیں وہ نہیں مل رہا؟ ہم سے رابطہ کرنے کے مزید طریقے جلد یہاں نظر آئیں گے۔';
+
+  @override
+  String get faq1Q => 'میں کوئی چیز کیسے دوں؟';
+
+  @override
+  String get faq1A =>
+      'ہوم اسکرین پر جامنی + بٹن دبائیں، چند تصاویر، عنوان، تفصیل، زمرہ اور حالت شامل کریں، پھر پوسٹ کر دیں۔ یہ فوراً فہرستوں میں نظر آنے لگے گی۔';
+
+  @override
+  String get faq2Q => 'میں کسی چیز کی درخواست کیسے کروں؟';
+
+  @override
+  String get faq2A =>
+      'کوئی بھی فہرست کھولیں اور \"مجھے دیں\" دبائیں۔ اس سے مالک کو درخواست چلی جاتی ہے اور آپ اس کے بارے میں ان سے چیٹ کر سکتے ہیں۔';
+
+  @override
+  String get faq3Q => 'میں مالک یا درخواست دینے والے سے چیٹ کیسے کروں؟';
+
+  @override
+  String get faq3A =>
+      'درخواست بھیجنے کے بعد اسے اِن باکس سے کھولیں یا فہرست پر \"مالک کو پیغام بھیجیں\" دبا کر چیٹ شروع کریں۔';
+
+  @override
+  String get faq4Q => 'میں اپنی چیز کی درخواست کیسے قبول کروں؟';
+
+  @override
+  String get faq4A =>
+      'اس درخواست کی چیٹ کھولیں اور \"قبول کریں اور یہ چیز دیں\" دبائیں۔ اس سے چیز دی ہوئی نشان زد ہو جاتی ہے اور اس پر باقی تمام زیر التوا درخواستیں بند ہو جاتی ہیں۔';
+
+  @override
+  String get faq5Q => 'میں کسی چیز کو اپنی پسندیدہ فہرست میں کیسے محفوظ کروں؟';
+
+  @override
+  String get faq5A =>
+      'کسی بھی فہرست پر دل کا نشان دبائیں۔ آپ کی محفوظ کردہ تمام چیزیں سیٹنگز > پسندیدہ میں ملیں گی۔';
+
+  @override
+  String get faq6Q => 'کیا ایپ کی زبان یا تھیم تبدیل کی جا سکتی ہے؟';
+
+  @override
+  String get faq6A =>
+      'جی ہاں — سیٹنگز میں جا کر زبان یا تھیم کھولیں۔ آپ انگریزی اور اردو کے درمیان، یا لائٹ، ڈارک اور اپنے ڈیوائس کی ڈیفالٹ سیٹنگ کے درمیان تبدیلی کر سکتے ہیں۔';
+
+  @override
+  String get faq7Q => 'میں اپنا پروفائل کیسے ایڈٹ کروں؟';
+
+  @override
+  String get faq7A =>
+      'سیٹنگز > پروفائل میں ترمیم پر جا کر اپنا نام، تصویر اور دیگر تفصیلات اپ ڈیٹ کریں۔';
+
+  @override
+  String get faq8Q => 'میں اپنا اکاؤنٹ کیسے حذف کروں؟';
+
+  @override
+  String get faq8A =>
+      'سیٹنگز > اکاؤنٹ حذف کریں پر جائیں۔ اس سے آپ کا پروفائل اور ڈیٹا مستقل طور پر ہٹ جاتا ہے اور اسے واپس نہیں لایا جا سکتا۔';
+
+  @override
+  String get faq9Q => 'کیا میرا ڈیٹا محفوظ ہے؟';
+
+  @override
+  String get faq9A =>
+      'ہم آپ کی معلومات صرف ایپ کی خصوصیات چلانے کے لیے استعمال کرتے ہیں۔ مکمل تفصیل کے لیے سیٹنگز > قانونی میں ہماری رازداری کی پالیسی دیکھیں۔';
+
+  @override
+  String legalLastUpdated(String date) {
+    return 'آخری اپ ڈیٹ: $date';
+  }
+
+  @override
+  String get legalDate => '18 ستمبر 2026';
+
+  @override
+  String get privacy1Title => '1. ہم جو معلومات جمع کرتے ہیں';
+
+  @override
+  String get privacy1Body =>
+      'ہم وہ معلومات جمع کرتے ہیں جو آپ براہِ راست فراہم کرتے ہیں، جیسے آپ کا نام، ای میل ایڈریس، پروفائل فوٹو، اور وہ فہرستیں، درخواستیں یا پیغامات جو آپ بناتے ہیں۔ ہم ایپ کے استعمال سے پیدا ہونے والی معلومات بھی جمع کرتے ہیں، جیسے آپ کی پسندیدہ فہرست، محفوظ کردہ مقام/صوبہ، اور ایپ کی ترجیحات (تھیم، زبان)۔';
+
+  @override
+  String get privacy2Title => '2. ہم آپ کی معلومات کیسے استعمال کرتے ہیں';
+
+  @override
+  String get privacy2Body =>
+      'ہم آپ کی معلومات ایپ کی بنیادی خصوصیات چلانے کے لیے استعمال کرتے ہیں: آپ کا پروفائل دکھانا، فہرستوں اور درخواستوں کو ظاہر کرنا اور ملانا، صارفین کے درمیان چیٹ ممکن بنانا، آپ کی پسندیدہ فہرست برقرار رکھنا، اور آپ کی سیٹنگز یاد رکھنا۔';
+
+  @override
+  String get privacy3Title => '3. مقام کی معلومات';
+
+  @override
+  String get privacy3Body =>
+      'اگر آپ کوئی مقام یا صوبہ منتخب کرتے ہیں تو اسے آپ کے علاقے کی متعلقہ فہرستیں اور درخواستیں دکھانے کے لیے استعمال کیا جاتا ہے۔ آپ اسے ایپ میں کسی بھی وقت تبدیل یا صاف کر سکتے ہیں۔';
+
+  @override
+  String get privacy4Title => '4. دیگر صارفین کے ساتھ اشتراک';
+
+  @override
+  String get privacy4Body =>
+      'ایپ کے معمول کے مطابق کچھ معلومات دیگر صارفین کو نظر آتی ہیں، جیسے آپ کی پوسٹ کی گئی فہرستوں پر آپ کا پروفائل نام اور تصویر، اور چیٹ کے ذریعے بھیجے گئے آپ کے پیغامات۔ ہم آپ کی ذاتی معلومات تیسرے فریق کو فروخت نہیں کرتے۔';
+
+  @override
+  String get privacy5Title => '5. ڈیٹا کا ذخیرہ اور تحفظ';
+
+  @override
+  String get privacy5Body =>
+      'آپ کا اکاؤنٹ اور ایپ کا ڈیٹا ہمارے بیک اینڈ سروس فراہم کنندہ Supabase کے ذریعے، صنعتی معیار کے حفاظتی طریقوں کے ساتھ محفوظ کیا جاتا ہے۔ اگرچہ ہم آپ کے ڈیٹا کی حفاظت کے لیے معقول اقدامات کرتے ہیں، لیکن ذخیرے یا ترسیل کا کوئی بھی طریقہ 100% محفوظ نہیں ہوتا۔';
+
+  @override
+  String get privacy6Title => '6. آپ کے اختیارات اور حقوق';
+
+  @override
+  String get privacy6Body =>
+      'آپ سیٹنگز میں پروفائل میں ترمیم سے اپنا پروفائل کسی بھی وقت دیکھ اور اپ ڈیٹ کر سکتے ہیں۔ آپ سیٹنگز سے اپنا اکاؤنٹ حذف کرنے کی درخواست کر سکتے ہیں، جس سے آپ کا پروفائل، فہرستیں، پسندیدہ فہرست اور متعلقہ ڈیٹا ہمارے سسٹمز سے مستقل طور پر ہٹا دیا جاتا ہے۔';
+
+  @override
+  String get privacy7Title => '7. ڈیٹا کی برقراری';
+
+  @override
+  String get privacy7Body =>
+      'ہم آپ کی معلومات اس وقت تک رکھتے ہیں جب تک آپ کا اکاؤنٹ فعال ہو یا ایپ کی خصوصیات فراہم کرنے کے لیے ضروری ہو۔ اکاؤنٹ حذف کرنے کے بعد آپ کا ذاتی ڈیٹا ہٹا دیا جاتا ہے، سوائے اس کے کہ قانون کے تحت اسے رکھنا لازمی ہو۔';
+
+  @override
+  String get privacy8Title => '8. بچوں کی رازداری';
+
+  @override
+  String get privacy8Body =>
+      'PAO کا رخ 13 سال سے کم عمر بچوں کی طرف نہیں ہے، اور ہم جان بوجھ کر 13 سال سے کم عمر بچوں کی ذاتی معلومات جمع نہیں کرتے۔';
+
+  @override
+  String get privacy9Title => '9. اس پالیسی میں تبدیلیاں';
+
+  @override
+  String get privacy9Body =>
+      'ہم وقتاً فوقتاً اس رازداری کی پالیسی کو اپ ڈیٹ کر سکتے ہیں۔ ہم اس صفحے کے اوپر تازہ ترین نظرِ ثانی کی تاریخ ظاہر کریں گے۔';
+
+  @override
+  String get privacy10Title => '10. ہم سے رابطہ کریں';
+
+  @override
+  String get privacy10Body =>
+      'اگر اس رازداری کی پالیسی یا آپ کے ڈیٹا کو سنبھالنے کے بارے میں آپ کے کوئی سوالات ہیں تو براہِ کرم سیٹنگز میں مدد مرکز کے ذریعے رابطہ کریں۔';
+
+  @override
+  String get terms1Title => '1. شرائط کی منظوری';
+
+  @override
+  String get terms1Body =>
+      'PAO ایپ میں اکاؤنٹ بنا کر یا اسے استعمال کر کے آپ ان شرائط و ضوابط کے پابند ہونے پر اتفاق کرتے ہیں۔ اگر آپ ان شرائط کے کسی حصے سے متفق نہیں ہیں تو براہِ کرم ایپ استعمال نہ کریں۔';
+
+  @override
+  String get terms2Title => '2. آپ کا اکاؤنٹ';
+
+  @override
+  String get terms2Body =>
+      'پروفائل بناتے وقت آپ کو درست معلومات فراہم کرنی ہوں گی اور اپنے لاگ اِن کی معلومات کو محفوظ رکھنے کے آپ خود ذمہ دار ہیں۔ آپ کے اکاؤنٹ کے تحت ہونے والی تمام سرگرمی کے آپ ذمہ دار ہیں۔';
+
+  @override
+  String get terms3Title => '3. فہرستیں اور درخواستیں';
+
+  @override
+  String get terms3Body =>
+      'جب آپ کوئی چیز شامل کرتے ہیں، درخواست بھیجتے ہیں، یا فہرستوں کے ساتھ تعامل کرتے ہیں تو آپ اس بات سے اتفاق کرتے ہیں کہ آپ کی فراہم کردہ معلومات درست اور سچی ہیں اور کسی قانون یا دوسروں کے حقوق کی خلاف ورزی نہیں کرتیں۔ PAO ایسی کسی بھی فہرست یا درخواست کو ہٹا سکتا ہے جو ان شرائط کی خلاف ورزی کرے۔';
+
+  @override
+  String get terms4Title => '4. PAO کا کردار';
+
+  @override
+  String get terms4Body =>
+      'PAO ایک ایسا پلیٹ فارم فراہم کرتا ہے جو صارفین کو فہرستیں دیکھنے، درخواستیں بھیجنے اور ایک دوسرے سے چیٹ کرنے میں مدد دیتا ہے۔ PAO صارفین کے درمیان کسی معاہدے، لین دین یا تبادلے کا فریق نہیں ہے اور نہ ہی کسی فہرست کی درستگی، معیار، حفاظت یا قانونی حیثیت، یا کسی صارف کے طرزِ عمل کی ضمانت دیتا ہے۔';
+
+  @override
+  String get terms5Title => '5. چیٹ اور رابطہ';
+
+  @override
+  String get terms5Body =>
+      'ایپ کے اندر چیٹ اس لیے فراہم کی گئی ہے کہ صارفین فہرستوں اور درخواستوں کے بارے میں بات چیت کر سکیں۔ آپ اتفاق کرتے ہیں کہ چیٹ کو توہین آمیز، دھوکہ دہی پر مبنی یا غیر قانونی مواد بھیجنے کے لیے استعمال نہیں کریں گے۔ سروس فراہم کرنے اور بہتر بنانے کے لیے پیغامات محفوظ کیے جا سکتے ہیں۔';
+
+  @override
+  String get terms6Title => '6. پسندیدہ فہرست اور ذاتی نوعیت';
+
+  @override
+  String get terms6Body =>
+      'پسندیدہ فہرست اور مقام پر مبنی براؤزنگ جیسی خصوصیات آپ کی سہولت کے لیے فراہم کی گئی ہیں اور آپ کے اکاؤنٹ سے منسلک ہیں۔ یہ ڈیٹا ایپ میں آپ کو نظر آنے والے مواد کو آپ کے مطابق بنانے کے لیے استعمال ہو سکتا ہے۔';
+
+  @override
+  String get terms7Title => '7. اکاؤنٹ حذف کرنا';
+
+  @override
+  String get terms7Body =>
+      'آپ سیٹنگز سے کسی بھی وقت اپنا اکاؤنٹ حذف کر سکتے ہیں۔ اکاؤنٹ حذف کرنے سے آپ کا پروفائل اور متعلقہ ڈیٹا مستقل طور پر ہٹا دیا جائے گا، جیسا کہ ہماری رازداری کی پالیسی میں بیان کیا گیا ہے، اور اس عمل کو واپس نہیں کیا جا سکتا۔';
+
+  @override
+  String get terms8Title => '8. ممنوعہ طرزِ عمل';
+
+  @override
+  String get terms8Body =>
+      'آپ اتفاق کرتے ہیں کہ ایپ کا غلط استعمال نہیں کریں گے، جس میں شامل ہے مگر محدود نہیں: غیر قانونی یا گمراہ کن فہرستیں پوسٹ کرنا، دیگر صارفین کو ہراساں کرنا، ایسے اکاؤنٹس تک رسائی کی کوشش کرنا جو آپ کے نہیں ہیں، یا ایپ کے معمول کے کام میں مداخلت کرنا۔';
+
+  @override
+  String get terms9Title => '9. ذمہ داری کی حد';
+
+  @override
+  String get terms9Body =>
+      'PAO \"جیسا ہے\" کی بنیاد پر فراہم کیا جاتا ہے۔ قانون کی اجازت کی زیادہ سے زیادہ حد تک، PAO اور اس کی ٹیم ایپ کے آپ کے استعمال یا دیگر صارفین کے ساتھ آپ کے تعامل سے پیدا ہونے والے کسی بالواسطہ، اتفاقی یا نتیجے میں ہونے والے نقصان کے ذمہ دار نہیں ہیں۔';
+
+  @override
+  String get terms10Title => '10. ان شرائط میں تبدیلیاں';
+
+  @override
+  String get terms10Body =>
+      'ہم وقتاً فوقتاً ان شرائط و ضوابط کو اپ ڈیٹ کر سکتے ہیں۔ تبدیلیاں شائع ہونے کے بعد ایپ کا مسلسل استعمال اس بات کا مطلب ہے کہ آپ نئی شرائط قبول کرتے ہیں۔';
+
+  @override
+  String get terms11Title => '11. ہم سے رابطہ کریں';
+
+  @override
+  String get terms11Body =>
+      'اگر ان شرائط و ضوابط کے بارے میں آپ کے کوئی سوالات ہیں تو براہِ کرم سیٹنگز میں مدد مرکز کے ذریعے رابطہ کریں۔';
+
+  @override
+  String get viewMyProfile => 'میرا پروفائل دیکھیں';
+}

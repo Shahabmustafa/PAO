@@ -5,6 +5,7 @@ import '../../../../core/widgets/app_icon.dart';
 import '../../../../core/widgets/app_snackbar.dart';
 import '../../data/language_store.dart';
 import '../../domain/app_language.dart';
+import '../../../../core/l10n/l10n.dart';
 
 class LanguageScreen extends StatefulWidget {
   const LanguageScreen({super.key});
@@ -39,9 +40,9 @@ class _LanguageScreenState extends State<LanguageScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Language',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Text(
+          context.l10n.language,
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
       body: SafeArea(
@@ -52,9 +53,9 @@ class _LanguageScreenState extends State<LanguageScreen> {
               child: TextField(
                 controller: _searchController,
                 onChanged: (value) => setState(() => _query = value),
-                decoration: const InputDecoration(
-                  hintText: 'Search language',
-                  prefixIcon: Padding(
+                decoration: InputDecoration(
+                  hintText: context.l10n.searchLanguage,
+                  prefixIcon: const Padding(
                     padding: EdgeInsets.all(12),
                     child: AppIcon(
                       AppIcons.search,
@@ -72,7 +73,7 @@ class _LanguageScreenState extends State<LanguageScreen> {
                   if (filtered.isEmpty) {
                     return Center(
                       child: Text(
-                        'No languages found',
+                        context.l10n.noLanguagesFound,
                         style: TextStyle(color: context.appTextSecondary),
                       ),
                     );
@@ -89,7 +90,9 @@ class _LanguageScreenState extends State<LanguageScreen> {
                           LanguageStore.select(language);
                           AppSnackbar.show(
                             context,
-                            'Language set to ${language.name}',
+                            lookupAppLocalizations(
+                              language.locale,
+                            ).languageSetTo(language.nativeName),
                           );
                         },
                         borderRadius: BorderRadius.circular(14),

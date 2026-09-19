@@ -4,6 +4,7 @@ import '../../../../core/utils/auth_error_message.dart';
 import '../../../auth/data/repository/auth_repository.dart';
 import '../../data/model/profile_model.dart';
 import '../../data/repository/profile_repository.dart';
+import '../../../../core/l10n/l10n.dart';
 
 class EditProfileProvider extends ChangeNotifier {
   EditProfileProvider({
@@ -44,7 +45,7 @@ class EditProfileProvider extends ChangeNotifier {
   Future<void> uploadAvatar(Uint8List bytes) async {
     final userId = _authRepository.currentUser?.id;
     if (userId == null) {
-      errorMessage = 'You must be logged in to update your photo.';
+      errorMessage = l10nNow.mustBeLoggedInPhoto;
       notifyListeners();
       return;
     }
@@ -58,7 +59,7 @@ class EditProfileProvider extends ChangeNotifier {
         bytes: bytes,
       );
     } catch (_) {
-      errorMessage = 'Failed to update photo. Please try again.';
+      errorMessage = l10nNow.failedToUpdatePhoto;
     } finally {
       isUploadingAvatar = false;
       notifyListeners();
@@ -73,7 +74,7 @@ class EditProfileProvider extends ChangeNotifier {
   }) async {
     final userId = _authRepository.currentUser?.id;
     if (userId == null) {
-      errorMessage = 'You must be logged in to update your profile.';
+      errorMessage = l10nNow.mustBeLoggedInProfile;
       notifyListeners();
       return false;
     }
@@ -98,7 +99,7 @@ class EditProfileProvider extends ChangeNotifier {
       errorMessage = authErrorMessage(e);
       return false;
     } catch (_) {
-      errorMessage = 'Something went wrong. Please try again.';
+      errorMessage = l10nNow.somethingWentWrong;
       return false;
     } finally {
       isSaving = false;

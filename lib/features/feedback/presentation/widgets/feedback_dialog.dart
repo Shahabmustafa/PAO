@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../data/repository/feedback_repository.dart';
+import '../../../../core/l10n/l10n.dart';
 
 /// Shows a star-rating + comment bottom sheet and submits it to Supabase.
 /// Returns `true` if feedback was submitted, `false`/`null` otherwise.
@@ -61,7 +62,7 @@ class _FeedbackSheetState extends State<_FeedbackSheet> {
 
   Future<void> _onSubmitPressed() async {
     if (_rating == 0) {
-      setState(() => _errorMessage = 'Please select a rating');
+      setState(() => _errorMessage = context.l10n.pleaseSelectRating);
       return;
     }
 
@@ -85,7 +86,7 @@ class _FeedbackSheetState extends State<_FeedbackSheet> {
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = 'Failed to submit feedback. Please try again.';
+        _errorMessage = context.l10n.failedToSubmitFeedback;
         _isSubmitting = false;
       });
     }
@@ -116,7 +117,7 @@ class _FeedbackSheetState extends State<_FeedbackSheet> {
           ),
           const SizedBox(height: 16),
           Text(
-            'Rate this exchange',
+            context.l10n.rateThisExchange,
             style: TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.bold,
@@ -142,8 +143,8 @@ class _FeedbackSheetState extends State<_FeedbackSheet> {
           TextField(
             controller: _commentController,
             maxLines: 3,
-            decoration: const InputDecoration(
-              hintText: 'Leave a comment (optional)',
+            decoration: InputDecoration(
+              hintText: context.l10n.leaveCommentHint,
             ),
           ),
           if (_errorMessage != null) ...[
@@ -161,14 +162,14 @@ class _FeedbackSheetState extends State<_FeedbackSheet> {
                   onPressed: _isSubmitting
                       ? null
                       : () => Navigator.pop(context),
-                  child: const Text('Cancel'),
+                  child: Text(context.l10n.cancel),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 flex: 2,
                 child: PrimaryButton(
-                  label: 'Submit',
+                  label: context.l10n.submit,
                   isLoading: _isSubmitting,
                   onPressed: _onSubmitPressed,
                 ),

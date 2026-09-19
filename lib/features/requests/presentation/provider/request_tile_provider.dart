@@ -6,6 +6,7 @@ import '../../../settings/data/model/profile_model.dart';
 import '../../../settings/data/repository/profile_repository.dart';
 import '../../data/model/request_model.dart';
 import '../../data/request_store.dart';
+import '../../../../core/l10n/l10n.dart';
 
 class RequestTileProvider extends ChangeNotifier {
   RequestTileProvider({
@@ -18,10 +19,10 @@ class RequestTileProvider extends ChangeNotifier {
     FeedbackRepository? feedbackRepository,
     PostRepository? postRepository,
     AuthRepository? authRepository,
-  })  : _profileRepository = profileRepository ?? ProfileRepository(),
-        _feedbackRepository = feedbackRepository ?? FeedbackRepository(),
-        _postRepository = postRepository ?? PostRepository(),
-        _authRepository = authRepository ?? AuthRepository() {
+  }) : _profileRepository = profileRepository ?? ProfileRepository(),
+       _feedbackRepository = feedbackRepository ?? FeedbackRepository(),
+       _postRepository = postRepository ?? PostRepository(),
+       _authRepository = authRepository ?? AuthRepository() {
     _loadProfile();
     if (productName == null) _loadProduct();
     if (isSentTab && request.isAccepted) _checkFeedback();
@@ -65,11 +66,12 @@ class RequestTileProvider extends ChangeNotifier {
     notifyListeners();
     try {
       final post = await _postRepository.fetchPostById(request.postId);
-      productName = post?.title ?? 'PAO item';
-      productImageUrl =
-          post != null && post.imageUrls.isNotEmpty ? post.imageUrls.first : null;
+      productName = post?.title ?? l10nNow.paoItem;
+      productImageUrl = post != null && post.imageUrls.isNotEmpty
+          ? post.imageUrls.first
+          : null;
     } catch (_) {
-      productName = 'PAO item';
+      productName = l10nNow.paoItem;
     } finally {
       isLoadingProduct = false;
       notifyListeners();
@@ -94,7 +96,7 @@ class RequestTileProvider extends ChangeNotifier {
       await RequestStore.accept(request);
       return true;
     } catch (_) {
-      errorMessage = 'Failed to update. Please try again.';
+      errorMessage = l10nNow.failedToUpdate;
       return false;
     } finally {
       isAccepting = false;
@@ -105,5 +107,21 @@ class RequestTileProvider extends ChangeNotifier {
   void markFeedbackGiven() {
     feedbackGiven = true;
     notifyListeners();
+  }
+
+  // The tile is rebuilt (and this provider disposed) when its request's
+  // status changes, while a profile/product/accept call may still be in
+  // flight — don't notify after that.
+  bool _disposed = false;
+
+  @override
+  void notifyListeners() {
+    if (!_disposed) super.notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
   }
 }

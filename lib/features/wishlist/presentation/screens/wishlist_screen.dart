@@ -8,6 +8,7 @@ import '../../../home/domain/product.dart';
 import '../../../home/presentation/widgets/product_card.dart';
 import '../../data/wishlist_store.dart';
 import '../../domain/wish_item.dart';
+import '../../../../core/l10n/l10n.dart';
 
 class WishlistScreen extends StatefulWidget {
   const WishlistScreen({super.key});
@@ -27,9 +28,9 @@ class _WishlistScreenState extends State<WishlistScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Wishlist',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Text(
+          context.l10n.wishlist,
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
       body: SafeArea(
@@ -99,7 +100,7 @@ class _EmptyWishlist extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            'Your wishlist is empty',
+            context.l10n.wishlistEmpty,
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
@@ -108,7 +109,7 @@ class _EmptyWishlist extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'Tap the Add button to save something',
+            context.l10n.wishlistEmptyHint,
             style: TextStyle(fontSize: 13, color: context.appTextSecondary),
           ),
         ],
