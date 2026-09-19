@@ -530,6 +530,12 @@ abstract class AppLocalizations {
   /// **'New'**
   String get conditionNew;
 
+  /// No description provided for @conditionUsed.
+  ///
+  /// In en, this message translates to:
+  /// **'Used'**
+  String get conditionUsed;
+
   /// No description provided for @conditionOld.
   ///
   /// In en, this message translates to:

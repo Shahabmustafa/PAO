@@ -233,6 +233,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get conditionNew => 'New';
 
   @override
+  String get conditionUsed => 'Used';
+
+  @override
   String get conditionOld => 'Old';
 
   @override

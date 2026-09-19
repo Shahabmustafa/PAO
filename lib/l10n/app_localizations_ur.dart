@@ -235,6 +235,9 @@ class AppLocalizationsUr extends AppLocalizations {
   String get conditionNew => 'نیا';
 
   @override
+  String get conditionUsed => 'استعمال شدہ';
+
+  @override
   String get conditionOld => 'پرانا';
 
   @override

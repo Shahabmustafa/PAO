@@ -34,6 +34,8 @@ String conditionLabel(AppLocalizations l10n, String condition) {
       return l10n.categoryAll;
     case 'New':
       return l10n.conditionNew;
+    case 'Used':
+      return l10n.conditionUsed;
     case 'Old':
       return l10n.conditionOld;
     default:

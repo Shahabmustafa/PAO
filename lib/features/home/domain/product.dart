@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
-const List<String> kProductConditions = ['New', 'Old'];
+const List<String> kProductConditions = ['New', 'Used', 'Old'];
 
 class Product {
   final String id;
