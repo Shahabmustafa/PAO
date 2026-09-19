@@ -3,6 +3,7 @@ import '../../features/splash/presentation/screens/splash_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/signup_screen.dart';
 import '../../features/auth/presentation/screens/forgot_password_screen.dart';
+import '../../features/auth/presentation/screens/reset_password_screen.dart';
 import '../../features/dashboard/presentation/screens/dashboard_screen.dart';
 import '../../features/location/presentation/screens/province_screen.dart';
 import 'app_routes.dart';
@@ -20,6 +21,8 @@ class AppRouter {
         return _buildRoute(const SignupScreen(), settings);
       case AppRoutes.forgotPassword:
         return _buildRoute(const ForgotPasswordScreen(), settings);
+      case AppRoutes.resetPassword:
+        return _buildRoute(const ResetPasswordScreen(), settings);
       case AppRoutes.selectProvince:
         return _buildRoute(const ProvinceScreen(), settings);
       case AppRoutes.dashboard:

@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../../core/config/supabase_config.dart';
 
 /// Talks directly to Supabase auth. No app logic here — the repository
 /// is the layer that interprets responses.
@@ -42,6 +43,15 @@ class AuthRemoteDataSource {
   }
 
   Future<void> resetPassword(String email) {
-    return _client.auth.resetPasswordForEmail(email);
+    return _client.auth.resetPasswordForEmail(
+      email,
+      redirectTo: SupabaseConfig.passwordResetRedirectUrl,
+    );
+  }
+
+  /// Sets a new password for the signed-in user (which, after following a
+  /// reset-password email link, is the temporary recovery session).
+  Future<void> updatePassword(String newPassword) async {
+    await _client.auth.updateUser(UserAttributes(password: newPassword));
   }
 }

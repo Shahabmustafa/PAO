@@ -9,6 +9,21 @@
 		<string>en</string>
 		<string>ur</string>
 	</array>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.pao.pao</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.pao.pao</string>
+			</array>
+		</dict>
+	</array>
+	<key>FlutterDeepLinkingEnabled</key>
+	<false/>
 	<key>CFBundleDisplayName</key>
 	<string>Pao</string>
 	<key>CFBundleExecutable</key>

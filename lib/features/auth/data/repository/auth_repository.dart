@@ -52,4 +52,8 @@ class AuthRepository {
   Future<void> sendPasswordResetEmail(String email) {
     return _dataSource.resetPassword(email);
   }
+
+  Future<void> updatePassword(String newPassword) {
+    return _dataSource.updatePassword(newPassword);
+  }
 }

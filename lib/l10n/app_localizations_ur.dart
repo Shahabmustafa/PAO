@@ -65,6 +65,10 @@ class AppLocalizationsUr extends AppLocalizations {
   String get errorWeakPassword => 'براہِ کرم زیادہ مضبوط پاس ورڈ منتخب کریں۔';
 
   @override
+  String get errorSamePassword =>
+      'آپ کا نیا پاس ورڈ پرانے پاس ورڈ سے مختلف ہونا چاہیے۔';
+
+  @override
   String get errorRateLimited =>
       'بہت زیادہ کوششیں ہو چکی ہیں۔ براہِ کرم کچھ دیر انتظار کریں اور دوبارہ کوشش کریں۔';
 
@@ -158,6 +162,25 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get sendResetLink => 'ری سیٹ لنک بھیجیں';
+
+  @override
+  String get resetPasswordTitle => 'پاس ورڈ ری سیٹ کریں';
+
+  @override
+  String get resetPasswordSubtitle =>
+      'اپنے اکاؤنٹ کے لیے نیا پاس ورڈ منتخب کریں۔';
+
+  @override
+  String get newPassword => 'نیا پاس ورڈ';
+
+  @override
+  String get enterNewPassword => 'نیا پاس ورڈ درج کریں';
+
+  @override
+  String get updatePassword => 'پاس ورڈ اپ ڈیٹ کریں';
+
+  @override
+  String get passwordUpdated => 'پاس ورڈ اپ ڈیٹ ہو گیا';
 
   @override
   String get backToLogin => 'لاگ اِن پر واپس جائیں';

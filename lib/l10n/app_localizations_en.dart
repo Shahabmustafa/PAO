@@ -63,6 +63,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorWeakPassword => 'Please choose a stronger password.';
 
   @override
+  String get errorSamePassword =>
+      'Your new password must be different from your old one.';
+
+  @override
   String get errorRateLimited =>
       'Too many attempts. Please wait a moment and try again.';
 
@@ -155,6 +159,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sendResetLink => 'Send Reset Link';
+
+  @override
+  String get resetPasswordTitle => 'Reset Password';
+
+  @override
+  String get resetPasswordSubtitle => 'Choose a new password for your account.';
+
+  @override
+  String get newPassword => 'New Password';
+
+  @override
+  String get enterNewPassword => 'Enter a new password';
+
+  @override
+  String get updatePassword => 'Update Password';
+
+  @override
+  String get passwordUpdated => 'Password updated';
 
   @override
   String get backToLogin => 'Back to Login';

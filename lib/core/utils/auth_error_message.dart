@@ -23,6 +23,8 @@ String authErrorMessage(AuthException error) {
       return l10n.errorEmailNotConfirmed;
     case 'weak_password':
       return l10n.errorWeakPassword;
+    case 'same_password':
+      return l10n.errorSamePassword;
     case 'over_request_rate_limit':
     case 'over_email_send_rate_limit':
       return l10n.errorRateLimited;

@@ -4,6 +4,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:toastification/toastification.dart';
 import 'core/config/supabase_config.dart';
+import 'core/routes/app_navigator.dart';
 import 'core/routes/app_router.dart';
 import 'core/routes/app_routes.dart';
 import 'core/theme/app_theme.dart';
@@ -19,6 +20,7 @@ Future<void> main() async {
     url: SupabaseConfig.url,
     anonKey: SupabaseConfig.anonKey,
   );
+  AppNavigator.listenForPasswordRecovery();
   await ThemeController.load();
   await LanguageStore.load();
   runApp(const MyApp());
@@ -37,6 +39,7 @@ class MyApp extends StatelessWidget {
       builder: (context, _) {
         final language = LanguageStore.selected.value;
         return MaterialApp(
+          navigatorKey: AppNavigator.navigatorKey,
           onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
           debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme,

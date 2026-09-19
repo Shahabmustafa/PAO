@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/routes/app_navigator.dart';
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../auth/data/repository/auth_repository.dart';
@@ -21,9 +22,14 @@ class _SplashScreenState extends State<SplashScreen> {
     await Future.delayed(const Duration(seconds: 2));
     if (!mounted) return;
     final isLoggedIn = AuthRepository().isLoggedIn;
+    final openedFromResetLink = AppNavigator.takePendingRecovery();
     Navigator.pushReplacementNamed(
       context,
-      isLoggedIn ? AppRoutes.dashboard : AppRoutes.login,
+      openedFromResetLink
+          ? AppRoutes.resetPassword
+          : isLoggedIn
+          ? AppRoutes.dashboard
+          : AppRoutes.login,
     );
   }
 
