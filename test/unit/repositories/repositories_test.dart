@@ -1,10 +1,15 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pao/core/realtime/realtime_event.dart';
+import 'package:pao/features/add_item/data/model/post_model.dart';
 import 'package:pao/features/add_item/data/repository/post_repository.dart';
 import 'package:pao/features/auth/data/repository/auth_repository.dart';
+import 'package:pao/features/chat/data/model/message_model.dart';
 import 'package:pao/features/chat/data/repository/chat_repository.dart';
 import 'package:pao/features/feedback/data/repository/feedback_repository.dart';
+import 'package:pao/features/requests/data/datasource/request_remote_datasource.dart';
+import 'package:pao/features/requests/data/model/request_model.dart';
 import 'package:pao/features/requests/data/repository/request_repository.dart';
 import 'package:pao/features/settings/data/repository/profile_repository.dart';
 import 'package:pao/features/wishlist/data/repository/wishlist_repository.dart';
@@ -108,27 +113,32 @@ void main() {
       repo = PostRepository(dataSource: source);
     });
 
-    test('createPost uploads every image first, in order, then stores the URLs', () async {
-      final a = Uint8List.fromList([1]);
-      final b = Uint8List.fromList([2]);
+    test(
+      'createPost uploads every image first, in order, then stores the URLs',
+      () async {
+        final a = Uint8List.fromList([1]);
+        final b = Uint8List.fromList([2]);
 
-      final post = await repo.createPost(
-        userId: 'u1',
-        title: 'Lamp',
-        description: 'Desk lamp',
-        category: 'Home & Living',
-        condition: 'Old',
-        images: [a, b],
-      );
+        final post = await repo.createPost(
+          userId: 'u1',
+          title: 'Lamp',
+          description: 'Desk lamp',
+          category: 'Home & Living',
+          condition: 'Old',
+          address: 'House 5, Street 2',
+          images: [a, b],
+        );
 
-      expect(source.uploaded, [a, b]);
-      expect(source.createdWith.single['imageUrls'], [
-        'https://cdn/u1/1.png',
-        'https://cdn/u1/2.png',
-      ]);
-      expect(post.title, 'Lamp');
-      expect(post.imageUrls, hasLength(2));
-    });
+        expect(source.uploaded, [a, b]);
+        expect(source.createdWith.single['imageUrls'], [
+          'https://cdn/u1/1.png',
+          'https://cdn/u1/2.png',
+        ]);
+        expect(source.createdWith.single['address'], 'House 5, Street 2');
+        expect(post.title, 'Lamp');
+        expect(post.imageUrls, hasLength(2));
+      },
+    );
 
     test('createPost with no images uploads nothing', () async {
       await repo.createPost(
@@ -137,11 +147,113 @@ void main() {
         description: 'd',
         category: 'c',
         condition: 'New',
+        address: 'House 5, Street 2',
         images: const [],
       );
 
       expect(source.uploaded, isEmpty);
       expect(source.createdWith.single['imageUrls'], isEmpty);
+    });
+
+    test('updatePost keeps old photos, uploads new ones after them', () async {
+      final fresh = Uint8List.fromList([9]);
+
+      final post = await repo.updatePost(
+        postId: 'p1',
+        userId: 'u1',
+        title: 'Lamp v2',
+        description: 'd',
+        category: 'Books',
+        condition: 'Used',
+        address: 'New address',
+        keptImageUrls: const ['https://cdn/old.png'],
+        newImages: [fresh],
+      );
+
+      expect(source.uploaded, [fresh]);
+      final saved = source.updatedWith.single;
+      expect(saved['postId'], 'p1');
+      expect(saved['address'], 'New address');
+      expect(saved['imageUrls'], ['https://cdn/old.png', 'https://cdn/u1/1.png']);
+      expect(post.title, 'Lamp v2');
+    });
+
+    test('updatePost removes dropped photos only after the row is saved', () async {
+      await repo.updatePost(
+        postId: 'p1',
+        userId: 'u1',
+        title: 't',
+        description: 'd',
+        category: 'c',
+        condition: 'New',
+        address: 'a',
+        keptImageUrls: const [],
+        newImages: const [],
+        removedImageUrls: const ['https://cdn/gone.png'],
+      );
+
+      expect(source.removedImages.single, ['https://cdn/gone.png']);
+    });
+
+    test('updatePost without dropped photos never touches storage', () async {
+      await repo.updatePost(
+        postId: 'p1',
+        userId: 'u1',
+        title: 't',
+        description: 'd',
+        category: 'c',
+        condition: 'New',
+        address: 'a',
+        keptImageUrls: const [],
+        newImages: const [],
+      );
+
+      expect(source.calls, isNot(contains('deleteImages')));
+    });
+
+    test('updatePost still succeeds if cleaning up old photos fails', () async {
+      source.deleteImagesError = Exception('storage down');
+
+      final post = await repo.updatePost(
+        postId: 'p1',
+        userId: 'u1',
+        title: 't',
+        description: 'd',
+        category: 'c',
+        condition: 'New',
+        address: 'a',
+        keptImageUrls: const [],
+        newImages: const [],
+        removedImageUrls: const ['https://cdn/gone.png'],
+      );
+
+      expect(post.title, 't');
+    });
+
+    test('deletePost deletes the row first, then its photos', () async {
+      await repo.deletePost('p1', imageUrls: const ['https://cdn/a.png']);
+
+      expect(source.calls, ['deletePost:p1', 'deleteImages']);
+      expect(source.removedImages.single, ['https://cdn/a.png']);
+    });
+
+    test('deletePost leaves the photos alone if the row was not deleted', () async {
+      final failing = _FailingDeleteSource();
+      final failingRepo = PostRepository(dataSource: failing);
+
+      await expectLater(
+        failingRepo.deletePost('p1', imageUrls: const ['https://cdn/a.png']),
+        throwsException,
+      );
+      expect(failing.removedImages, isEmpty);
+    });
+
+    test('deletePost still succeeds if removing photos fails', () async {
+      source.deleteImagesError = Exception('storage down');
+
+      await repo.deletePost('p1', imageUrls: const ['https://cdn/a.png']);
+
+      expect(source.deletedPosts, ['p1']);
     });
 
     test('fetchAvailablePosts maps rows to models', () async {
@@ -152,12 +264,84 @@ void main() {
       expect(posts.map((p) => p.id), ['a', 'b']);
     });
 
-    test('streamAvailablePosts maps each emission', () async {
-      source.rows = [postJson(id: 'a')];
+    test('fetchAvailablePostsPage passes the query through', () async {
+      source.rows = [postJson(id: 'a'), postJson(id: 'b')];
 
-      final emitted = await repo.streamAvailablePosts().first;
+      final posts = await repo.fetchAvailablePostsPage(
+        offset: 8,
+        limit: 8,
+        excludeUserId: 'me',
+        category: 'Books',
+        condition: 'Old',
+        search: 'novel',
+      );
 
-      expect(emitted.single.id, 'a');
+      expect(posts.map((p) => p.id), ['a', 'b']);
+      expect(source.calls, ['page:8:8:me:Books:Old:novel']);
+    });
+
+    test('watchPosts maps row events to models and passes the rest on', () async {
+      final events = <RealtimeEvent<PostModel>>[];
+      final sub = repo.watchPosts().listen(events.add);
+      addTearDown(sub.cancel);
+
+      source.postEvents
+        ..add(
+          RealtimeEvent(
+            type: RealtimeEventType.insert,
+            id: 'a',
+            record: postJson(id: 'a', title: 'Live'),
+          ),
+        )
+        ..add(const RealtimeEvent(type: RealtimeEventType.delete, id: 'b'))
+        ..add(const RealtimeEvent(type: RealtimeEventType.subscribed));
+      await pumpEventQueue();
+
+      expect(events.map((e) => e.type), [
+        RealtimeEventType.insert,
+        RealtimeEventType.delete,
+        RealtimeEventType.subscribed,
+      ]);
+      expect(events.first.record!.title, 'Live');
+      expect(events[1].record, isNull);
+    });
+
+    test('watchPosts completes an incomplete UPDATE by fetching the row', () async {
+      source.row = postJson(id: 'a', title: 'Complete');
+      final events = <RealtimeEvent<PostModel>>[];
+      final sub = repo.watchPosts().listen(events.add);
+      addTearDown(sub.cancel);
+
+      // Realtime leaves out unchanged large columns such as `description`.
+      source.postEvents.add(
+        const RealtimeEvent(
+          type: RealtimeEventType.update,
+          id: 'a',
+          record: {'id': 'a', 'is_given': true},
+        ),
+      );
+      await pumpEventQueue();
+
+      expect(events.single.type, RealtimeEventType.update);
+      expect(events.single.record!.title, 'Complete');
+    });
+
+    test('watchPosts drops an incomplete event whose row is gone', () async {
+      source.row = null;
+      final events = <RealtimeEvent<PostModel>>[];
+      final sub = repo.watchPosts().listen(events.add);
+      addTearDown(sub.cancel);
+
+      source.postEvents.add(
+        const RealtimeEvent(
+          type: RealtimeEventType.update,
+          id: 'a',
+          record: {'id': 'a'},
+        ),
+      );
+      await pumpEventQueue();
+
+      expect(events, isEmpty);
     });
 
     test('fetchPostById returns null or a model', () async {
@@ -199,20 +383,43 @@ void main() {
       expect(request.isPending, isTrue);
     });
 
-    test('fetch and stream methods map rows to models', () async {
+    test('fetch methods map rows to models', () async {
       source.rows = [requestJson(id: 'a'), requestJson(id: 'b')];
 
       expect((await repo.fetchSentRequests('me')).map((r) => r.id), ['a', 'b']);
-      expect((await repo.fetchReceivedRequests('me')).map((r) => r.id), ['a', 'b']);
-      expect((await repo.streamSentRequests('me').first).length, 2);
-      expect((await repo.streamReceivedRequests('me').first).length, 2);
+      expect((await repo.fetchReceivedRequests('me')).map((r) => r.id), [
+        'a',
+        'b',
+      ]);
     });
 
-    test('acceptRequest accepts first, then closes the competing requests', () async {
-      await repo.acceptRequest(requestId: 'r1', postId: 'p1');
+    test('watchRequests maps rows to models and keeps the tag', () async {
+      final events = <RealtimeEvent<RequestModel>>[];
+      final sub = repo.watchRequests('me').listen(events.add);
+      addTearDown(sub.cancel);
 
-      expect(source.calls, ['accept:r1', 'closeOthers:p1:r1']);
+      source.events.add(
+        RealtimeEvent(
+          type: RealtimeEventType.update,
+          id: 'a',
+          record: requestJson(id: 'a', status: 'accepted'),
+          tag: RequestRemoteDataSource.sentTag,
+        ),
+      );
+      await pumpEventQueue();
+
+      expect(events.single.record!.isAccepted, isTrue);
+      expect(events.single.tag, 'sent');
     });
+
+    test(
+      'acceptRequest accepts first, then closes the competing requests',
+      () async {
+        await repo.acceptRequest(requestId: 'r1', postId: 'p1');
+
+        expect(source.calls, ['accept:r1', 'closeOthers:p1:r1']);
+      },
+    );
 
     test('cancelRequest delegates', () async {
       await repo.cancelRequest('r1');
@@ -232,7 +439,13 @@ void main() {
 
     test('fetchWishlist maps rows', () async {
       source.rows = [
-        {'id': 'w1', 'user_id': 'u', 'post_id': 'p1', 'title': 'Bike', 'note': null},
+        {
+          'id': 'w1',
+          'user_id': 'u',
+          'post_id': 'p1',
+          'title': 'Bike',
+          'note': null,
+        },
       ];
 
       final items = await repo.fetchWishlist('u');
@@ -242,7 +455,12 @@ void main() {
     });
 
     test('add and remove delegate with their arguments', () async {
-      await repo.addToWishlist(userId: 'u', postId: 'p1', title: 'Bike', note: 'n');
+      await repo.addToWishlist(
+        userId: 'u',
+        postId: 'p1',
+        title: 'Bike',
+        note: 'n',
+      );
       await repo.removeFromWishlist(userId: 'u', postId: 'p1');
 
       expect(source.calls, ['add:u:p1:Bike:n', 'remove:u:p1']);
@@ -296,7 +514,7 @@ void main() {
   });
 
   group('ChatRepository', () {
-    test('streamMessages maps rows and sendMessage delegates', () async {
+    test('fetchMessages maps rows, sendMessage returns the saved row', () async {
       final source = FakeChatDataSource()
         ..rows = [
           {
@@ -309,11 +527,49 @@ void main() {
         ];
       final repo = ChatRepository(dataSource: source);
 
-      final messages = await repo.streamMessages('r1').first;
-      await repo.sendMessage(requestId: 'r1', senderId: 's', body: 'yo');
+      final messages = await repo.fetchMessages('r1');
+      final sent = await repo.sendMessage(
+        requestId: 'r1',
+        senderId: 's',
+        body: 'yo',
+      );
 
       expect(messages.single.body, 'hi');
+      expect(sent.body, 'yo');
+      expect(sent.id, 'sent-1');
       expect(source.calls, ['send:r1:s:yo']);
+    });
+
+    test('watchMessages maps insert and delete events', () async {
+      final source = FakeChatDataSource();
+      final repo = ChatRepository(dataSource: source);
+      final events = <RealtimeEvent<MessageModel>>[];
+      final sub = repo.watchMessages('r1').listen(events.add);
+      addTearDown(sub.cancel);
+
+      source.events
+        ..add(
+          RealtimeEvent(
+            type: RealtimeEventType.insert,
+            id: 'm1',
+            record: {
+              'id': 'm1',
+              'request_id': 'r1',
+              'sender_id': 's',
+              'body': 'hi',
+              'created_at': kCreatedAt.toIso8601String(),
+            },
+          ),
+        )
+        ..add(const RealtimeEvent(type: RealtimeEventType.delete, id: 'm1'));
+      await pumpEventQueue();
+
+      expect(events.map((e) => e.type), [
+        RealtimeEventType.insert,
+        RealtimeEventType.delete,
+      ]);
+      expect(events.first.record!.body, 'hi');
+      expect(events.last.record, isNull);
     });
   });
 
@@ -347,15 +603,21 @@ void main() {
       expect(profiles['b']!.fullName, 'Bina');
     });
 
-    test('uploadAndSetAvatar uploads, then saves the URL on the profile', () async {
-      final url = await repo.uploadAndSetAvatar(
-        userId: 'u1',
-        bytes: Uint8List.fromList([1, 2]),
-      );
+    test(
+      'uploadAndSetAvatar uploads, then saves the URL on the profile',
+      () async {
+        final url = await repo.uploadAndSetAvatar(
+          userId: 'u1',
+          bytes: Uint8List.fromList([1, 2]),
+        );
 
-      expect(url, 'https://cdn/avatar.png');
-      expect(source.calls, ['upload:u1', 'updateAvatar:u1:https://cdn/avatar.png']);
-    });
+        expect(url, 'https://cdn/avatar.png');
+        expect(source.calls, [
+          'upload:u1',
+          'updateAvatar:u1:https://cdn/avatar.png',
+        ]);
+      },
+    );
 
     test('saveProfile sends the new email only when it changed', () async {
       await repo.saveProfile(
@@ -381,4 +643,10 @@ void main() {
       ]);
     });
   });
+}
+
+/// A data source whose `deletePost` fails, like RLS refusing a non-owner.
+class _FailingDeleteSource extends FakePostDataSource {
+  @override
+  Future<void> deletePost(String postId) async => throw Exception('not allowed');
 }

@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import '../../../core/realtime/realtime_event.dart';
+import '../../../core/realtime/realtime_log.dart';
 import '../../add_item/data/model/post_model.dart';
 import '../../add_item/data/repository/post_repository.dart';
 import '../../../core/theme/app_colors.dart';
@@ -19,29 +21,90 @@ class ProductStore {
   /// loading skeleton instead of an empty state.
   static final ValueNotifier<bool> isLoading = ValueNotifier<bool>(true);
 
-  static StreamSubscription<List<PostModel>>? _subscription;
+  static StreamSubscription<RealtimeEvent<PostModel>>? _subscription;
+  static bool _hasSynced = false;
+
+  static final StreamController<RealtimeEvent<PostModel>> _changes =
+      StreamController<RealtimeEvent<PostModel>>.broadcast();
+  static final StreamController<void> _reconnects =
+      StreamController<void>.broadcast();
+
+  /// Every post INSERT / UPDATE / DELETE that arrived over Realtime, emitted
+  /// after [items] has already been updated. Lets a screen that keeps its
+  /// own (paginated) list apply the same change without refetching.
+  static Stream<RealtimeEvent<PostModel>> get changes => _changes.stream;
+
+  /// Fires when the channel re-joins after a dropped connection — events
+  /// were missed in between, so listeners should reload.
+  static Stream<void> get reconnected => _reconnects.stream;
 
   /// Starts a live Supabase Realtime subscription that keeps [items] in
-  /// sync automatically whenever any post is created, edited, or marked as
-  /// given — no manual refresh needed. Safe to call more than once; only
-  /// the first call actually starts the subscription.
+  /// sync automatically whenever any post is created, edited, marked as
+  /// given or deleted — no manual refresh needed. Safe to call more than
+  /// once; only the first call actually starts the subscription.
   static void startRealtimeSync({PostRepository? repository}) {
     if (_subscription != null) return;
-    _subscription = (repository ?? PostRepository())
-        .streamAvailablePosts()
-        .listen((posts) {
-          final remoteProducts = posts.map(productFromPost).toList();
-          final remoteIds = remoteProducts.map((p) => p.id).toSet();
-          final localOnly = items.value
-              .where((p) => !remoteIds.contains(p.id))
-              .toList();
-          items.value = [...remoteProducts, ...localOnly];
-          isLoading.value = false;
-        }, onError: (_) => isLoading.value = false);
+    final repo = repository ?? PostRepository();
+    _subscription = repo.watchPosts().listen(
+      (event) => _onEvent(event, repo),
+      onError: (Object e) {
+        realtimeLog('posts stream error: $e');
+        isLoading.value = false;
+      },
+    );
+  }
+
+  /// Cancels the subscription (removing the Realtime channel). A later
+  /// [startRealtimeSync] starts a fresh one.
+  static void stopRealtimeSync() {
+    _subscription?.cancel();
+    _subscription = null;
+    _hasSynced = false;
+  }
+
+  static void _onEvent(RealtimeEvent<PostModel> event, PostRepository repo) {
+    switch (event.type) {
+      case RealtimeEventType.subscribed:
+        // Initial load, and catch-up after a reconnect.
+        if (event.isReconnect) _reconnects.add(null);
+        _hasSynced = true;
+        syncFromSupabase(repository: repo).catchError((_) {});
+      case RealtimeEventType.error:
+        // Realtime is down; still load once so the UI isn't stuck loading.
+        if (!_hasSynced) {
+          _hasSynced = true;
+          syncFromSupabase(repository: repo).catchError((_) {});
+        }
+      case RealtimeEventType.insert:
+      case RealtimeEventType.update:
+        final post = event.record;
+        if (post == null) return;
+        final known = items.value.any((p) => p.id == post.id);
+        // A post the store has never seen is only worth adding while it is
+        // still available; a given-away one is just history.
+        if (known || !post.isGiven) update(productFromPost(post));
+        _changes.add(event);
+      case RealtimeEventType.delete:
+        remove(event.id);
+        _changes.add(event);
+    }
   }
 
   static void add(Product product) {
     items.value = [product, ...items.value];
+  }
+
+  /// Replaces the stored copy of [product] (matched by id), or adds it if
+  /// the store doesn't have it yet.
+  static void update(Product product) {
+    final exists = items.value.any((p) => p.id == product.id);
+    items.value = exists
+        ? [for (final p in items.value) p.id == product.id ? product : p]
+        : [product, ...items.value];
+  }
+
+  static void remove(String id) {
+    items.value = items.value.where((p) => p.id != id).toList();
   }
 
   static void markAsGiven(String id) {
@@ -76,6 +139,7 @@ class ProductStore {
       color: AppColors.primary,
       description: post.description ?? '',
       condition: post.condition,
+      address: post.address,
       imageUrls: post.imageUrls,
       userId: post.userId,
       isGiven: post.isGiven,

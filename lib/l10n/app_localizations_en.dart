@@ -924,4 +924,25 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get viewMyProfile => 'View my profile';
+
+  @override
+  String get edit => 'Edit';
+
+  @override
+  String get editProduct => 'Edit Product';
+
+  @override
+  String get productUpdated => 'Product updated';
+
+  @override
+  String deleteProductConfirm(String name) {
+    return 'Delete \"$name\"? Its requests, chats and wishlist entries will be removed too. This cannot be undone.';
+  }
+
+  @override
+  String get productDeleted => 'Product deleted';
+
+  @override
+  String get failedToDeleteProduct =>
+      'Failed to delete product. Please try again.';
 }

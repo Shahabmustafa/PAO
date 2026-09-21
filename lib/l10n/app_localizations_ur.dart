@@ -931,4 +931,25 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get viewMyProfile => 'میرا پروفائل دیکھیں';
+
+  @override
+  String get edit => 'ترمیم کریں';
+
+  @override
+  String get editProduct => 'پروڈکٹ میں ترمیم کریں';
+
+  @override
+  String get productUpdated => 'پروڈکٹ اپ ڈیٹ ہو گئی';
+
+  @override
+  String deleteProductConfirm(String name) {
+    return '\"$name\" حذف کریں؟ اس کی درخواستیں، چیٹس اور وش لسٹ کی اندراجات بھی ہٹ جائیں گی۔ اسے واپس نہیں کیا جا سکتا۔';
+  }
+
+  @override
+  String get productDeleted => 'پروڈکٹ حذف ہو گئی';
+
+  @override
+  String get failedToDeleteProduct =>
+      'پروڈکٹ حذف کرنے میں ناکامی۔ براہِ کرم دوبارہ کوشش کریں۔';
 }

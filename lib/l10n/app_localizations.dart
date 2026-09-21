@@ -1765,6 +1765,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'View my profile'**
   String get viewMyProfile;
+
+  /// No description provided for @edit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get edit;
+
+  /// No description provided for @editProduct.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Product'**
+  String get editProduct;
+
+  /// No description provided for @productUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Product updated'**
+  String get productUpdated;
+
+  /// No description provided for @deleteProductConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete \"{name}\"? Its requests, chats and wishlist entries will be removed too. This cannot be undone.'**
+  String deleteProductConfirm(String name);
+
+  /// No description provided for @productDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Product deleted'**
+  String get productDeleted;
+
+  /// No description provided for @failedToDeleteProduct.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to delete product. Please try again.'**
+  String get failedToDeleteProduct;
 }
 
 class _AppLocalizationsDelegate

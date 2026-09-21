@@ -7,10 +7,9 @@ import '../../../../core/theme/app_icons.dart';
 import '../../../../core/widgets/app_avatar.dart';
 import '../../../../core/widgets/app_icon.dart';
 import '../../../../core/widgets/app_shimmer.dart';
+import '../../../add_item/data/repository/post_repository.dart';
 import '../../../auth/data/repository/auth_repository.dart';
 import '../../../profile/presentation/screens/user_profile_screen.dart';
-import '../../data/product_store.dart';
-import '../../domain/product.dart';
 import '../provider/home_provider.dart';
 import '../widgets/filter_bottom_sheet.dart';
 import '../widgets/product_card.dart';
@@ -18,13 +17,18 @@ import '../../../../core/l10n/l10n.dart';
 
 class HomeScreen extends StatelessWidget {
   final bool autofocusSearch;
+  final PostRepository? postRepository;
 
-  const HomeScreen({super.key, this.autofocusSearch = false});
+  const HomeScreen({
+    super.key,
+    this.autofocusSearch = false,
+    this.postRepository,
+  });
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => HomeProvider(),
+      create: (_) => HomeProvider(postRepository: postRepository),
       child: _HomeView(autofocusSearch: autofocusSearch),
     );
   }
@@ -43,10 +47,15 @@ class _HomeViewState extends State<_HomeView> {
   final _searchController = TextEditingController();
   final _searchFocusNode = FocusNode();
   final _authRepository = AuthRepository();
+  final _scrollController = ScrollController();
+
+  // Start fetching the next page once the user is this close to the end.
+  static const double _loadMoreThreshold = 300;
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_loadMoreIfNearEnd);
     if (widget.autofocusSearch) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _searchFocusNode.requestFocus();
@@ -56,9 +65,20 @@ class _HomeViewState extends State<_HomeView> {
 
   @override
   void dispose() {
+    _scrollController.dispose();
     _searchController.dispose();
     _searchFocusNode.dispose();
     super.dispose();
+  }
+
+  void _loadMoreIfNearEnd() {
+    if (!mounted || !_scrollController.hasClients) return;
+    final position = _scrollController.position;
+    if (!position.hasContentDimensions) return;
+    final provider = context.read<HomeProvider>();
+    // After a failure the footer's retry button decides, not the scroll.
+    if (provider.loadMoreFailed) return;
+    if (position.extentAfter < _loadMoreThreshold) provider.loadMore();
   }
 
   Future<void> _onFilterTapped() async {
@@ -77,237 +97,286 @@ class _HomeViewState extends State<_HomeView> {
     final homeProvider = context.watch<HomeProvider>();
     final activeFilterCount = homeProvider.filters.activeCount;
 
+    final products = homeProvider.products;
+    final isLoading = homeProvider.isLoading;
+    // Space taken by the floating nav bar (and system insets) below the grid.
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+
+    // When a page doesn't fill the screen there is nothing to scroll, so the
+    // next page has to be requested without a scroll event.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadMoreIfNearEnd());
+
     return Scaffold(
       body: SafeArea(
-        child: ValueListenableBuilder<bool>(
-          valueListenable: ProductStore.isLoading,
-          builder: (context, isLoading, _) {
-            return ValueListenableBuilder<List<Product>>(
-              valueListenable: ProductStore.items,
-              builder: (context, allProducts, _) {
-                final products = homeProvider.filterProducts(allProducts);
-                return RefreshIndicator(
-                  color: AppColors.primary,
-                  onRefresh: homeProvider.refresh,
-                  child: CustomScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    slivers: [
-                      SliverPadding(
-                        padding: const EdgeInsets.only(top: 20),
-                        sliver: SliverToBoxAdapter(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 20),
-                            child: StreamBuilder<AuthState>(
-                              stream: _authRepository.authStateChanges,
-                              builder: (context, _) {
-                                final currentUser = _authRepository.currentUser;
-                                return Row(
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                    GestureDetector(
-                                      onTap: currentUser == null
-                                          ? null
-                                          : () => Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (_) =>
-                                                    UserProfileScreen(
-                                                      userId: currentUser.id,
-                                                    ),
-                                              ),
-                                            ),
-                                      child: AppAvatar(
-                                        radius: 24,
-                                        imageUrl: currentUser?.avatarUrl,
+        bottom: false,
+        child: RefreshIndicator(
+          color: AppColors.primary,
+          onRefresh: homeProvider.refresh,
+          child: CustomScrollView(
+            controller: _scrollController,
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              SliverPadding(
+                padding: const EdgeInsets.only(top: 20),
+                sliver: SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: StreamBuilder<AuthState>(
+                      stream: _authRepository.authStateChanges,
+                      builder: (context, _) {
+                        final currentUser = _authRepository.currentUser;
+                        return Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            GestureDetector(
+                              onTap: currentUser == null
+                                  ? null
+                                  : () => Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => UserProfileScreen(
+                                          userId: currentUser.id,
+                                        ),
                                       ),
                                     ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            context.l10n.welcomeBackGreeting,
-                                            style: TextStyle(
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w500,
-                                              color: context.appTextSecondary,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            currentUser?.fullName ??
-                                                context.l10n.yourName,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(
-                                              fontSize: 20,
-                                              fontWeight: FontWeight.bold,
-                                              color: context.appTextPrimary,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              },
+                              child: AppAvatar(
+                                radius: 24,
+                                imageUrl: currentUser?.avatarUrl,
+                              ),
                             ),
-                          ),
-                        ),
-                      ),
-                      const SliverToBoxAdapter(child: SizedBox(height: 20)),
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(12),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: AppColors.textPrimary.withValues(
-                                          alpha: 0.04,
-                                        ),
-                                        blurRadius: 12,
-                                        offset: const Offset(0, 4),
-                                      ),
-                                    ],
-                                  ),
-                                  child: TextField(
-                                    controller: _searchController,
-                                    focusNode: _searchFocusNode,
-                                    onChanged: homeProvider.onSearchChanged,
-                                    decoration: InputDecoration(
-                                      hintText: context.l10n.searchHint,
-                                      prefixIcon: const Padding(
-                                        padding: EdgeInsets.all(12),
-                                        child: AppIcon(
-                                          AppIcons.search,
-                                          size: 20,
-                                          color: AppColors.primary,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              _FilterButton(
-                                activeCount: activeFilterCount,
-                                onTap: _onFilterTapped,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SliverToBoxAdapter(child: SizedBox(height: 16)),
-                      if (isLoading && products.isEmpty)
-                        const SliverPadding(
-                          padding: EdgeInsets.only(bottom: 20),
-                          sliver: SliverToBoxAdapter(
-                            child: _ProductGridShimmer(),
-                          ),
-                        )
-                      else if (products.isEmpty)
-                        SliverFillRemaining(
-                          hasScrollBody: false,
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 20),
-                            child: Center(
+                            const SizedBox(width: 12),
+                            Expanded(
                               child: Column(
-                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Container(
-                                    height: 56,
-                                    width: 56,
-                                    decoration: BoxDecoration(
-                                      color: AppColors.primary.withValues(
-                                        alpha: 0.08,
-                                      ),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Center(
-                                      child: AppIcon(
-                                        AppIcons.search,
-                                        size: 26,
-                                        color: AppColors.primary,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 16),
                                   Text(
-                                    context.l10n.noProductsFound,
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      color: context.appTextPrimary,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    context.l10n.tryDifferentSearch,
-                                    textAlign: TextAlign.center,
+                                    context.l10n.welcomeBackGreeting,
                                     style: TextStyle(
                                       fontSize: 13,
+                                      fontWeight: FontWeight.w500,
                                       color: context.appTextSecondary,
                                     ),
                                   ),
-                                  if (homeProvider.hasActiveSearch) ...[
-                                    const SizedBox(height: 16),
-                                    TextButton(
-                                      onPressed: () {
-                                        _searchController.clear();
-                                        homeProvider.clearSearch();
-                                      },
-                                      style: TextButton.styleFrom(
-                                        foregroundColor: AppColors.primary,
-                                      ),
-                                      child: Text(context.l10n.clearSearch),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    currentUser?.fullName ??
+                                        context.l10n.yourName,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: context.appTextPrimary,
                                     ),
-                                  ],
+                                  ),
                                 ],
                               ),
                             ),
-                          ),
-                        )
-                      else
-                        SliverPadding(
-                          padding: const EdgeInsets.only(bottom: 20),
-                          sliver: SliverToBoxAdapter(
-                            child: MasonryGridView.count(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 20,
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 20)),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.textPrimary.withValues(
+                                  alpha: 0.04,
+                                ),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
                               ),
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              crossAxisCount: 2,
-                              mainAxisSpacing: 14,
-                              crossAxisSpacing: 12,
-                              itemCount: products.length,
-                              itemBuilder: (context, index) {
-                                return ProductCard(product: products[index]);
-                              },
+                            ],
+                          ),
+                          child: TextField(
+                            controller: _searchController,
+                            focusNode: _searchFocusNode,
+                            onChanged: homeProvider.onSearchChanged,
+                            decoration: InputDecoration(
+                              hintText: context.l10n.searchHint,
+                              prefixIcon: const Padding(
+                                padding: EdgeInsets.all(12),
+                                child: AppIcon(
+                                  AppIcons.search,
+                                  size: 20,
+                                  color: AppColors.primary,
+                                ),
+                              ),
                             ),
                           ),
                         ),
+                      ),
+                      const SizedBox(width: 10),
+                      _FilterButton(
+                        activeCount: activeFilterCount,
+                        onTap: _onFilterTapped,
+                      ),
                     ],
                   ),
-                );
-              },
-            );
-          },
+                ),
+              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 16)),
+              if (isLoading && products.isEmpty)
+                SliverPadding(
+                  padding: EdgeInsets.only(bottom: 20 + bottomInset),
+                  sliver: const SliverToBoxAdapter(
+                    child: _ProductGridShimmer(),
+                  ),
+                )
+              else if (products.isEmpty)
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(20, 0, 20, bottomInset),
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            height: 56,
+                            width: 56,
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.08),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Center(
+                              child: AppIcon(
+                                AppIcons.search,
+                                size: 26,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            context.l10n.noProductsFound,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: context.appTextPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            context.l10n.tryDifferentSearch,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: context.appTextSecondary,
+                            ),
+                          ),
+                          if (homeProvider.hasActiveSearch) ...[
+                            const SizedBox(height: 16),
+                            TextButton(
+                              onPressed: () {
+                                _searchController.clear();
+                                homeProvider.clearSearch();
+                              },
+                              style: TextButton.styleFrom(
+                                foregroundColor: AppColors.primary,
+                              ),
+                              child: Text(context.l10n.clearSearch),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                )
+              else ...[
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  sliver: SliverMasonryGrid.count(
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 14,
+                    crossAxisSpacing: 12,
+                    childCount: products.length,
+                    itemBuilder: (context, index) {
+                      final product = products[index];
+                      return ProductCard(
+                        key: ValueKey(product.id),
+                        product: product,
+                      );
+                    },
+                  ),
+                ),
+                SliverToBoxAdapter(
+                  child: _LoadMoreFooter(
+                    isLoading: homeProvider.isLoadingMore,
+                    failed: homeProvider.loadMoreFailed,
+                    onRetry: homeProvider.loadMore,
+                    bottomInset: bottomInset,
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
+/// Bottom of the grid: placeholder cards while the next page loads, or a
+/// retry button if that request failed.
+class _LoadMoreFooter extends StatelessWidget {
+  final bool isLoading;
+  final bool failed;
+  final VoidCallback onRetry;
+  final double bottomInset;
+
+  const _LoadMoreFooter({
+    required this.isLoading,
+    required this.failed,
+    required this.onRetry,
+    required this.bottomInset,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (isLoading) {
+      return Padding(
+        padding: EdgeInsets.only(top: 14, bottom: 20 + bottomInset),
+        child: const _ProductGridShimmer(
+          key: Key('home-load-more-skeleton'),
+          itemCount: 2,
+        ),
+      );
+    }
+    if (failed) {
+      return Padding(
+        padding: EdgeInsets.only(top: 12, bottom: 12 + bottomInset),
+        child: Center(
+          child: TextButton.icon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh, size: 18),
+            label: Text(context.l10n.somethingWentWrong),
+            style: TextButton.styleFrom(
+              foregroundColor: context.appTextSecondary,
+            ),
+          ),
+        ),
+      );
+    }
+    return SizedBox(height: 20 + bottomInset);
+  }
+}
+
 class _ProductGridShimmer extends StatelessWidget {
-  const _ProductGridShimmer();
+  final int itemCount;
+
+  const _ProductGridShimmer({super.key, this.itemCount = 6});
 
   @override
   Widget build(BuildContext context) {
@@ -318,7 +387,7 @@ class _ProductGridShimmer extends StatelessWidget {
       crossAxisCount: 2,
       mainAxisSpacing: 14,
       crossAxisSpacing: 12,
-      itemCount: 6,
+      itemCount: itemCount,
       itemBuilder: (context, index) {
         return Container(
           decoration: BoxDecoration(

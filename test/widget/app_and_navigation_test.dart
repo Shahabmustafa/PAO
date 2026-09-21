@@ -212,6 +212,73 @@ void main() {
       expect(find.text('Inbox'), findsNothing, reason: 'Inbox tab was renamed');
     });
 
+    group('Requests badge', () {
+      // The badge is the only "1"/"2"/… text the dashboard shows.
+      Finder badge(String count) => find.text(count);
+
+      testWidgets('is hidden when nothing is waiting for an answer', (
+        tester,
+      ) async {
+        await pumpDashboard(tester);
+
+        expect(badge('1'), findsNothing);
+        expect(badge('0'), findsNothing);
+      });
+
+      testWidgets('counts received requests that are still pending', (
+        tester,
+      ) async {
+        await pumpDashboard(tester);
+
+        // Set after the first pump, as the realtime stream would: the
+        // Requests screen clears the store while it starts up.
+        RequestStore.received.value = [
+          makeRequest(id: 'a'),
+          makeRequest(id: 'b'),
+          makeRequest(id: 'c', status: 'accepted'),
+          makeRequest(id: 'd', status: 'closed'),
+        ];
+        await tester.pump();
+
+        expect(badge('2'), findsOneWidget);
+      });
+
+      testWidgets('ignores requests the user sent', (tester) async {
+        await pumpDashboard(tester);
+
+        RequestStore.sent.value = [makeRequest()];
+        await tester.pump();
+
+        expect(badge('1'), findsNothing);
+      });
+
+      testWidgets('updates live when a request arrives or is answered', (
+        tester,
+      ) async {
+        await pumpDashboard(tester);
+        expect(badge('1'), findsNothing);
+
+        RequestStore.received.value = [makeRequest(id: 'a')];
+        await tester.pump();
+        expect(badge('1'), findsOneWidget);
+
+        RequestStore.received.value = [makeRequest(id: 'a', status: 'accepted')];
+        await tester.pump();
+        expect(badge('1'), findsNothing);
+      });
+
+      testWidgets('caps a large count at 99+', (tester) async {
+        await pumpDashboard(tester);
+
+        RequestStore.received.value = [
+          for (var i = 0; i < 120; i++) makeRequest(id: 'r$i'),
+        ];
+        await tester.pump();
+
+        expect(badge('99+'), findsOneWidget);
+      });
+    });
+
     testWidgets('each tab shows its screen', (tester) async {
       await pumpDashboard(tester);
 
@@ -243,7 +310,7 @@ void main() {
       await tester.tap(createButton);
       await tester.pumpAndSettle();
 
-      expect(find.text('Give something away for free'), findsOneWidget);
+      expect(find.text('Photos'), findsOneWidget);
       expect(find.byType(AppIcon), findsWidgets);
     });
 

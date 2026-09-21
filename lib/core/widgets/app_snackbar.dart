@@ -22,7 +22,9 @@ class AppSnackbar {
       type: color == AppColors.error
           ? ToastificationType.error
           : ToastificationType.success,
-      style: ToastificationStyle.flatColored,
+      // `flatColored` ignores `backgroundColor` and paints a light tint, which
+      // hides the theme-colored text in dark mode; `flat` honours it.
+      style: ToastificationStyle.flat,
       alignment: Alignment.bottomCenter,
       autoCloseDuration: const Duration(seconds: 2),
       showProgressBar: false,

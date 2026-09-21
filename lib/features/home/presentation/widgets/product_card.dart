@@ -13,7 +13,14 @@ import '../../domain/localized_labels.dart';
 class ProductCard extends StatelessWidget {
   final Product product;
 
-  const ProductCard({super.key, required this.product});
+  /// Whether the heart button that adds the product to the wishlist is shown.
+  final bool showWishlistButton;
+
+  const ProductCard({
+    super.key,
+    required this.product,
+    this.showWishlistButton = true,
+  });
 
   void _toggleWishlist(bool isSaved) {
     if (isSaved) {
@@ -89,32 +96,33 @@ class ProductCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  PositionedDirectional(
-                    top: 8,
-                    end: 8,
-                    child: ValueListenableBuilder<List<WishItem>>(
-                      valueListenable: WishlistStore.items,
-                      builder: (context, items, _) {
-                        final isSaved = items.any(
-                          (item) => item.id == product.id,
-                        );
-                        return GestureDetector(
-                          onTap: () => _toggleWishlist(isSaved),
-                          child: SizedBox(
-                            height: 22,
-                            width: 22,
-                            child: AppIcon(
-                              isSaved
-                                  ? AppIcons.favoriteFilled
-                                  : AppIcons.favoriteOutline,
-                              size: 12,
-                              color: AppColors.primary,
+                  if (showWishlistButton)
+                    PositionedDirectional(
+                      top: 8,
+                      end: 8,
+                      child: ValueListenableBuilder<List<WishItem>>(
+                        valueListenable: WishlistStore.items,
+                        builder: (context, items, _) {
+                          final isSaved = items.any(
+                            (item) => item.id == product.id,
+                          );
+                          return GestureDetector(
+                            onTap: () => _toggleWishlist(isSaved),
+                            child: SizedBox(
+                              height: 22,
+                              width: 22,
+                              child: AppIcon(
+                                isSaved
+                                    ? AppIcons.favoriteFilled
+                                    : AppIcons.favoriteOutline,
+                                size: 12,
+                                color: AppColors.primary,
+                              ),
                             ),
-                          ),
-                        );
-                      },
+                          );
+                        },
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),

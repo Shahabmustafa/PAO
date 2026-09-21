@@ -1,3 +1,4 @@
+import '../../../../core/realtime/realtime_event.dart';
 import '../datasource/chat_remote_datasource.dart';
 import '../model/message_model.dart';
 
@@ -8,22 +9,29 @@ class ChatRepository {
 
   final ChatRemoteDataSource _dataSource;
 
-  Stream<List<MessageModel>> streamMessages(String requestId) {
-    return _dataSource
-        .streamMessages(requestId)
-        .map((rows) => rows.map(MessageModel.fromJson).toList());
+  /// Every message of the conversation, oldest first.
+  Future<List<MessageModel>> fetchMessages(String requestId) async {
+    final rows = await _dataSource.fetchMessages(requestId);
+    return rows.map(MessageModel.fromJson).toList();
   }
 
-  Future<void> sendMessage({
+  Stream<RealtimeEvent<MessageModel>> watchMessages(String requestId) {
+    return _dataSource
+        .watchMessages(requestId)
+        .map((event) => event.mapRecord(MessageModel.fromJson));
+  }
+
+  Future<MessageModel> sendMessage({
     required String requestId,
     required String senderId,
     required String body,
-  }) {
-    return _dataSource.sendMessage(
+  }) async {
+    final row = await _dataSource.sendMessage(
       requestId: requestId,
       senderId: senderId,
       body: body,
     );
+    return MessageModel.fromJson(row);
   }
 
   Future<void> deleteMessage(String messageId) =>

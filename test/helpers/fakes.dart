@@ -6,6 +6,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:pao/core/realtime/realtime_event.dart';
 import 'package:pao/features/add_item/data/datasource/post_remote_datasource.dart';
 import 'package:pao/features/add_item/data/model/post_model.dart';
 import 'package:pao/features/add_item/data/repository/post_repository.dart';
@@ -42,6 +43,7 @@ Map<String, dynamic> postJson({
   String? description = 'Barely used',
   String? category = 'Electronics',
   String? condition = 'Old',
+  String? address = 'House 5, Street 2',
   List<String>? imageUrls = const ['https://img/1.png', 'https://img/2.png'],
   bool? isGiven = false,
 }) => {
@@ -51,6 +53,7 @@ Map<String, dynamic> postJson({
   'description': description,
   'category': category,
   'condition': condition,
+  'address': address,
   'image_urls': imageUrls,
   'is_given': isGiven,
   'created_at': kCreatedAt.toIso8601String(),
@@ -118,6 +121,32 @@ MessageModel makeMessage({
   body: body,
   createdAt: kCreatedAt,
 );
+
+// Realtime events, as a repository delivers them.
+RealtimeEvent<T> insertEvent<T>(String id, T record, {String tag = ''}) =>
+    RealtimeEvent(
+      type: RealtimeEventType.insert,
+      id: id,
+      record: record,
+      tag: tag,
+    );
+
+RealtimeEvent<T> updateEvent<T>(String id, T record, {String tag = ''}) =>
+    RealtimeEvent(
+      type: RealtimeEventType.update,
+      id: id,
+      record: record,
+      tag: tag,
+    );
+
+RealtimeEvent<T> deleteEvent<T>(String id) =>
+    RealtimeEvent(type: RealtimeEventType.delete, id: id);
+
+RealtimeEvent<T> subscribedEvent<T>({bool isReconnect = false}) =>
+    RealtimeEvent(type: RealtimeEventType.subscribed, isReconnect: isReconnect);
+
+RealtimeEvent<T> errorEvent<T>() =>
+    const RealtimeEvent(type: RealtimeEventType.error);
 
 const ProfileModel kOtherProfile = ProfileModel(
   id: 'owner-1',
@@ -202,10 +231,59 @@ class FakePostRepository implements PostRepository {
   Map<String, PostModel> byId = {};
   Map<String, List<PostModel>> postsByUser = {};
   int donatedCount = 0;
-  StreamController<List<PostModel>>? postsController;
+  StreamController<RealtimeEvent<PostModel>>? postsController;
 
   final createCalls = <Map<String, Object?>>[];
   final markedGiven = <String>[];
+
+  Object? updateError;
+  Object? deleteError;
+  final updateCalls = <Map<String, Object?>>[];
+  final deleteCalls = <Map<String, Object?>>[];
+
+  @override
+  Future<PostModel> updatePost({
+    required String postId,
+    required String userId,
+    required String title,
+    required String description,
+    required String category,
+    required String condition,
+    required String address,
+    required List<String> keptImageUrls,
+    required List<Uint8List> newImages,
+    List<String> removedImageUrls = const [],
+  }) async {
+    updateCalls.add({
+      'postId': postId,
+      'userId': userId,
+      'title': title,
+      'description': description,
+      'category': category,
+      'condition': condition,
+      'address': address,
+      'kept': keptImageUrls,
+      'new': newImages.length,
+      'removed': removedImageUrls,
+    });
+    if (updateError != null) throw updateError!;
+    return makePost(
+      id: postId,
+      userId: userId,
+      title: title,
+      category: category,
+      condition: condition,
+    );
+  }
+
+  @override
+  Future<void> deletePost(
+    String postId, {
+    List<String> imageUrls = const [],
+  }) async {
+    deleteCalls.add({'postId': postId, 'imageUrls': imageUrls});
+    if (deleteError != null) throw deleteError!;
+  }
 
   @override
   Future<void> markAsGiven(String postId) async {
@@ -234,9 +312,71 @@ class FakePostRepository implements PostRepository {
     return available;
   }
 
+  /// Every call to [fetchAvailablePostsPage], for asserting on the query.
+  final pageCalls =
+      <
+        ({
+          int offset,
+          int limit,
+          String? excludeUserId,
+          String? category,
+          String? condition,
+          String? search,
+        })
+      >[];
+
+  /// Set to hold every page response until it completes.
+  Completer<void>? pageGate;
+
+  /// Thrown by [fetchAvailablePostsPage] while set.
+  Object? pageError;
+
+  /// Mimics the server: filters [available] with the same rules as the real
+  /// query, then returns the requested slice.
   @override
-  Stream<List<PostModel>> streamAvailablePosts() =>
-      (postsController ??= StreamController<List<PostModel>>.broadcast())
+  Future<List<PostModel>> fetchAvailablePostsPage({
+    required int offset,
+    required int limit,
+    String? excludeUserId,
+    String? category,
+    String? condition,
+    String? search,
+  }) async {
+    pageCalls.add((
+      offset: offset,
+      limit: limit,
+      excludeUserId: excludeUserId,
+      category: category,
+      condition: condition,
+      search: search,
+    ));
+    if (pageGate != null) await pageGate!.future;
+    if (pageError != null) throw pageError!;
+    return available
+        .where((post) {
+          if (post.isGiven) return false;
+          if (excludeUserId != null && post.userId == excludeUserId) {
+            return false;
+          }
+          if (category != null && (post.category ?? 'Other') != category) {
+            return false;
+          }
+          if (condition != null && post.condition != condition) return false;
+          if (search != null &&
+              !post.title.toLowerCase().contains(search.toLowerCase())) {
+            return false;
+          }
+          return true;
+        })
+        .skip(offset)
+        .take(limit)
+        .toList();
+  }
+
+  @override
+  Stream<RealtimeEvent<PostModel>> watchPosts() =>
+      (postsController ??=
+              StreamController<RealtimeEvent<PostModel>>.broadcast())
           .stream;
 
   @override
@@ -246,6 +386,7 @@ class FakePostRepository implements PostRepository {
     required String description,
     required String category,
     required String condition,
+    required String address,
     required List<Uint8List> images,
   }) async {
     createCalls.add({
@@ -254,6 +395,7 @@ class FakePostRepository implements PostRepository {
       'description': description,
       'category': category,
       'condition': condition,
+      'address': address,
       'images': images.length,
     });
     if (createError != null) throw createError!;
@@ -272,8 +414,7 @@ class FakeRequestRepository implements RequestRepository {
   Object? acceptError;
   List<RequestModel> sent = [];
   List<RequestModel> received = [];
-  StreamController<List<RequestModel>>? sentController;
-  StreamController<List<RequestModel>>? receivedController;
+  StreamController<RealtimeEvent<RequestModel>>? eventsController;
 
   final createCalls = <({String postId, String requesterId, String ownerId})>[];
   final acceptCalls = <({String requestId, String postId})>[];
@@ -308,13 +449,9 @@ class FakeRequestRepository implements RequestRepository {
       received;
 
   @override
-  Stream<List<RequestModel>> streamSentRequests(String requesterId) =>
-      (sentController ??= StreamController<List<RequestModel>>.broadcast())
-          .stream;
-
-  @override
-  Stream<List<RequestModel>> streamReceivedRequests(String ownerId) =>
-      (receivedController ??= StreamController<List<RequestModel>>.broadcast())
+  Stream<RealtimeEvent<RequestModel>> watchRequests(String userId) =>
+      (eventsController ??=
+              StreamController<RealtimeEvent<RequestModel>>.broadcast())
           .stream;
 
   @override
@@ -447,22 +584,38 @@ class FakeFeedbackRepository implements FeedbackRepository {
 class FakeChatRepository implements ChatRepository {
   Object? sendError;
   Object? deleteError;
+  Object? fetchError;
+  List<MessageModel> history = [];
+  int fetchCalls = 0;
   final deleted = <String>[];
-  final controller = StreamController<List<MessageModel>>.broadcast();
+  final controller = StreamController<RealtimeEvent<MessageModel>>.broadcast();
   final sent = <({String requestId, String senderId, String body})>[];
 
   @override
-  Stream<List<MessageModel>> streamMessages(String requestId) =>
+  Future<List<MessageModel>> fetchMessages(String requestId) async {
+    fetchCalls++;
+    if (fetchError != null) throw fetchError!;
+    return history;
+  }
+
+  @override
+  Stream<RealtimeEvent<MessageModel>> watchMessages(String requestId) =>
       controller.stream;
 
   @override
-  Future<void> sendMessage({
+  Future<MessageModel> sendMessage({
     required String requestId,
     required String senderId,
     required String body,
   }) async {
     if (sendError != null) throw sendError!;
     sent.add((requestId: requestId, senderId: senderId, body: body));
+    return makeMessage(
+      id: 'sent-${sent.length}',
+      requestId: requestId,
+      senderId: senderId,
+      body: body,
+    );
   }
 
   @override
@@ -543,6 +696,54 @@ class FakePostDataSource implements PostRemoteDataSource {
   Map<String, dynamic>? row;
   int donated = 0;
 
+  Object? deleteImagesError;
+  final postEvents = StreamController<RealtimeEvent<Map<String, dynamic>>>();
+
+  @override
+  Stream<RealtimeEvent<Map<String, dynamic>>> watchPosts() => postEvents.stream;
+  final updatedWith = <Map<String, Object?>>[];
+  final deletedPosts = <String>[];
+  final removedImages = <List<String>>[];
+
+  @override
+  Future<Map<String, dynamic>> updatePost({
+    required String postId,
+    required String title,
+    required String description,
+    required String category,
+    required String condition,
+    required String address,
+    required List<String> imageUrls,
+  }) async {
+    updatedWith.add({
+      'postId': postId,
+      'title': title,
+      'address': address,
+      'imageUrls': imageUrls,
+    });
+    return postJson(
+      id: postId,
+      title: title,
+      category: category,
+      condition: condition,
+      address: address,
+      imageUrls: imageUrls,
+    );
+  }
+
+  @override
+  Future<void> deletePost(String postId) async {
+    calls.add('deletePost:$postId');
+    deletedPosts.add(postId);
+  }
+
+  @override
+  Future<void> deleteImages(List<String> urls) async {
+    calls.add('deleteImages');
+    if (deleteImagesError != null) throw deleteImagesError!;
+    removedImages.add(urls);
+  }
+
   @override
   Future<String> uploadImage({
     required String userId,
@@ -560,8 +761,19 @@ class FakePostDataSource implements PostRemoteDataSource {
   Future<List<Map<String, dynamic>>> fetchAvailablePosts() async => rows;
 
   @override
-  Stream<List<Map<String, dynamic>>> streamAvailablePosts() =>
-      Stream.value(rows);
+  Future<List<Map<String, dynamic>>> fetchAvailablePostsPage({
+    required int offset,
+    required int limit,
+    String? excludeUserId,
+    String? category,
+    String? condition,
+    String? search,
+  }) async {
+    calls.add(
+      'page:$offset:$limit:$excludeUserId:$category:$condition:$search',
+    );
+    return rows;
+  }
 
   @override
   Future<Map<String, dynamic>?> fetchPostById(String postId) async => row;
@@ -582,12 +794,14 @@ class FakePostDataSource implements PostRemoteDataSource {
     required String description,
     required String category,
     required String condition,
+    required String address,
     required List<String> imageUrls,
   }) async {
     createdWith.add({
       'userId': userId,
       'title': title,
       'category': category,
+      'address': address,
       'imageUrls': imageUrls,
     });
     return postJson(
@@ -595,6 +809,7 @@ class FakePostDataSource implements PostRemoteDataSource {
       title: title,
       category: category,
       condition: condition,
+      address: address,
       imageUrls: imageUrls,
     );
   }
@@ -622,13 +837,11 @@ class FakeRequestDataSource implements RequestRemoteDataSource {
     String ownerId,
   ) async => rows;
 
-  @override
-  Stream<List<Map<String, dynamic>>> streamSentRequests(String requesterId) =>
-      Stream.value(rows);
+  final events = StreamController<RealtimeEvent<Map<String, dynamic>>>();
 
   @override
-  Stream<List<Map<String, dynamic>>> streamReceivedRequests(String ownerId) =>
-      Stream.value(rows);
+  Stream<RealtimeEvent<Map<String, dynamic>>> watchRequests(String userId) =>
+      events.stream;
 
   @override
   Future<void> cancelRequest(String requestId) async =>
@@ -693,16 +906,31 @@ class FakeChatDataSource implements ChatRemoteDataSource {
   List<Map<String, dynamic>> rows = [];
   final calls = <String>[];
 
-  @override
-  Stream<List<Map<String, dynamic>>> streamMessages(String requestId) =>
-      Stream.value(rows);
+  final events = StreamController<RealtimeEvent<Map<String, dynamic>>>();
 
   @override
-  Future<void> sendMessage({
+  Future<List<Map<String, dynamic>>> fetchMessages(String requestId) async =>
+      rows;
+
+  @override
+  Stream<RealtimeEvent<Map<String, dynamic>>> watchMessages(String requestId) =>
+      events.stream;
+
+  @override
+  Future<Map<String, dynamic>> sendMessage({
     required String requestId,
     required String senderId,
     required String body,
-  }) async => calls.add('send:$requestId:$senderId:$body');
+  }) async {
+    calls.add('send:$requestId:$senderId:$body');
+    return {
+      'id': 'sent-1',
+      'request_id': requestId,
+      'sender_id': senderId,
+      'body': body,
+      'created_at': kCreatedAt.toIso8601String(),
+    };
+  }
 
   @override
   Future<void> deleteMessage(String messageId) async =>

@@ -4,6 +4,8 @@ import '../../../../core/theme/app_icons.dart';
 import '../../../../core/widgets/app_icon.dart';
 import '../../../add_item/presentation/screens/add_item_screen.dart';
 import '../../../home/presentation/screens/home_screen.dart';
+import '../../../requests/data/model/request_model.dart';
+import '../../../requests/data/request_store.dart';
 import '../../../requests/presentation/screens/requests_screen.dart';
 import '../../../settings/presentation/screens/settings_screen.dart';
 import '../../../wishlist/presentation/screens/wishlist_screen.dart';
@@ -94,11 +96,16 @@ class _FloatingNavBar extends StatelessWidget {
                 ),
                 const SizedBox(width: 64),
                 Expanded(
-                  child: _NavItem(
-                    icon: AppIcons.inbox,
-                    label: context.l10n.navRequests,
-                    isActive: currentIndex == 3,
-                    onTap: () => onTap(3),
+                  // Received requests still waiting for the user's answer.
+                  child: ValueListenableBuilder<List<RequestModel>>(
+                    valueListenable: RequestStore.received,
+                    builder: (context, received, _) => _NavItem(
+                      icon: AppIcons.inbox,
+                      label: context.l10n.navRequests,
+                      isActive: currentIndex == 3,
+                      badgeCount: received.where((r) => r.isPending).length,
+                      onTap: () => onTap(3),
+                    ),
                   ),
                 ),
                 Expanded(
@@ -125,6 +132,7 @@ class _NavItem extends StatelessWidget {
   final String? activeIcon;
   final String label;
   final bool isActive;
+  final int badgeCount;
   final VoidCallback onTap;
 
   const _NavItem({
@@ -133,6 +141,7 @@ class _NavItem extends StatelessWidget {
     required this.label,
     required this.isActive,
     required this.onTap,
+    this.badgeCount = 0,
   });
 
   @override
@@ -146,10 +155,21 @@ class _NavItem extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            AppIcon(
-              isActive && activeIcon != null ? activeIcon! : icon,
-              size: 22,
-              color: color,
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                AppIcon(
+                  isActive && activeIcon != null ? activeIcon! : icon,
+                  size: 22,
+                  color: color,
+                ),
+                if (badgeCount > 0)
+                  PositionedDirectional(
+                    top: -6,
+                    end: -10,
+                    child: _CountBadge(count: badgeCount),
+                  ),
+              ],
             ),
             const SizedBox(height: 4),
             Text(
@@ -161,6 +181,34 @@ class _NavItem extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CountBadge extends StatelessWidget {
+  final int count;
+
+  const _CountBadge({required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: AppColors.error,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        count > 99 ? '99+' : '$count',
+        style: const TextStyle(
+          fontSize: 10,
+          height: 1.2,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
         ),
       ),
     );

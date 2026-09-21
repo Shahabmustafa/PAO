@@ -1,3 +1,4 @@
+import '../../../../core/realtime/realtime_event.dart';
 import '../datasource/request_remote_datasource.dart';
 import '../model/request_model.dart';
 
@@ -31,16 +32,12 @@ class RequestRepository {
     return rows.map(RequestModel.fromJson).toList();
   }
 
-  Stream<List<RequestModel>> streamSentRequests(String requesterId) {
+  /// Live request changes for [userId]. Events are tagged
+  /// [RequestRemoteDataSource.sentTag] / [RequestRemoteDataSource.receivedTag].
+  Stream<RealtimeEvent<RequestModel>> watchRequests(String userId) {
     return _dataSource
-        .streamSentRequests(requesterId)
-        .map((rows) => rows.map(RequestModel.fromJson).toList());
-  }
-
-  Stream<List<RequestModel>> streamReceivedRequests(String ownerId) {
-    return _dataSource
-        .streamReceivedRequests(ownerId)
-        .map((rows) => rows.map(RequestModel.fromJson).toList());
+        .watchRequests(userId)
+        .map((event) => event.mapRecord(RequestModel.fromJson));
   }
 
   Future<void> cancelRequest(String requestId) {

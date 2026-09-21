@@ -127,6 +127,7 @@ class AppTheme {
         backgroundColor: AppColorsDark.background,
         elevation: 0,
         iconTheme: IconThemeData(color: AppColorsDark.textPrimary),
+        scrolledUnderElevation: 0,
       ),
       tabBarTheme: const TabBarThemeData(
         labelColor: AppColors.primary,

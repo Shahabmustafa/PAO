@@ -59,7 +59,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
                   padding: const EdgeInsets.all(20),
                   crossAxisCount: 2,
                   mainAxisSpacing: 14,
-                  crossAxisSpacing: 0,
+                  crossAxisSpacing: 12,
                   itemCount: products.length,
                   itemBuilder: (context, index) {
                     return ProductCard(product: products[index]);

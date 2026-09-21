@@ -3,6 +3,8 @@ import 'package:pao/features/auth/data/model/user_model.dart';
 import 'package:pao/features/chat/presentation/provider/chat_provider.dart';
 import 'package:pao/features/feedback/data/model/feedback_model.dart';
 import 'package:pao/features/requests/data/model/request_model.dart';
+import 'package:pao/features/requests/data/request_store.dart';
+import 'package:pao/features/chat/data/model/message_model.dart';
 
 import '../../helpers/fakes.dart';
 
@@ -52,28 +54,189 @@ void main() {
   });
 
   group('messages', () {
-    test('starts loading, then shows what the stream delivers', () async {
-      final provider = build();
-      expect(provider.isLoading, isTrue);
+    // A message with its own timestamp, so ordering is deterministic.
+    MessageModel msg(
+      String id, {
+      int minute = 0,
+      String senderId = 'owner-1',
+    }) => MessageModel(
+      id: id,
+      requestId: 'req-1',
+      senderId: senderId,
+      body: 'body $id',
+      createdAt: kCreatedAt.add(Duration(minutes: minute)),
+    );
 
-      chat.controller.add([makeMessage(id: 'a'), makeMessage(id: 'b')]);
+    test(
+      'starts loading, then shows the history once the channel joins',
+      () async {
+        chat.history = [msg('a'), msg('b', minute: 1)];
+        final provider = build();
+        expect(provider.isLoading, isTrue);
+
+        chat.controller.add(subscribedEvent());
+        await pumpEventQueue();
+
+        expect(provider.isLoading, isFalse);
+        expect(provider.messages.map((m) => m.id), ['a', 'b']);
+      },
+    );
+
+    test('a new message arrives live, in order, without a refetch', () async {
+      chat.history = [msg('a')];
+      final provider = build();
+      chat.controller.add(subscribedEvent());
+      await pumpEventQueue();
+      var notified = 0;
+      provider.addListener(() => notified++);
+      final fetchesBefore = chat.fetchCalls;
+
+      chat.controller.add(insertEvent('b', msg('b', minute: 1)));
       await pumpEventQueue();
 
-      expect(provider.isLoading, isFalse);
+      expect(provider.messages.map((m) => m.id), ['a', 'b']);
+      expect(notified, 1);
+      expect(chat.fetchCalls, fetchesBefore, reason: 'no refetch per event');
+    });
+
+    test('the same message delivered twice appears once', () async {
+      final provider = build();
+      chat.controller.add(subscribedEvent());
+      await pumpEventQueue();
+
+      chat.controller.add(insertEvent('a', msg('a')));
+      chat.controller.add(insertEvent('a', msg('a')));
+      await pumpEventQueue();
+
+      expect(provider.messages.map((m) => m.id), ['a']);
+    });
+
+    test('a live message that beat the history fetch is kept once', () async {
+      chat.history = [msg('a'), msg('b', minute: 1)];
+      final provider = build();
+
+      // 'b' arrives live before the fetch response is merged in.
+      chat.controller.add(insertEvent('b', msg('b', minute: 1)));
+      chat.controller.add(subscribedEvent());
+      await pumpEventQueue();
+
       expect(provider.messages.map((m) => m.id), ['a', 'b']);
     });
 
-    test('live updates replace the list and notify', () async {
+    test('a live message newer than the fetched history is kept', () async {
+      chat.history = [msg('a')];
       final provider = build();
-      var notified = 0;
-      provider.addListener(() => notified++);
 
-      chat.controller.add([makeMessage(id: 'a')]);
-      chat.controller.add([makeMessage(id: 'a'), makeMessage(id: 'b')]);
+      chat.controller.add(insertEvent('b', msg('b', minute: 1)));
+      chat.controller.add(subscribedEvent());
       await pumpEventQueue();
 
-      expect(provider.messages, hasLength(2));
-      expect(notified, greaterThanOrEqualTo(2));
+      expect(provider.messages.map((m) => m.id), ['a', 'b']);
+    });
+
+    test('a live UPDATE replaces the message in place', () async {
+      chat.history = [msg('a'), msg('b', minute: 1)];
+      final provider = build();
+      chat.controller.add(subscribedEvent());
+      await pumpEventQueue();
+
+      chat.controller.add(
+        updateEvent(
+          'a',
+          MessageModel(
+            id: 'a',
+            requestId: 'req-1',
+            senderId: 'owner-1',
+            body: 'edited',
+            createdAt: kCreatedAt,
+          ),
+        ),
+      );
+      await pumpEventQueue();
+
+      expect(provider.messages.map((m) => m.body), ['edited', 'body b']);
+    });
+
+    test(
+      'a live DELETE removes the message, and ignores other chats',
+      () async {
+        chat.history = [msg('a'), msg('b', minute: 1)];
+        final provider = build();
+        chat.controller.add(subscribedEvent());
+        await pumpEventQueue();
+        var notified = 0;
+        provider.addListener(() => notified++);
+
+        chat.controller.add(deleteEvent('not-in-this-chat'));
+        await pumpEventQueue();
+        expect(provider.messages, hasLength(2));
+        expect(notified, 0, reason: 'unknown ids are ignored');
+
+        chat.controller.add(deleteEvent('a'));
+        await pumpEventQueue();
+        expect(provider.messages.map((m) => m.id), ['b']);
+      },
+    );
+
+    test('a message for another request is ignored', () async {
+      final provider = build();
+      chat.controller.add(subscribedEvent());
+      await pumpEventQueue();
+
+      chat.controller.add(
+        insertEvent(
+          'x',
+          MessageModel(
+            id: 'x',
+            requestId: 'other-request',
+            senderId: 'owner-1',
+            body: 'wrong chat',
+            createdAt: kCreatedAt,
+          ),
+        ),
+      );
+      await pumpEventQueue();
+
+      expect(provider.messages, isEmpty);
+    });
+
+    test('re-joining after a dropped connection reloads the history', () async {
+      chat.history = [msg('a')];
+      final provider = build();
+      chat.controller.add(subscribedEvent());
+      await pumpEventQueue();
+
+      // While disconnected, 'a' was deleted and 'b' arrived.
+      chat.history = [msg('b', minute: 1)];
+      chat.controller.add(subscribedEvent(isReconnect: true));
+      await pumpEventQueue();
+
+      expect(provider.messages.map((m) => m.id), [
+        'b',
+      ], reason: 'a was deleted while offline');
+      expect(chat.fetchCalls, 2);
+    });
+
+    test('if realtime cannot connect the history still loads', () async {
+      chat.history = [msg('a')];
+      final provider = build();
+
+      chat.controller.add(errorEvent());
+      await pumpEventQueue();
+
+      expect(provider.isLoading, isFalse);
+      expect(provider.messages.map((m) => m.id), ['a']);
+    });
+
+    test('a failed history load shows a message and stops loading', () async {
+      chat.fetchError = Exception('offline');
+      final provider = build();
+
+      chat.controller.add(subscribedEvent());
+      await pumpEventQueue();
+
+      expect(provider.errorMessage, 'Failed to load messages.');
+      expect(provider.isLoading, isFalse);
     });
 
     test('a stream error shows a message and stops loading', () async {
@@ -103,6 +266,47 @@ void main() {
       provider.dispose();
 
       expect(chat.controller.hasListener, isFalse);
+    });
+  });
+
+  group('live request status', () {
+    tearDown(RequestStore.reset);
+
+    test('follows the request when the owner accepts it', () async {
+      final provider = build(request: makeRequest(status: 'pending'));
+      await pumpEventQueue();
+      var notified = 0;
+      provider.addListener(() => notified++);
+
+      RequestStore.sent.value = [makeRequest(status: 'accepted')];
+
+      expect(provider.request.status, 'accepted');
+      expect(notified, 1);
+    });
+
+    test('ignores other requests', () async {
+      final provider = build(request: makeRequest(status: 'pending'));
+      await pumpEventQueue();
+
+      RequestStore.sent.value = [makeRequest(id: 'other', status: 'accepted')];
+
+      expect(provider.request.status, 'pending');
+    });
+
+    test('stops listening once disposed', () async {
+      final provider = ChatProvider(
+        request: makeRequest(),
+        otherUserId: 'owner-1',
+        repository: chat,
+        authRepository: auth,
+        profileRepository: profiles,
+        feedbackRepository: feedback,
+      );
+      await pumpEventQueue();
+      provider.dispose();
+
+      // Would throw "used after being disposed" if it were still listening.
+      RequestStore.received.value = [makeRequest(status: 'accepted')];
     });
   });
 
@@ -138,6 +342,27 @@ void main() {
       expect(sent.requestId, 'req-1');
       expect(provider.isSending, isFalse);
     });
+
+    test(
+      'the sent message shows at once and its realtime echo is not doubled',
+      () async {
+        final provider = build();
+
+        await provider.sendMessage('hello');
+        expect(provider.messages.map((m) => m.id), ['sent-1']);
+
+        // Realtime then delivers the same row back to the sender.
+        chat.controller.add(
+          insertEvent(
+            'sent-1',
+            makeMessage(id: 'sent-1', senderId: 'requester-1', body: 'hello'),
+          ),
+        );
+        await pumpEventQueue();
+
+        expect(provider.messages.map((m) => m.id), ['sent-1']);
+      },
+    );
 
     test('ignores empty and whitespace-only text', () async {
       final provider = build();

@@ -16,6 +16,7 @@ void main() {
     description: 'Desk lamp',
     category: 'Home & Living',
     condition: 'Old',
+    address: 'House 5, Street 2',
     images: images ?? [Uint8List.fromList([1, 2, 3])],
   );
 
@@ -78,5 +79,49 @@ void main() {
     await submit();
 
     expect(provider.errorMessage, isNull);
+  });
+
+  group('update', () {
+    Future<dynamic> update() => provider.update(
+      postId: 'p1',
+      title: 'Lamp v2',
+      description: 'Desk lamp',
+      category: 'Home & Living',
+      condition: 'Used',
+      address: 'House 9',
+      keptImageUrls: const ['https://cdn/a.png'],
+      newImages: [Uint8List.fromList([1])],
+      removedImageUrls: const ['https://cdn/b.png'],
+    );
+
+    test('requires a signed-in user and never calls the repository', () async {
+      auth.user = null;
+
+      expect(await update(), isNull);
+      expect(provider.errorMessage, 'You must be logged in to post an item.');
+      expect(posts.updateCalls, isEmpty);
+    });
+
+    test('saves the edits for the current user', () async {
+      final post = await update();
+
+      expect(post.title, 'Lamp v2');
+      final call = posts.updateCalls.single;
+      expect(call['postId'], 'p1');
+      expect(call['userId'], 'u1');
+      expect(call['address'], 'House 9');
+      expect(call['kept'], ['https://cdn/a.png']);
+      expect(call['new'], 1);
+      expect(call['removed'], ['https://cdn/b.png']);
+      expect(provider.isLoading, isFalse);
+    });
+
+    test('a failure returns null with the update message', () async {
+      posts.updateError = Exception('offline');
+
+      expect(await update(), isNull);
+      expect(provider.errorMessage, 'Failed to update. Please try again.');
+      expect(provider.isLoading, isFalse);
+    });
   });
 }

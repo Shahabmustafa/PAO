@@ -1,7 +1,11 @@
+import 'dart:async';
+
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pao/core/theme/app_colors.dart';
 import 'package:pao/core/widgets/app_icon.dart';
+import 'package:pao/features/add_item/data/model/post_model.dart';
 import 'package:pao/features/home/data/product_store.dart';
 import 'package:pao/features/home/domain/filter_options.dart';
 import 'package:pao/features/home/domain/product.dart';
@@ -23,6 +27,7 @@ Product product(
   String category = 'Electronics',
   String condition = 'New',
   String description = '',
+  String? address,
   String? userId = 'someone-else',
   bool isGiven = false,
 }) => Product(
@@ -32,6 +37,7 @@ Product product(
   color: AppColors.primary,
   condition: condition,
   description: description,
+  address: address,
   userId: userId,
   isGiven: isGiven,
 );
@@ -71,6 +77,27 @@ void main() {
       expect(find.text('Old'), findsOneWidget);
     });
 
+    testWidgets('decodes the photo at thumbnail size, not full size', (
+      tester,
+    ) async {
+      await pumpCard(
+        tester,
+        Product(
+          id: '1',
+          name: 'Lamp',
+          category: 'Electronics',
+          color: AppColors.primary,
+          imageUrls: const ['https://img/1.png'],
+        ),
+      );
+
+      final image = tester.widget<CachedNetworkImage>(
+        find.byType(CachedNetworkImage),
+      );
+      // A card is about half the screen wide; uploads are up to 1600 px.
+      expect(image.memCacheWidth, tester.view.physicalSize.width ~/ 2);
+    });
+
     testWidgets('without a photo it shows the first letter', (tester) async {
       await pumpCard(tester, product('1', 'Headphones'));
 
@@ -82,7 +109,9 @@ void main() {
     ) async {
       Color? badgeColor(String label) {
         final container = tester.widget<Container>(
-          find.ancestor(of: find.text(label), matching: find.byType(Container)).first,
+          find
+              .ancestor(of: find.text(label), matching: find.byType(Container))
+              .first,
         );
         return (container.decoration as BoxDecoration).color;
       }
@@ -94,23 +123,27 @@ void main() {
       expect(badgeColor('Old'), isNot(AppColors.primary));
     });
 
-    testWidgets('the heart saves the item to the wishlist, and again removes it', (
-      tester,
-    ) async {
-      await pumpCard(tester, product('p1', 'Lamp', category: 'Home & Living'));
-      final heart = find.byType(AppIcon);
+    testWidgets(
+      'the heart saves the item to the wishlist, and again removes it',
+      (tester) async {
+        await pumpCard(
+          tester,
+          product('p1', 'Lamp', category: 'Home & Living'),
+        );
+        final heart = find.byType(AppIcon);
 
-      await tester.tap(heart);
-      await tester.pump();
+        await tester.tap(heart);
+        await tester.pump();
 
-      expect(WishlistStore.items.value.map((i) => i.id), ['p1']);
-      expect(WishlistStore.items.value.single.note, 'Home & Living');
+        expect(WishlistStore.items.value.map((i) => i.id), ['p1']);
+        expect(WishlistStore.items.value.single.note, 'Home & Living');
 
-      await tester.tap(heart);
-      await tester.pump();
+        await tester.tap(heart);
+        await tester.pump();
 
-      expect(WishlistStore.items.value, isEmpty);
-    });
+        expect(WishlistStore.items.value, isEmpty);
+      },
+    );
 
     testWidgets('an already-saved item shows as saved', (tester) async {
       WishlistStore.items.value = [
@@ -128,7 +161,10 @@ void main() {
       tester,
     ) async {
       usePhoneSurface(tester);
-      await pumpCard(tester, product('1', 'Headphones', description: 'Barely used'));
+      await pumpCard(
+        tester,
+        product('1', 'Headphones', description: 'Barely used'),
+      );
 
       await tester.tap(find.text('Headphones'));
       await tester.pumpAndSettle();
@@ -146,8 +182,10 @@ void main() {
           Builder(
             builder: (context) => Scaffold(
               body: TextButton(
-                onPressed: () =>
-                    showFilterBottomSheet(context, initial: const FilterOptions()),
+                onPressed: () => showFilterBottomSheet(
+                  context,
+                  initial: const FilterOptions(),
+                ),
                 child: const Text('open'),
               ),
             ),
@@ -212,7 +250,10 @@ void main() {
               body: TextButton(
                 onPressed: () async => result = await showFilterBottomSheet(
                   context,
-                  initial: const FilterOptions(category: 'Toys', condition: 'Old'),
+                  initial: const FilterOptions(
+                    category: 'Toys',
+                    condition: 'Old',
+                  ),
                 ),
                 child: const Text('open'),
               ),
@@ -313,18 +354,47 @@ void main() {
   });
 
   group('HomeScreen', () {
-    Future<void> pumpHome(WidgetTester tester) async {
-      usePhoneSurface(tester);
-      await tester.pumpWidget(testApp(const HomeScreen()));
+    late FakePostRepository repo;
+
+    setUp(() => repo = FakePostRepository());
+
+    /// [count] available posts: "Item 1" .. "Item N", newest first.
+    List<PostModel> items(int count) => [
+      for (var i = 1; i <= count; i++)
+        makePost(id: 'p$i', title: 'Item $i', condition: 'New'),
+    ];
+
+    Future<void> pumpHome(
+      WidgetTester tester, {
+      Size size = const Size(600, 1400),
+      ThemeMode themeMode = ThemeMode.light,
+    }) async {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(
+        testApp(HomeScreen(postRepository: repo), themeMode: themeMode),
+      );
       await tester.pump();
     }
+
+    // A screen too short to show all 8 cards of a page, so more products
+    // only load once the user scrolls.
+    const shortScreen = Size(600, 800);
+
+    // The grid's own scrollable, not the search field's horizontal one.
+    Finder scrollArea() => find.byWidgetPredicate(
+      (widget) =>
+          widget is Scrollable && widget.axisDirection == AxisDirection.down,
+    );
 
     testWidgets('shows the greeting, search and the product grid', (
       tester,
     ) async {
-      ProductStore.items.value = [
-        product('1', 'Headphones'),
-        product('2', 'Novel', category: 'Books'),
+      repo.available = [
+        makePost(id: '1', title: 'Headphones'),
+        makePost(id: '2', title: 'Novel', category: 'Books'),
       ];
 
       await pumpHome(tester);
@@ -336,15 +406,17 @@ void main() {
     });
 
     testWidgets('search narrows the grid', (tester) async {
-      ProductStore.items.value = [
-        product('1', 'Headphones'),
-        product('2', 'Novel', category: 'Books'),
+      repo.available = [
+        makePost(id: '1', title: 'Headphones'),
+        makePost(id: '2', title: 'Novel', category: 'Books'),
       ];
       await pumpHome(tester);
 
       await tester.enterText(find.byType(TextField), 'nov');
+      await tester.pump(const Duration(milliseconds: 500)); // debounce
       await tester.pump();
 
+      expect(repo.pageCalls.last.search, 'nov');
       expect(find.text('Novel'), findsOneWidget);
       expect(find.text('Headphones'), findsNothing);
     });
@@ -352,10 +424,11 @@ void main() {
     testWidgets('no match shows the empty state, and Clear search restores', (
       tester,
     ) async {
-      ProductStore.items.value = [product('1', 'Headphones')];
+      repo.available = [makePost(id: '1', title: 'Headphones')];
       await pumpHome(tester);
 
       await tester.enterText(find.byType(TextField), 'zzz');
+      await tester.pump(const Duration(milliseconds: 500));
       await tester.pump();
 
       expect(find.text('No products found'), findsOneWidget);
@@ -366,15 +439,16 @@ void main() {
 
       await tester.tap(find.text('Clear search'));
       await tester.pump();
+      await tester.pump();
 
       expect(find.text('Headphones'), findsOneWidget);
       expect(find.text('No products found'), findsNothing);
     });
 
     testWidgets('given-away products never appear', (tester) async {
-      ProductStore.items.value = [
-        product('1', 'Available'),
-        product('2', 'Gone', isGiven: true),
+      repo.available = [
+        makePost(id: '1', title: 'Available'),
+        makePost(id: '2', title: 'Gone', isGiven: true),
       ];
 
       await pumpHome(tester);
@@ -383,14 +457,128 @@ void main() {
       expect(find.text('Gone'), findsNothing);
     });
 
-    testWidgets('renders in dark mode without layout errors', (tester) async {
-      usePhoneSurface(tester);
-      ProductStore.items.value = [product('1', 'Headphones')];
+    testWidgets('shows a loading skeleton until the first page arrives', (
+      tester,
+    ) async {
+      repo.available = items(3);
+      repo.pageGate = Completer<void>();
 
-      await tester.pumpWidget(
-        testApp(const HomeScreen(), themeMode: ThemeMode.dark),
-      );
+      await pumpHome(tester);
+      expect(find.byType(ProductCard), findsNothing);
+      expect(find.text('No products found'), findsNothing);
+
+      repo.pageGate!.complete();
       await tester.pump();
+      await tester.pump();
+
+      expect(find.byType(ProductCard), findsNWidgets(3));
+    });
+
+    testWidgets('loads only 8 products at first', (tester) async {
+      repo.available = items(20);
+
+      await pumpHome(tester, size: shortScreen);
+
+      expect(repo.pageCalls, hasLength(1));
+      expect(repo.pageCalls.single.limit, 8);
+      expect(find.text('Item 1'), findsOneWidget);
+      expect(find.text('Item 9'), findsNothing);
+    });
+
+    testWidgets('scrolling to the end shows a loader, then more products', (
+      tester,
+    ) async {
+      repo.available = items(20);
+      await pumpHome(tester, size: shortScreen);
+      repo.pageGate = Completer<void>();
+
+      await tester.drag(scrollArea(), const Offset(0, -3000));
+      await tester.pump();
+
+      expect(repo.pageCalls, hasLength(2));
+      expect(repo.pageCalls.last.offset, 8);
+      expect(find.byKey(const Key('home-load-more-skeleton')), findsOneWidget);
+
+      repo.pageGate!.complete();
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.byKey(const Key('home-load-more-skeleton')), findsNothing);
+      await tester.scrollUntilVisible(
+        find.text('Item 9'),
+        300,
+        scrollable: scrollArea(),
+      );
+      expect(find.text('Item 9'), findsOneWidget);
+    });
+
+    testWidgets('keeps loading pages until the last one, then stops', (
+      tester,
+    ) async {
+      repo.available = items(10);
+      await pumpHome(tester, size: shortScreen);
+
+      await tester.drag(scrollArea(), const Offset(0, -3000));
+      await tester.pump();
+      await tester.pump();
+      expect(repo.pageCalls, hasLength(2));
+
+      await tester.drag(scrollArea(), const Offset(0, -3000));
+      await tester.pump();
+      await tester.pump();
+
+      expect(repo.pageCalls, hasLength(2), reason: 'page of 2 was the last');
+      expect(find.text('Item 10'), findsOneWidget);
+      expect(find.byKey(const Key('home-load-more-skeleton')), findsNothing);
+    });
+
+    testWidgets('loads the next page by itself when the screen is not full', (
+      tester,
+    ) async {
+      repo.available = items(20);
+
+      await pumpHome(tester, size: const Size(600, 4000));
+      await tester.pump();
+
+      expect(repo.pageCalls.length, greaterThan(1));
+      expect(find.text('Item 9'), findsOneWidget);
+    });
+
+    testWidgets('a failed page can be retried', (tester) async {
+      repo.available = items(20);
+      await pumpHome(tester, size: shortScreen);
+      repo.pageError = Exception('offline');
+
+      await tester.drag(scrollArea(), const Offset(0, -3000));
+      await tester.pump();
+      await tester.pump();
+
+      final retry = find.text('Something went wrong. Please try again.');
+      expect(retry, findsOneWidget);
+      expect(repo.pageCalls, hasLength(2), reason: 'no automatic retry loop');
+
+      repo.pageError = null;
+      // The taller skeleton was just replaced by the short retry row, which
+      // can sit just below the fold.
+      await tester.ensureVisible(retry);
+      await tester.pump();
+      await tester.tap(retry);
+      await tester.pump();
+      await tester.pump();
+
+      expect(retry, findsNothing);
+      await tester.scrollUntilVisible(
+        find.text('Item 9'),
+        300,
+        scrollable: scrollArea(),
+      );
+      expect(find.text('Item 9'), findsOneWidget);
+    });
+
+    testWidgets('renders in dark mode without layout errors', (tester) async {
+      repo.available = [makePost(id: '1', title: 'Headphones')];
+
+      await pumpHome(tester, themeMode: ThemeMode.dark);
 
       expect(find.text('Headphones'), findsOneWidget);
       expect(tester.takeException(), isNull);
@@ -409,7 +597,12 @@ void main() {
     ) async {
       await pumpDetail(
         tester,
-        product('1', 'Headphones', condition: 'Old', description: 'Barely used'),
+        product(
+          '1',
+          'Headphones',
+          condition: 'Old',
+          description: 'Barely used',
+        ),
       );
 
       expect(find.text('Headphones'), findsWidgets);
@@ -417,6 +610,27 @@ void main() {
       expect(find.text('Barely used'), findsOneWidget);
       expect(find.text('Old'), findsWidgets);
       expect(find.widgetWithText(ElevatedButton, 'Give Me'), findsOneWidget);
+    });
+
+    testWidgets('shows the address next to condition and category', (
+      tester,
+    ) async {
+      await pumpDetail(
+        tester,
+        product('1', 'Headphones', address: 'House 5, Street 2'),
+      );
+
+      expect(find.text('Address'), findsOneWidget);
+      expect(find.text('House 5, Street 2'), findsOneWidget);
+    });
+
+    testWidgets('a post without an address hides the address row', (
+      tester,
+    ) async {
+      await pumpDetail(tester, product('1', 'Headphones'));
+
+      expect(find.text('Condition'), findsOneWidget);
+      expect(find.text('Address'), findsNothing);
     });
 
     testWidgets('an empty description shows a placeholder', (tester) async {
@@ -435,7 +649,10 @@ void main() {
 
       await pumpDetail(tester, product('1', 'Headphones'));
 
-      expect(find.widgetWithText(ElevatedButton, 'Message Owner'), findsOneWidget);
+      expect(
+        find.widgetWithText(ElevatedButton, 'Message Owner'),
+        findsOneWidget,
+      );
       expect(find.widgetWithText(ElevatedButton, 'Give Me'), findsNothing);
     });
 

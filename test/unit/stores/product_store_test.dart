@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pao/core/realtime/realtime_event.dart';
 import 'package:pao/core/theme/app_colors.dart';
 import 'package:pao/features/home/data/product_store.dart';
 import 'package:pao/features/home/domain/product.dart';
@@ -21,6 +22,36 @@ void main() {
     repo = FakePostRepository();
     ProductStore.items.value = [];
     ProductStore.isLoading.value = true;
+  });
+
+  group('update / remove', () {
+    test('update replaces the matching product in place', () {
+      ProductStore.items.value = [local('a'), local('b'), local('c')];
+
+      ProductStore.update(
+        Product(id: 'b', name: 'Renamed', category: 'Toys', color: Colors.red),
+      );
+
+      expect(ProductStore.items.value.map((p) => p.id), ['a', 'b', 'c']);
+      expect(ProductStore.items.value[1].name, 'Renamed');
+      expect(ProductStore.items.value[0].name, 'Local a');
+    });
+
+    test('update adds a product the store does not have yet', () {
+      ProductStore.items.value = [local('a')];
+
+      ProductStore.update(local('z'));
+
+      expect(ProductStore.items.value.map((p) => p.id), ['z', 'a']);
+    });
+
+    test('remove drops only the matching product', () {
+      ProductStore.items.value = [local('a'), local('b')];
+
+      ProductStore.remove('a');
+
+      expect(ProductStore.items.value.map((p) => p.id), ['b']);
+    });
   });
 
   group('add / markAsGiven', () {
@@ -129,41 +160,139 @@ void main() {
     });
   });
 
-  // startRealtimeSync can only be started once per process (there is no
-  // reset), so its behavior is exercised as one ordered scenario.
   group('startRealtimeSync', () {
-    test('keeps products live, and only subscribes once', () async {
-      ProductStore.items.value = [local('local-only')];
+    tearDown(ProductStore.stopRealtimeSync);
 
+    test(
+      'loads the posts when the channel joins, then keeps them live',
+      () async {
+        repo.available = [makePost(id: 'p1', title: 'First')];
+        ProductStore.items.value = [local('local-only')];
+
+        ProductStore.startRealtimeSync(repository: repo);
+        repo.postsController!.add(subscribedEvent());
+        await pumpEventQueue();
+
+        expect(ProductStore.items.value.map((p) => p.id), ['p1', 'local-only']);
+        expect(ProductStore.isLoading.value, isFalse);
+      },
+    );
+
+    test('a new post is added at the top, and announced once', () async {
+      ProductStore.items.value = [local('old')];
+      ProductStore.startRealtimeSync(repository: repo);
+      final announced = <String>[];
+      final sub = ProductStore.changes.listen((e) => announced.add(e.id));
+      addTearDown(sub.cancel);
+
+      repo.postsController!.add(insertEvent('new', makePost(id: 'new')));
+      await pumpEventQueue();
+
+      expect(ProductStore.items.value.map((p) => p.id), ['new', 'old']);
+      expect(announced, ['new']);
+    });
+
+    test('the same post delivered twice is listed once', () async {
+      ProductStore.startRealtimeSync(repository: repo);
+
+      repo.postsController!.add(insertEvent('p1', makePost(id: 'p1')));
+      repo.postsController!.add(insertEvent('p1', makePost(id: 'p1')));
+      await pumpEventQueue();
+
+      expect(ProductStore.items.value.map((p) => p.id), ['p1']);
+    });
+
+    test('an edit replaces the post in place', () async {
+      ProductStore.items.value = [local('a'), local('b')];
+      ProductStore.startRealtimeSync(repository: repo);
+
+      repo.postsController!.add(
+        updateEvent('b', makePost(id: 'b', title: 'Edited b')),
+      );
+      await pumpEventQueue();
+
+      expect(ProductStore.items.value.map((p) => p.id), ['a', 'b']);
+      expect(ProductStore.items.value[1].name, 'Edited b');
+    });
+
+    test('a post given away is kept, marked given', () async {
+      ProductStore.items.value = [local('a')];
+      ProductStore.startRealtimeSync(repository: repo);
+
+      repo.postsController!.add(
+        updateEvent('a', makePost(id: 'a', isGiven: true)),
+      );
+      await pumpEventQueue();
+
+      expect(ProductStore.items.value.single.isGiven, isTrue);
+    });
+
+    test('an unknown post that is already given is not added', () async {
+      ProductStore.startRealtimeSync(repository: repo);
+
+      repo.postsController!.add(
+        updateEvent('x', makePost(id: 'x', isGiven: true)),
+      );
+      await pumpEventQueue();
+
+      expect(ProductStore.items.value, isEmpty);
+    });
+
+    test('a delete removes the post and is announced', () async {
+      ProductStore.items.value = [local('a'), local('b')];
+      ProductStore.startRealtimeSync(repository: repo);
+      final announced = <RealtimeEventType>[];
+      final sub = ProductStore.changes.listen((e) => announced.add(e.type));
+      addTearDown(sub.cancel);
+
+      repo.postsController!.add(deleteEvent('a'));
+      await pumpEventQueue();
+
+      expect(ProductStore.items.value.map((p) => p.id), ['b']);
+      expect(announced, [RealtimeEventType.delete]);
+    });
+
+    test('a re-join announces a reconnect and reloads', () async {
+      ProductStore.startRealtimeSync(repository: repo);
+      repo.postsController!.add(subscribedEvent());
+      await pumpEventQueue();
+      var reconnects = 0;
+      final sub = ProductStore.reconnected.listen((_) => reconnects++);
+      addTearDown(sub.cancel);
+
+      repo.available = [makePost(id: 'missed')];
+      repo.postsController!.add(subscribedEvent(isReconnect: true));
+      await pumpEventQueue();
+
+      expect(reconnects, 1);
+      expect(ProductStore.items.value.map((p) => p.id), ['missed']);
+    });
+
+    test('if realtime cannot connect the posts still load', () async {
+      repo.available = [makePost(id: 'p1')];
+      ProductStore.startRealtimeSync(repository: repo);
+
+      repo.postsController!.add(errorEvent());
+      await pumpEventQueue();
+
+      expect(ProductStore.items.value.map((p) => p.id), ['p1']);
+      expect(ProductStore.isLoading.value, isFalse);
+    });
+
+    test('only subscribes once, and stopRealtimeSync unsubscribes', () async {
       ProductStore.startRealtimeSync(repository: repo);
       final controller = repo.postsController!;
 
-      controller.add([makePost(id: 'p1', title: 'Live one')]);
-      await pumpEventQueue();
-
-      expect(
-        ProductStore.items.value.map((p) => p.id),
-        ['p1', 'local-only'],
-        reason: 'remote first, local-only preserved',
-      );
-      expect(ProductStore.isLoading.value, isFalse);
-
-      // A later event refreshes the remote set (newest first).
-      controller.add([
-        makePost(id: 'p2', title: 'Second'),
-        makePost(id: 'p1', title: 'Live one (edited)'),
-      ]);
-      await pumpEventQueue();
-      expect(
-        ProductStore.items.value.map((p) => p.id),
-        ['p2', 'p1', 'local-only'],
-      );
-      expect(ProductStore.items.value[1].name, 'Live one (edited)');
-
-      // A second call must not create another subscription.
       final other = FakePostRepository();
       ProductStore.startRealtimeSync(repository: other);
       expect(other.postsController, isNull);
+
+      ProductStore.stopRealtimeSync();
+      expect(controller.hasListener, isFalse);
+
+      // ...and a later start subscribes afresh.
+      ProductStore.startRealtimeSync(repository: other);
+      expect(other.postsController, isNotNull);
     });
   });
 }

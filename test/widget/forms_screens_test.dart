@@ -34,7 +34,11 @@ void main() {
     final provinceField = find.byType(DropdownButtonFormField<Province>);
     final cityField = find.byType(DropdownButtonFormField<String>);
 
-    Future<void> choose(WidgetTester tester, Finder dropdown, String option) async {
+    Future<void> choose(
+      WidgetTester tester,
+      Finder dropdown,
+      String option,
+    ) async {
       await tester.tap(dropdown);
       await tester.pumpAndSettle();
       await tester.tap(find.text(option).last);
@@ -117,17 +121,59 @@ void main() {
       await tester.pumpWidget(testApp(const AddItemScreen()));
     }
 
+    testWidgets('Add Photo opens an alert dialog with Camera and Gallery', (
+      tester,
+    ) async {
+      await pumpAdd(tester);
+      expect(find.byType(AlertDialog), findsNothing);
+
+      await tester.tap(find.text('Add Photo').first);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.text('Add Photo'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Camera'), findsOneWidget);
+      expect(find.text('Gallery'), findsOneWidget);
+
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      expect(find.byType(AlertDialog), findsNothing);
+    });
+
+    testWidgets('the photo dialog wraps its content instead of stretching', (
+      tester,
+    ) async {
+      await pumpAdd(tester);
+
+      await tester.tap(find.text('Add Photo').first);
+      await tester.pumpAndSettle();
+
+      final option = find
+          .ancestor(of: find.text('Camera'), matching: find.byType(Material))
+          .first;
+      expect(tester.getSize(option).height, lessThan(200));
+    });
+
     testWidgets('shows the form', (tester) async {
       await pumpAdd(tester);
 
       expect(find.text('Add Product'), findsOneWidget);
-      expect(find.text('Give something away for free'), findsOneWidget);
       expect(find.text('Photos'), findsOneWidget);
       expect(find.text('Title'), findsOneWidget);
       expect(find.text('Description'), findsOneWidget);
+      expect(find.text('Address'), findsOneWidget);
       expect(find.text('Category'), findsOneWidget);
       expect(find.text('Condition'), findsOneWidget);
-      expect(find.widgetWithText(ElevatedButton, 'Post for Free'), findsOneWidget);
+      expect(
+        find.widgetWithText(ElevatedButton, 'Post for Free'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('offers every category except "All"', (tester) async {
@@ -167,14 +213,16 @@ void main() {
       await tester.pump();
 
       final after = {
-        for (final chip in tester.widgetList<ChoiceChip>(find.byType(ChoiceChip)))
+        for (final chip in tester.widgetList<ChoiceChip>(
+          find.byType(ChoiceChip),
+        ))
           (chip.label as Text).data: chip.selected,
       };
       expect(after['Old'], isTrue);
       expect(after['New'], isFalse);
     });
 
-    testWidgets('title and description are required', (tester) async {
+    testWidgets('title, description and address are required', (tester) async {
       await pumpAdd(tester);
 
       await tester.ensureVisible(find.text('Post for Free'));
@@ -183,12 +231,17 @@ void main() {
 
       expect(find.text('Title is required'), findsOneWidget);
       expect(find.text('Description is required'), findsOneWidget);
+      expect(find.text('Address is required'), findsOneWidget);
     });
 
     testWidgets('a category must be chosen', (tester) async {
       await pumpAdd(tester);
       await tester.enterText(byHint('e.g. Wireless Headphones'), 'Lamp');
-      await tester.enterText(byHint('Describe the item and its condition'), 'Desk lamp');
+      await tester.enterText(
+        byHint('Describe the item and its condition'),
+        'Desk lamp',
+      );
+      await tester.enterText(byHint('Enter your address'), 'House 5, Street 2');
 
       await tester.ensureVisible(find.text('Post for Free'));
       await tester.tap(find.text('Post for Free'));
@@ -203,7 +256,11 @@ void main() {
     ) async {
       await pumpAdd(tester);
       await tester.enterText(byHint('e.g. Wireless Headphones'), 'Lamp');
-      await tester.enterText(byHint('Describe the item and its condition'), 'Desk lamp');
+      await tester.enterText(
+        byHint('Describe the item and its condition'),
+        'Desk lamp',
+      );
+      await tester.enterText(byHint('Enter your address'), 'House 5, Street 2');
       await tester.ensureVisible(find.text('Books'));
       await tester.tap(find.text('Books'));
       await tester.pump();
@@ -212,7 +269,10 @@ void main() {
       await tester.tap(find.text('Post for Free'));
       await pumpUntilToastVisible(tester);
 
-      expect(find.text('You must be logged in to post an item.'), findsOneWidget);
+      expect(
+        find.text('You must be logged in to post an item.'),
+        findsOneWidget,
+      );
       await settleToasts(tester);
     });
 
@@ -222,7 +282,7 @@ void main() {
         testApp(const AddItemScreen(), themeMode: ThemeMode.dark),
       );
 
-      expect(find.text('Give something away for free'), findsOneWidget);
+      expect(find.text('Photos'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   });
@@ -242,7 +302,10 @@ void main() {
       expect(find.text('Email'), findsOneWidget);
       expect(find.text('Phone (optional)'), findsOneWidget);
       expect(find.text('Bio (optional)'), findsOneWidget);
-      expect(find.widgetWithText(ElevatedButton, 'Save Changes'), findsOneWidget);
+      expect(
+        find.widgetWithText(ElevatedButton, 'Save Changes'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('name and email are required', (tester) async {

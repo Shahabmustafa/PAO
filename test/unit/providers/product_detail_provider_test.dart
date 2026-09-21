@@ -4,6 +4,7 @@ import 'package:pao/features/auth/data/model/user_model.dart';
 import 'package:pao/features/home/data/product_store.dart';
 import 'package:pao/features/home/domain/product.dart';
 import 'package:pao/features/home/presentation/provider/product_detail_provider.dart';
+import 'package:pao/features/requests/data/request_store.dart';
 
 import '../../helpers/fakes.dart';
 import '../../helpers/test_app.dart';
@@ -140,6 +141,75 @@ void main() {
       expect(provider.errorMessage, 'Failed to update. Please try again.');
       expect(ProductStore.items.value.single.isGiven, isFalse);
       expect(provider.isMarkingGiven, isFalse);
+    });
+  });
+
+  group('deleteProduct', () {
+    test('deletes the post and forgets it locally', () async {
+      auth.user = const UserModel(id: 'owner-1');
+      RequestStore.sent.value = [makeRequest(id: 'r1', postId: 'p1')];
+      RequestStore.received.value = [
+        makeRequest(id: 'r2', postId: 'p1'),
+        makeRequest(id: 'r3', postId: 'other'),
+      ];
+      final provider = build();
+
+      final ok = await provider.deleteProduct();
+
+      expect(ok, isTrue);
+      expect(posts.deleteCalls.single['postId'], 'p1');
+      expect(ProductStore.items.value, isEmpty);
+      expect(RequestStore.sent.value, isEmpty);
+      expect(RequestStore.received.value.map((r) => r.id), ['r3']);
+      expect(provider.isDeleting, isFalse);
+    });
+
+    test('passes the photos along so they can be removed from storage', () async {
+      auth.user = const UserModel(id: 'owner-1');
+      final provider = ProductDetailProvider(
+        product: Product(
+          id: 'p1',
+          name: 'Lamp',
+          category: 'Books',
+          color: Colors.green,
+          userId: 'owner-1',
+          imageUrls: const ['https://cdn/a.png'],
+        ),
+        authRepository: auth,
+        postRepository: posts,
+        profileRepository: profiles,
+      );
+
+      await provider.deleteProduct();
+
+      expect(posts.deleteCalls.single['imageUrls'], ['https://cdn/a.png']);
+    });
+
+    test('only the owner can delete', () async {
+      // Signed in as "me", the post belongs to "owner-1".
+      final provider = build();
+
+      final ok = await provider.deleteProduct();
+
+      expect(ok, isFalse);
+      expect(posts.deleteCalls, isEmpty);
+      expect(ProductStore.items.value, hasLength(1));
+    });
+
+    test('a failure keeps the post and shows a message', () async {
+      auth.user = const UserModel(id: 'owner-1');
+      posts.deleteError = Exception('offline');
+      final provider = build();
+
+      final ok = await provider.deleteProduct();
+
+      expect(ok, isFalse);
+      expect(
+        provider.errorMessage,
+        'Failed to delete product. Please try again.',
+      );
+      expect(ProductStore.items.value, hasLength(1));
+      expect(provider.isDeleting, isFalse);
     });
   });
 }

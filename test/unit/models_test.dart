@@ -25,6 +25,7 @@ void main() {
       expect(post.description, 'Barely used');
       expect(post.category, 'Electronics');
       expect(post.condition, 'Old');
+      expect(post.address, 'House 5, Street 2');
       expect(post.imageUrls, ['https://img/1.png', 'https://img/2.png']);
       expect(post.isGiven, isFalse);
       expect(post.createdAt, kCreatedAt);
@@ -36,6 +37,7 @@ void main() {
           description: null,
           category: null,
           condition: null,
+          address: null,
           imageUrls: null,
           isGiven: null,
         ),
@@ -44,6 +46,7 @@ void main() {
       expect(post.description, isNull);
       expect(post.category, isNull);
       expect(post.condition, 'New');
+      expect(post.address, isNull);
       expect(post.imageUrls, isEmpty);
       expect(post.isGiven, isFalse);
     });

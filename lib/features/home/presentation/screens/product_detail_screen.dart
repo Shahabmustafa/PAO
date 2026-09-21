@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
+import '../../../../core/config/app_links.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_icons.dart';
 import '../../../../core/widgets/app_avatar.dart';
@@ -9,12 +10,14 @@ import '../../../../core/widgets/app_network_image.dart';
 import '../../../../core/widgets/app_shimmer.dart';
 import '../../../../core/widgets/app_snackbar.dart';
 import '../../../../core/widgets/primary_button.dart';
+import '../../../add_item/presentation/screens/add_item_screen.dart';
 import '../../../chat/presentation/screens/chat_screen.dart';
 import '../../../profile/presentation/screens/user_profile_screen.dart';
 import '../../../requests/data/model/request_model.dart';
 import '../../../requests/data/request_store.dart';
 import '../../../wishlist/data/wishlist_store.dart';
 import '../../../wishlist/domain/wish_item.dart';
+import '../../data/product_store.dart';
 import '../../domain/product.dart';
 import '../provider/product_detail_provider.dart';
 import '../../../../core/l10n/l10n.dart';
@@ -23,13 +26,26 @@ import '../../domain/localized_labels.dart';
 class ProductDetailScreen extends StatelessWidget {
   final Product product;
 
-  const ProductDetailScreen({super.key, required this.product});
+  /// Lets a test supply a provider wired to fakes; the app builds its own.
+  @visibleForTesting
+  final ProductDetailProvider? provider;
+
+  const ProductDetailScreen({super.key, required this.product, this.provider});
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => ProductDetailProvider(product: product),
-      child: _ProductDetailView(product: product),
+      create: (_) => provider ?? ProductDetailProvider(product: product),
+      // After the owner edits the post, the store holds the new version.
+      child: ValueListenableBuilder<List<Product>>(
+        valueListenable: ProductStore.items,
+        builder: (context, items, _) => _ProductDetailView(
+          product: items.firstWhere(
+            (p) => p.id == product.id,
+            orElse: () => product,
+          ),
+        ),
+      ),
     );
   }
 }
@@ -51,7 +67,10 @@ class _ProductDetailView extends StatelessWidget {
 
   void _onSharePressed(BuildContext context) {
     SharePlus.instance.share(
-      ShareParams(text: context.l10n.shareProduct(product.name)),
+      ShareParams(
+        text:
+            '${context.l10n.shareProduct(product.name)}\n${AppLinks.playStore}',
+      ),
     );
   }
 
@@ -87,6 +106,53 @@ class _ProductDetailView extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _onEditPressed(BuildContext context) async {
+    final updated = await Navigator.push<Product>(
+      context,
+      MaterialPageRoute(builder: (_) => AddItemScreen(product: product)),
+    );
+    if (updated == null || !context.mounted) return;
+    AppSnackbar.show(context, context.l10n.productUpdated);
+  }
+
+  Future<void> _onDeletePressed(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(context.l10n.delete),
+        content: Text(context.l10n.deleteProductConfirm(product.name)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(context.l10n.cancel),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(context.l10n.delete),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    final provider = context.read<ProductDetailProvider>();
+    final success = await provider.deleteProduct();
+    if (!context.mounted) return;
+
+    if (success) {
+      Navigator.pop(context);
+      AppSnackbar.show(context, context.l10n.productDeleted);
+    } else {
+      AppSnackbar.show(
+        context,
+        provider.errorMessage ?? context.l10n.failedToDeleteProduct,
+        icon: Icons.error_outline,
+        color: AppColors.error,
+      );
+    }
   }
 
   Future<void> _onMarkAsGivenPressed(BuildContext context) async {
@@ -215,29 +281,35 @@ class _ProductDetailView extends StatelessWidget {
                 PositionedDirectional(
                   top: 8,
                   end: 8,
-                  child: ValueListenableBuilder<List<WishItem>>(
-                    valueListenable: WishlistStore.items,
-                    builder: (context, items, _) {
-                      final isSaved = items.any(
-                        (item) => item.id == product.id,
-                      );
-                      return InkWell(
-                        onTap: () => _toggleWishlist(isSaved),
-                        borderRadius: BorderRadius.circular(20),
-                        child: SizedBox(
-                          height: 36,
-                          width: 36,
-                          child: AppIcon(
-                            isSaved
-                                ? AppIcons.favoriteFilled
-                                : AppIcons.favoriteOutline,
-                            size: 22,
-                            color: AppColors.primary,
-                          ),
+                  child: provider.isOwner && !product.isGiven
+                      ? _OwnerMenu(
+                          isBusy: provider.isDeleting,
+                          onEdit: () => _onEditPressed(context),
+                          onDelete: () => _onDeletePressed(context),
+                        )
+                      : ValueListenableBuilder<List<WishItem>>(
+                          valueListenable: WishlistStore.items,
+                          builder: (context, items, _) {
+                            final isSaved = items.any(
+                              (item) => item.id == product.id,
+                            );
+                            return InkWell(
+                              onTap: () => _toggleWishlist(isSaved),
+                              borderRadius: BorderRadius.circular(20),
+                              child: SizedBox(
+                                height: 36,
+                                width: 36,
+                                child: AppIcon(
+                                  isSaved
+                                      ? AppIcons.favoriteFilled
+                                      : AppIcons.favoriteOutline,
+                                  size: 22,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            );
+                          },
                         ),
-                      );
-                    },
-                  ),
                 ),
               ],
             ),
@@ -246,48 +318,43 @@ class _ProductDetailView extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          product.name,
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: context.appTextPrimary,
-                          ),
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: product.condition == 'New'
-                              ? AppColors.primary
-                              : Colors.black.withValues(alpha: 0.6),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          conditionLabel(context.l10n, product.condition),
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: product.condition == 'New'
-                                ? AppColors.onPrimary
-                                : Colors.white,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
                   Text(
-                    categoryLabel(context.l10n, product.category),
+                    product.name,
                     style: TextStyle(
-                      fontSize: 14,
-                      color: context.appTextSecondary,
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: context.appTextPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: context.appSurface,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: context.appBorder),
+                    ),
+                    child: Column(
+                      children: [
+                        _DetailRow(
+                          label: context.l10n.condition,
+                          value: conditionLabel(
+                            context.l10n,
+                            product.condition,
+                          ),
+                        ),
+                        Divider(height: 1, color: context.appBorder),
+                        _DetailRow(
+                          label: context.l10n.category,
+                          value: categoryLabel(context.l10n, product.category),
+                        ),
+                        if (product.address?.isNotEmpty ?? false) ...[
+                          Divider(height: 1, color: context.appBorder),
+                          _DetailRow(
+                            label: context.l10n.address,
+                            value: product.address!,
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -412,6 +479,110 @@ class _ProductDetailView extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Edit / Delete menu shown to the owner of a post, in the corner of the
+/// photo (where other users get the wishlist heart).
+class _OwnerMenu extends StatelessWidget {
+  final bool isBusy;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  const _OwnerMenu({
+    required this.isBusy,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 36,
+      width: 36,
+      decoration: BoxDecoration(
+        color: context.appSurface,
+        shape: BoxShape.circle,
+      ),
+      child: isBusy
+          ? const Padding(
+              padding: EdgeInsets.all(9),
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : PopupMenuButton<VoidCallback>(
+              padding: EdgeInsets.zero,
+              tooltip: '',
+              icon: const Icon(
+                Icons.more_vert,
+                size: 20,
+                color: AppColors.primary,
+              ),
+              onSelected: (action) => action(),
+              itemBuilder: (context) => [
+                PopupMenuItem(
+                  value: onEdit,
+                  child: Row(
+                    children: [
+                      const Icon(Icons.edit_outlined, size: 20),
+                      const SizedBox(width: 12),
+                      Text(context.l10n.edit),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: onDelete,
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.delete_outline,
+                        size: 20,
+                        color: AppColors.error,
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        context.l10n.delete,
+                        style: const TextStyle(color: AppColors.error),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+    );
+  }
+}
+
+class _DetailRow extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _DetailRow({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Row(
+        children: [
+          Text(
+            label,
+            style: TextStyle(fontSize: 14, color: context.appTextSecondary),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: context.appTextPrimary,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

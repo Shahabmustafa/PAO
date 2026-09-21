@@ -43,6 +43,38 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   void initState() {
     super.initState();
     _load();
+    _storeSignature = _signatureOfThisUsersPosts();
+    ProductStore.items.addListener(_onStoreChanged);
+  }
+
+  @override
+  void dispose() {
+    ProductStore.items.removeListener(_onStoreChanged);
+    super.dispose();
+  }
+
+  String _storeSignature = '';
+
+  // The store changes for every post anyone creates, edits or deletes
+  // (realtime). Only a change to this user's own posts — e.g. edited,
+  // deleted or given away from a product screen opened on top of this one —
+  // is worth reloading the tabs for.
+  String _signatureOfThisUsersPosts() {
+    final mine = ProductStore.items.value.where(
+      (p) => p.userId == widget.userId,
+    );
+    return [
+      for (final p in mine)
+        '${p.id}|${p.isGiven}|${p.name}|${p.description}|${p.category}|'
+            '${p.condition}|${p.address}|${p.imageUrls.join(',')}',
+    ].join('\n');
+  }
+
+  void _onStoreChanged() {
+    final signature = _signatureOfThisUsersPosts();
+    if (signature == _storeSignature) return;
+    _storeSignature = signature;
+    _load();
   }
 
   Future<void> _load() async {
@@ -246,7 +278,8 @@ class _ProductsTab extends StatelessWidget {
       mainAxisSpacing: 14,
       crossAxisSpacing: 12,
       itemCount: products.length,
-      itemBuilder: (context, index) => ProductCard(product: products[index]),
+      itemBuilder: (context, index) =>
+          ProductCard(product: products[index], showWishlistButton: false),
     );
   }
 }

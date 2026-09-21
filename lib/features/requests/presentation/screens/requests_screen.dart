@@ -27,9 +27,8 @@ class _RequestsScreenState extends State<RequestsScreen> {
   @override
   void initState() {
     super.initState();
+    // Loads both lists when the channel joins, then keeps them live.
     RequestStore.startRealtimeSync();
-    RequestStore.syncSentFromSupabase().catchError((_) {});
-    RequestStore.syncReceivedFromSupabase().catchError((_) {});
   }
 
   @override

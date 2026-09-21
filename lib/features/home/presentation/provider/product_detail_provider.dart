@@ -14,9 +14,9 @@ class ProductDetailProvider extends ChangeNotifier {
     AuthRepository? authRepository,
     PostRepository? postRepository,
     ProfileRepository? profileRepository,
-  })  : _authRepository = authRepository ?? AuthRepository(),
-        _postRepository = postRepository ?? PostRepository(),
-        _profileRepository = profileRepository ?? ProfileRepository() {
+  }) : _authRepository = authRepository ?? AuthRepository(),
+       _postRepository = postRepository ?? PostRepository(),
+       _profileRepository = profileRepository ?? ProfileRepository() {
     _loadPosterProfile();
   }
 
@@ -28,6 +28,7 @@ class ProductDetailProvider extends ChangeNotifier {
   bool isLoadingPoster = true;
   bool isMarkingGiven = false;
   bool isRequesting = false;
+  bool isDeleting = false;
   ProfileModel? posterProfile;
   String? errorMessage;
 
@@ -97,6 +98,29 @@ class ProductDetailProvider extends ChangeNotifier {
       return false;
     } finally {
       isMarkingGiven = false;
+      notifyListeners();
+    }
+  }
+
+  /// Deletes this post for good (owner only) and forgets it locally.
+  Future<bool> deleteProduct() async {
+    if (!isOwner) return false;
+    isDeleting = true;
+    errorMessage = null;
+    notifyListeners();
+    try {
+      await _postRepository.deletePost(
+        product.id,
+        imageUrls: product.imageUrls,
+      );
+      ProductStore.remove(product.id);
+      RequestStore.removeForPost(product.id);
+      return true;
+    } catch (_) {
+      errorMessage = l10nNow.failedToDeleteProduct;
+      return false;
+    } finally {
+      isDeleting = false;
       notifyListeners();
     }
   }

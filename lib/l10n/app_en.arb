@@ -368,5 +368,18 @@
   "terms10Body": "We may update these Terms & Conditions from time to time. Continued use of the app after changes are published means you accept the updated terms.",
   "terms11Title": "11. Contact Us",
   "terms11Body": "If you have questions about these Terms & Conditions, please reach out through the Help Center in Settings.",
-  "viewMyProfile": "View my profile"
+  "viewMyProfile": "View my profile",
+  "edit": "Edit",
+  "editProduct": "Edit Product",
+  "productUpdated": "Product updated",
+  "deleteProductConfirm": "Delete \"{name}\"? Its requests, chats and wishlist entries will be removed too. This cannot be undone.",
+  "@deleteProductConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "productDeleted": "Product deleted",
+  "failedToDeleteProduct": "Failed to delete product. Please try again."
 }

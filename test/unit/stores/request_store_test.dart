@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pao/core/realtime/realtime_event.dart';
 import 'package:pao/features/auth/data/model/user_model.dart';
 import 'package:pao/features/home/data/product_store.dart';
 import 'package:pao/features/home/domain/product.dart';
@@ -24,49 +25,181 @@ void main() {
   tearDown(RequestStore.reset);
 
   group('realtime sync', () {
+    // The channel tags each event with the list it belongs to.
+    RealtimeEvent<RequestModel> sentInsert(RequestModel r) =>
+        insertEvent(r.id, r, tag: 'sent');
+    RealtimeEvent<RequestModel> receivedInsert(RequestModel r) =>
+        insertEvent(r.id, r, tag: 'received');
+
     test('does nothing when signed out', () async {
       auth.user = null;
 
       RequestStore.startRealtimeSync(repository: repo, authRepository: auth);
-      repo.sentController?.add([makeRequest()]);
-      await pumpEventQueue();
 
-      expect(repo.sentController, isNull, reason: 'never subscribed');
-      expect(RequestStore.sent.value, isEmpty);
+      expect(repo.eventsController, isNull, reason: 'never subscribed');
     });
 
-    test('streams update sent and received', () async {
+    test('loads both lists when the channel joins', () async {
+      repo.sent = [makeRequest(id: 's1')];
+      repo.received = [makeRequest(id: 'r1'), makeRequest(id: 'r2')];
       RequestStore.startRealtimeSync(repository: repo, authRepository: auth);
 
-      repo.sentController!.add([makeRequest(id: 's1')]);
-      repo.receivedController!.add([makeRequest(id: 'r1'), makeRequest(id: 'r2')]);
+      repo.eventsController!.add(subscribedEvent());
       await pumpEventQueue();
 
       expect(RequestStore.sent.value.map((r) => r.id), ['s1']);
       expect(RequestStore.received.value.map((r) => r.id), ['r1', 'r2']);
     });
 
+    test('if realtime cannot connect the lists still load, once', () async {
+      repo.sent = [makeRequest(id: 's1')];
+      RequestStore.startRealtimeSync(repository: repo, authRepository: auth);
+
+      repo.eventsController!.add(errorEvent());
+      await pumpEventQueue();
+      expect(RequestStore.sent.value.map((r) => r.id), ['s1']);
+
+      repo.sent = [makeRequest(id: 'changed')];
+      repo.eventsController!.add(errorEvent());
+      await pumpEventQueue();
+      expect(
+        RequestStore.sent.value.map((r) => r.id),
+        ['s1'],
+        reason: 'repeated errors do not keep refetching',
+      );
+    });
+
+    test('a new "Give Me" request appears in Received right away', () async {
+      RequestStore.startRealtimeSync(repository: repo, authRepository: auth);
+      final controller = repo.eventsController!;
+
+      controller.add(receivedInsert(makeRequest(id: 'r1', ownerId: 'me')));
+      await pumpEventQueue();
+
+      expect(RequestStore.received.value.map((r) => r.id), ['r1']);
+      expect(RequestStore.sent.value, isEmpty);
+    });
+
+    test('an accept / decline updates the sent request in place', () async {
+      RequestStore.sent.value = [
+        makeRequest(id: 'a', requesterId: 'me'),
+        makeRequest(id: 'b', requesterId: 'me'),
+      ];
+      RequestStore.startRealtimeSync(repository: repo, authRepository: auth);
+
+      repo.eventsController!.add(
+        updateEvent(
+          'a',
+          makeRequest(id: 'a', requesterId: 'me', status: 'accepted'),
+          tag: 'sent',
+        ),
+      );
+      repo.eventsController!.add(
+        updateEvent(
+          'b',
+          makeRequest(id: 'b', requesterId: 'me', status: 'declined'),
+          tag: 'sent',
+        ),
+      );
+      await pumpEventQueue();
+
+      expect(RequestStore.sent.value.map((r) => r.id), ['a', 'b']);
+      expect(RequestStore.sent.value.map((r) => r.status), [
+        'accepted',
+        'declined',
+      ]);
+    });
+
+    test('the same request delivered twice is listed once', () async {
+      RequestStore.startRealtimeSync(repository: repo, authRepository: auth);
+      final controller = repo.eventsController!;
+
+      controller.add(sentInsert(makeRequest(id: 's1')));
+      controller.add(sentInsert(makeRequest(id: 's1')));
+      await pumpEventQueue();
+
+      expect(RequestStore.sent.value.map((r) => r.id), ['s1']);
+    });
+
+    test('a request we just sent is not doubled by its realtime echo', () async {
+      RequestStore.startRealtimeSync(repository: repo, authRepository: auth);
+
+      await RequestStore.send(
+        postId: 'p1',
+        ownerId: 'owner',
+        repository: repo,
+        authRepository: auth,
+      );
+      repo.eventsController!.add(
+        sentInsert(makeRequest(id: 'new-req', postId: 'p1', requesterId: 'me')),
+      );
+      await pumpEventQueue();
+
+      expect(RequestStore.sent.value.map((r) => r.id), ['new-req']);
+    });
+
+    test('a delete removes the request from both lists, ignoring unknown ids', () async {
+      RequestStore.sent.value = [makeRequest(id: 's1')];
+      RequestStore.received.value = [makeRequest(id: 'r1')];
+      RequestStore.startRealtimeSync(repository: repo, authRepository: auth);
+      final controller = repo.eventsController!;
+      var notified = 0;
+      RequestStore.sent.addListener(() => notified++);
+      RequestStore.received.addListener(() => notified++);
+
+      controller.add(deleteEvent('someone-elses'));
+      await pumpEventQueue();
+      expect(notified, 0);
+
+      controller.add(deleteEvent('s1'));
+      controller.add(deleteEvent('r1'));
+      await pumpEventQueue();
+
+      expect(RequestStore.sent.value, isEmpty);
+      expect(RequestStore.received.value, isEmpty);
+    });
+
+    test('newer requests are ordered first', () async {
+      RequestStore.startRealtimeSync(repository: repo, authRepository: auth);
+      final older = makeRequest(id: 'old');
+      final newer = RequestModel(
+        id: 'new',
+        postId: 'post-1',
+        requesterId: 'requester-1',
+        ownerId: 'owner-1',
+        status: 'pending',
+        createdAt: kCreatedAt.add(const Duration(hours: 1)),
+      );
+
+      repo.eventsController!.add(receivedInsert(older));
+      repo.eventsController!.add(receivedInsert(newer));
+      await pumpEventQueue();
+
+      expect(RequestStore.received.value.map((r) => r.id), ['new', 'old']);
+    });
+
     test('a second call does not subscribe again', () async {
       RequestStore.startRealtimeSync(repository: repo, authRepository: auth);
-      final firstSent = repo.sentController;
+      final first = repo.eventsController;
 
       final other = FakeRequestRepository();
       RequestStore.startRealtimeSync(repository: other, authRepository: auth);
 
-      expect(other.sentController, isNull);
-      expect(repo.sentController, same(firstSent));
+      expect(other.eventsController, isNull);
+      expect(repo.eventsController, same(first));
     });
 
-    test('reset cancels the subscriptions and clears the cache', () async {
+    test('reset cancels the subscription and clears the cache', () async {
       RequestStore.startRealtimeSync(repository: repo, authRepository: auth);
-      repo.sentController!.add([makeRequest()]);
+      repo.eventsController!.add(sentInsert(makeRequest()));
       await pumpEventQueue();
       expect(RequestStore.sent.value, hasLength(1));
 
       RequestStore.reset();
-      repo.sentController!.add([makeRequest(id: 'after-reset')]);
+      repo.eventsController!.add(sentInsert(makeRequest(id: 'after-reset')));
       await pumpEventQueue();
 
+      expect(repo.eventsController!.hasListener, isFalse);
       expect(RequestStore.sent.value, isEmpty);
       expect(RequestStore.received.value, isEmpty);
     });
@@ -78,7 +211,25 @@ void main() {
       final next = FakeRequestRepository();
       RequestStore.startRealtimeSync(repository: next, authRepository: auth);
 
-      expect(next.sentController, isNotNull);
+      expect(next.eventsController, isNotNull);
+    });
+  });
+
+  group('removeForPost', () {
+    test('drops sent and received requests for that post only', () {
+      RequestStore.sent.value = [
+        makeRequest(id: 's1', postId: 'gone'),
+        makeRequest(id: 's2', postId: 'kept'),
+      ];
+      RequestStore.received.value = [
+        makeRequest(id: 'r1', postId: 'gone'),
+        makeRequest(id: 'r2', postId: 'kept'),
+      ];
+
+      RequestStore.removeForPost('gone');
+
+      expect(RequestStore.sent.value.map((r) => r.id), ['s2']);
+      expect(RequestStore.received.value.map((r) => r.id), ['r2']);
     });
   });
 

@@ -10,6 +10,10 @@ class Product {
   final Color color;
   final String description;
   final String condition;
+
+  /// Where the item can be collected. Null for posts created before the
+  /// address field existed.
+  final String? address;
   final List<Uint8List> images;
   final List<String> imageUrls;
   final String? userId;
@@ -22,6 +26,7 @@ class Product {
     required this.color,
     this.description = '',
     this.condition = 'New',
+    this.address,
     this.images = const [],
     this.imageUrls = const [],
     this.userId,
@@ -40,6 +45,7 @@ class Product {
       color: color,
       description: description,
       condition: condition,
+      address: address,
       images: images,
       imageUrls: imageUrls,
       userId: userId,

@@ -1,4 +1,6 @@
 import 'dart:typed_data';
+import '../../../../core/realtime/realtime_event.dart';
+import '../../../../core/realtime/realtime_log.dart';
 import '../datasource/post_remote_datasource.dart';
 import '../model/post_model.dart';
 
@@ -33,10 +35,55 @@ class PostRepository {
     return rows.map(PostModel.fromJson).toList();
   }
 
-  Stream<List<PostModel>> streamAvailablePosts() {
-    return _dataSource.streamAvailablePosts().map(
-      (rows) => rows.map(PostModel.fromJson).toList(),
+  Future<List<PostModel>> fetchAvailablePostsPage({
+    required int offset,
+    required int limit,
+    String? excludeUserId,
+    String? category,
+    String? condition,
+    String? search,
+  }) async {
+    final rows = await _dataSource.fetchAvailablePostsPage(
+      offset: offset,
+      limit: limit,
+      excludeUserId: excludeUserId,
+      category: category,
+      condition: condition,
+      search: search,
     );
+    return rows.map(PostModel.fromJson).toList();
+  }
+
+  /// Live post changes. An UPDATE that arrives without every column (Realtime
+  /// leaves out unchanged large values such as a long description) is
+  /// completed by fetching that one row.
+  Stream<RealtimeEvent<PostModel>> watchPosts() {
+    return _dataSource
+        .watchPosts()
+        .asyncMap(_toPostEvent)
+        .where((event) => event != null)
+        .cast<RealtimeEvent<PostModel>>();
+  }
+
+  Future<RealtimeEvent<PostModel>?> _toPostEvent(
+    RealtimeEvent<Map<String, dynamic>> event,
+  ) async {
+    try {
+      return event.mapRecord(PostModel.fromJson);
+    } catch (_) {
+      realtimeLog('post ${event.id} arrived incomplete, fetching that row');
+    }
+    try {
+      final row = await _dataSource.fetchPostById(event.id);
+      if (row == null) return null;
+      return RealtimeEvent(
+        type: event.type,
+        id: event.id,
+        record: PostModel.fromJson(row),
+      );
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<PostModel> createPost({
@@ -45,6 +92,7 @@ class PostRepository {
     required String description,
     required String category,
     required String condition,
+    required String address,
     required List<Uint8List> images,
   }) async {
     final imageUrls = <String>[];
@@ -59,8 +107,62 @@ class PostRepository {
       description: description,
       category: category,
       condition: condition,
+      address: address,
       imageUrls: imageUrls,
     );
     return PostModel.fromJson(row);
+  }
+
+  /// Saves edits to a post. [keptImageUrls] are photos already uploaded that
+  /// stay, [newImages] are uploaded now, and [removedImageUrls] are deleted
+  /// from storage once the post row has been updated.
+  Future<PostModel> updatePost({
+    required String postId,
+    required String userId,
+    required String title,
+    required String description,
+    required String category,
+    required String condition,
+    required String address,
+    required List<String> keptImageUrls,
+    required List<Uint8List> newImages,
+    List<String> removedImageUrls = const [],
+  }) async {
+    final imageUrls = [...keptImageUrls];
+    for (final bytes in newImages) {
+      imageUrls.add(
+        await _dataSource.uploadImage(userId: userId, bytes: bytes),
+      );
+    }
+
+    final row = await _dataSource.updatePost(
+      postId: postId,
+      title: title,
+      description: description,
+      category: category,
+      condition: condition,
+      address: address,
+      imageUrls: imageUrls,
+    );
+    await _deleteImagesQuietly(removedImageUrls);
+    return PostModel.fromJson(row);
+  }
+
+  /// Deletes a post and, afterwards, its photos.
+  Future<void> deletePost(
+    String postId, {
+    List<String> imageUrls = const [],
+  }) async {
+    await _dataSource.deletePost(postId);
+    await _deleteImagesQuietly(imageUrls);
+  }
+
+  // A leftover photo is harmless next to a failed edit/delete, so storage
+  // errors here are swallowed.
+  Future<void> _deleteImagesQuietly(List<String> urls) async {
+    if (urls.isEmpty) return;
+    try {
+      await _dataSource.deleteImages(urls);
+    } catch (_) {}
   }
 }

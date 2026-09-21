@@ -20,6 +20,7 @@ class AddItemProvider extends ChangeNotifier {
     required String description,
     required String category,
     required String condition,
+    required String address,
     required List<Uint8List> images,
   }) async {
     final userId = _authRepository.currentUser?.id;
@@ -40,10 +41,55 @@ class AddItemProvider extends ChangeNotifier {
         description: description,
         category: category,
         condition: condition,
+        address: address,
         images: images,
       );
     } catch (_) {
       errorMessage = l10nNow.somethingWentWrong;
+      return null;
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<PostModel?> update({
+    required String postId,
+    required String title,
+    required String description,
+    required String category,
+    required String condition,
+    required String address,
+    required List<String> keptImageUrls,
+    required List<Uint8List> newImages,
+    List<String> removedImageUrls = const [],
+  }) async {
+    final userId = _authRepository.currentUser?.id;
+    if (userId == null) {
+      errorMessage = l10nNow.mustBeLoggedInToPost;
+      notifyListeners();
+      return null;
+    }
+
+    isLoading = true;
+    errorMessage = null;
+    notifyListeners();
+
+    try {
+      return await _repository.updatePost(
+        postId: postId,
+        userId: userId,
+        title: title,
+        description: description,
+        category: category,
+        condition: condition,
+        address: address,
+        keptImageUrls: keptImageUrls,
+        newImages: newImages,
+        removedImageUrls: removedImageUrls,
+      );
+    } catch (_) {
+      errorMessage = l10nNow.failedToUpdate;
       return null;
     } finally {
       isLoading = false;

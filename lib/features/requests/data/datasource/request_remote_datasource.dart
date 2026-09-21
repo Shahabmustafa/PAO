@@ -1,4 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../../core/realtime/realtime_event.dart';
+import '../../../../core/realtime/realtime_table_stream.dart';
 
 /// Talks directly to Supabase (the `requests` table). No app logic here —
 /// the repository interprets the results.
@@ -46,24 +48,46 @@ class RequestRemoteDataSource {
     return List<Map<String, dynamic>>.from(rows as List);
   }
 
-  /// Live Supabase Realtime stream of requests this user sent — emits again
-  /// automatically whenever one of those requests changes (e.g. accepted).
-  Stream<List<Map<String, dynamic>>> streamSentRequests(String requesterId) {
-    return _client
-        .from('requests')
-        .stream(primaryKey: ['id'])
-        .eq('requester_id', requesterId)
-        .order('created_at', ascending: false);
-  }
+  /// Tag on events for requests this user sent.
+  static const sentTag = 'sent';
 
-  /// Live Supabase Realtime stream of requests this user received — emits
-  /// again automatically whenever a new request comes in or changes status.
-  Stream<List<Map<String, dynamic>>> streamReceivedRequests(String ownerId) {
-    return _client
-        .from('requests')
-        .stream(primaryKey: ['id'])
-        .eq('owner_id', ownerId)
-        .order('created_at', ascending: false);
+  /// Tag on events for requests this user received.
+  static const receivedTag = 'received';
+
+  /// Live INSERT / UPDATE / DELETE events for every request [userId] is part
+  /// of, tagged [sentTag] (they are the requester) or [receivedTag] (they
+  /// own the post). Row Level Security already limits requests to the two
+  /// participants; the filters just pick the right list. DELETE can't be
+  /// filtered, so every delete is delivered and matched to local state by id.
+  Stream<RealtimeEvent<Map<String, dynamic>>> watchRequests(String userId) {
+    PostgresChangeFilter column(String name) => PostgresChangeFilter(
+      type: PostgresChangeFilterType.eq,
+      column: name,
+      value: userId,
+    );
+    return watchTable(
+      _client,
+      channelName: 'requests:$userId',
+      table: 'requests',
+      bindings: [
+        for (final event in [
+          PostgresChangeEvent.insert,
+          PostgresChangeEvent.update,
+        ]) ...[
+          RealtimeBinding(
+            event: event,
+            filter: column('requester_id'),
+            tag: sentTag,
+          ),
+          RealtimeBinding(
+            event: event,
+            filter: column('owner_id'),
+            tag: receivedTag,
+          ),
+        ],
+        const RealtimeBinding(event: PostgresChangeEvent.delete),
+      ],
+    );
   }
 
   Future<void> cancelRequest(String requestId) {
