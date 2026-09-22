@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
+import '../../../../core/notifications/notification_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_icons.dart';
 import '../../../../core/widgets/app_icon.dart';
@@ -20,6 +22,7 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   int _currentIndex = 0;
+  final _barController = BottomBarController();
 
   final List<Widget> _screens = const [
     HomeScreen(),
@@ -29,16 +32,69 @@ class _DashboardScreenState extends State<DashboardScreen> {
     SettingsScreen(),
   ];
 
+  @override
+  void initState() {
+    super.initState();
+    // A tapped push notification (see NotificationRouter) may request a tab
+    // switch, either right as this screen is (re)pushed onto the stack...
+    final requested = NotificationRouter.requestedTab.value;
+    if (requested != null) {
+      NotificationRouter.requestedTab.value = null;
+      _currentIndex = requested;
+    }
+    // ...or while it's already mounted.
+    NotificationRouter.requestedTab.addListener(_onTabRequested);
+  }
+
+  @override
+  void dispose() {
+    NotificationRouter.requestedTab.removeListener(_onTabRequested);
+    _barController.dispose();
+    super.dispose();
+  }
+
+  void _onTabRequested() {
+    final requested = NotificationRouter.requestedTab.value;
+    if (requested == null) return;
+    NotificationRouter.requestedTab.value = null;
+    setState(() => _currentIndex = requested);
+    _barController.show();
+  }
+
   void _onTabTapped(int index) {
     setState(() => _currentIndex = index);
+    _barController.show();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(index: _currentIndex, children: _screens),
-      bottomNavigationBar: SafeArea(
-        child: _FloatingNavBar(
+      body: BottomBar(
+        controller: _barController,
+        // Home, Add Product and Settings hide the bar on scroll (down
+        // hides, up shows); other tabs keep it pinned and _onTabTapped/
+        // _onTabRequested force it back into view when navigating away.
+        scrollBehavior: BottomBarScrollBehavior(
+          hideOnScroll:
+              _currentIndex == 0 || _currentIndex == 2 || _currentIndex == 4,
+        ),
+        showIcon: false,
+        // Zero offset and a transparent bar decoration: _FloatingNavBarContent
+        // draws its own margin and pill background already, exactly like the
+        // original hand-built nav bar. Leaving these unset falls back to the
+        // package's own outer margin and tinted surface color, which then
+        // shows through around/behind our pill as an extra colored halo.
+        layout: const BottomBarLayout.adaptive(
+          maxWidth: 420,
+          offset: 0,
+          clip: Clip.none,
+        ),
+        theme: const BottomBarThemeData(barDecoration: BoxDecoration()),
+        // Reserves the floating bar's real, measured height at the bottom
+        // of every tab, so its content (e.g. Add Product's Post button)
+        // never ends up hidden underneath it.
+        body: IndexedStack(index: _currentIndex, children: _screens),
+        child: _FloatingNavBarContent(
           currentIndex: _currentIndex,
           onTap: _onTabTapped,
         ),
@@ -47,11 +103,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 }
 
-class _FloatingNavBar extends StatelessWidget {
+class _FloatingNavBarContent extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
 
-  const _FloatingNavBar({required this.currentIndex, required this.onTap});
+  const _FloatingNavBarContent({
+    required this.currentIndex,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {

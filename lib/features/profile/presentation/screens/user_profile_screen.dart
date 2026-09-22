@@ -188,14 +188,32 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                       pinned: true,
                       delegate: _TabBarDelegate(
                         background: context.appBackground,
+                        trackColor: context.appSurface,
+                        borderColor: context.appBorder,
                         tabBar: TabBar(
-                          indicatorColor: AppColors.primary,
-                          labelColor: context.appTextPrimary,
+                          // A filled pill that slides between tabs, matching
+                          // the app's chip style (e.g. the Condition picker
+                          // on Add Product) instead of the plain Material
+                          // underline indicator.
+                          indicator: BoxDecoration(
+                            color: AppColors.primary,
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          indicatorSize: TabBarIndicatorSize.tab,
+                          indicatorPadding: const EdgeInsets.symmetric(
+                            vertical: 2,
+                          ),
+                          splashBorderRadius: BorderRadius.circular(18),
+                          dividerColor: Colors.transparent,
+                          labelColor: AppColors.onPrimary,
                           unselectedLabelColor: context.appTextSecondary,
-                          dividerColor: context.appBorder,
                           labelStyle: const TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
+                          ),
+                          unselectedLabelStyle: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
                           ),
                           tabs: [
                             Tab(text: context.l10n.tabPosts),
@@ -232,14 +250,27 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 class _TabBarDelegate extends SliverPersistentHeaderDelegate {
   final TabBar tabBar;
   final Color background;
+  final Color trackColor;
+  final Color borderColor;
 
-  const _TabBarDelegate({required this.tabBar, required this.background});
+  const _TabBarDelegate({
+    required this.tabBar,
+    required this.background,
+    required this.trackColor,
+    required this.borderColor,
+  });
+
+  static const double _outerPadding = 8;
+  static const double _trackPadding = 4;
+
+  double get _height =>
+      tabBar.preferredSize.height + (_outerPadding + _trackPadding) * 2;
 
   @override
-  double get minExtent => tabBar.preferredSize.height;
+  double get minExtent => _height;
 
   @override
-  double get maxExtent => tabBar.preferredSize.height;
+  double get maxExtent => _height;
 
   @override
   Widget build(
@@ -247,12 +278,27 @@ class _TabBarDelegate extends SliverPersistentHeaderDelegate {
     double shrinkOffset,
     bool overlapsContent,
   ) {
-    return Container(color: background, child: tabBar);
+    return Container(
+      color: background,
+      padding: const EdgeInsets.fromLTRB(20, _outerPadding, 20, _outerPadding),
+      child: Container(
+        padding: const EdgeInsets.all(_trackPadding),
+        decoration: BoxDecoration(
+          color: trackColor,
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: borderColor),
+        ),
+        child: tabBar,
+      ),
+    );
   }
 
   @override
   bool shouldRebuild(_TabBarDelegate oldDelegate) {
-    return oldDelegate.tabBar != tabBar || oldDelegate.background != background;
+    return oldDelegate.tabBar != tabBar ||
+        oldDelegate.background != background ||
+        oldDelegate.trackColor != trackColor ||
+        oldDelegate.borderColor != borderColor;
   }
 }
 
@@ -367,7 +413,9 @@ class _FeedbackTile extends StatelessWidget {
   String _timeAgo(BuildContext context, DateTime date) {
     final l10n = context.l10n;
     final diff = DateTime.now().difference(date);
-    if (diff.inDays >= 30) return l10n.timeMonthsAgo((diff.inDays / 30).floor());
+    if (diff.inDays >= 30) {
+      return l10n.timeMonthsAgo((diff.inDays / 30).floor());
+    }
     if (diff.inDays >= 1) return l10n.timeDaysAgo(diff.inDays);
     if (diff.inHours >= 1) return l10n.timeHoursAgo(diff.inHours);
     if (diff.inMinutes >= 1) return l10n.timeMinutesAgo(diff.inMinutes);

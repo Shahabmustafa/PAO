@@ -1,9 +1,11 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:toastification/toastification.dart';
 import 'core/config/supabase_config.dart';
+import 'core/notifications/push_notification_service.dart';
 import 'core/routes/app_navigator.dart';
 import 'core/routes/app_router.dart';
 import 'core/routes/app_routes.dart';
@@ -11,6 +13,7 @@ import 'core/theme/app_theme.dart';
 import 'core/theme/theme_controller.dart';
 import 'features/settings/data/language_store.dart';
 import 'features/settings/domain/app_language.dart';
+import 'firebase_options.dart';
 import 'l10n/app_localizations.dart';
 
 Future<void> main() async {
@@ -20,6 +23,8 @@ Future<void> main() async {
     url: SupabaseConfig.url,
     anonKey: SupabaseConfig.anonKey,
   );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await PushNotificationService.initialize();
   AppNavigator.listenForPasswordRecovery();
   await ThemeController.load();
   await LanguageStore.load();

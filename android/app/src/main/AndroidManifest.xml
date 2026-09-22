@@ -41,6 +41,19 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- Small icon FCM uses for a notification it displays itself
+             (background/terminated, see PushNotificationService). Without
+             this it falls back to the full-color app icon, which Android
+             can only render as a solid block since it has no alpha
+             channel. ic_notification is a plain white "PAO" silhouette
+             (android/app/src/main/res/drawable-*dpi/ic_notification.png),
+             tinted with notification_color at display time. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_notification" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/notification_color" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

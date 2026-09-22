@@ -1,0 +1,66 @@
+PAO - PLAY STORE CHECKLIST FOR THE PUSH NOTIFICATIONS UPDATE
+==============================================================
+Do this before/while uploading the next release to Google Play Console.
+Version was bumped in pubspec.yaml: 1.1.1+3 -> 1.2.0+4.
+
+
+1. BUILD
+--------
+flutter_local_notifications was added after the first build of this update
+(shows a real notification while the app is in the foreground, since FCM
+itself shows nothing there -- background/terminated is still shown natively
+by the OS from the FCM payload's own `notification` block, untouched). It's
+a new native plugin, so a plain hot-restart doesn't pick it up -- do a full
+rebuild before packaging:
+   flutter clean
+   flutter pub get
+
+Then build a signed release bundle:
+   flutter build appbundle --release
+
+
+2. DATA SAFETY SECTION (Play Console -> App content -> Data safety)
+---------------------------------------------------------------------
+This update adds a new kind of data collection (the FCM push token), so the
+Data Safety form needs a new entry:
+
+   Data type        : Device or other IDs
+   Collected        : Yes
+   Purpose          : App functionality
+   Shared with 3rd parties : No (only delivered through Firebase/Google, not
+                              sold or shared for advertising)
+   User control     : Signing out clears the token (handled in
+                       lib/core/notifications/push_notification_service.dart)
+
+
+3. PRIVACY POLICY
+------------------
+docs/privacy_policy.html was already updated with a disclosure for the push
+token. It just needs to be committed and pushed so GitHub Pages redeploys
+the live URL Play Console checks:
+
+   git add docs/privacy_policy.html pubspec.yaml
+   git commit -m "Add push notifications; update privacy policy"
+   git push
+
+
+4. PERMISSIONS
+---------------
+Nothing manual needed. firebase_messaging adds Android 13+'s
+POST_NOTIFICATIONS permission to the merged manifest itself, and
+PushNotificationService.initialize() already requests it at runtime.
+
+
+5. RELEASE NOTES ("What's new")
+---------------------------------
+Suggested line:
+   "Added real-time push notifications for new messages and requests."
+
+
+NOT NEEDED
+-----------
+- google-services.json is a build-time file only, never uploaded to Play
+  Console directly.
+- No SHA-1/SHA-256 certificate fingerprint registration needed in Firebase
+  for plain FCM messaging (only required for things like Google Sign-In or
+  Dynamic Links, which this app doesn't use).

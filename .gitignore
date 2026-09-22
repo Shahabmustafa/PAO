@@ -47,5 +47,10 @@ app.*.map.json
 # Environment variables / secrets
 .env
 
+# Firebase app config (client keys aren't secret, but kept local like the
+# rest of this project's credentials; each dev/CI downloads their own copy)
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+
 # Supabase SQL (kept local only)
 supabase/

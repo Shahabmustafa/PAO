@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Matches AppColors.primary in lib/core/theme/app_colors.dart. Used
+         to tint the notification small icon: it's a plain white
+         silhouette on its own, and Android draws it in this color. -->
+    <color name="notification_color">#AEF503</color>
+</resources>

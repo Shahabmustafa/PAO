@@ -48,6 +48,13 @@ class RequestRemoteDataSource {
     return List<Map<String, dynamic>>.from(rows as List);
   }
 
+  /// A single request regardless of which side of it the caller is on --
+  /// used to open a chat straight from a push notification, where only the
+  /// request id is known up front.
+  Future<Map<String, dynamic>?> fetchRequestById(String requestId) {
+    return _client.from('requests').select().eq('id', requestId).maybeSingle();
+  }
+
   /// Tag on events for requests this user sent.
   static const sentTag = 'sent';
 

@@ -1,0 +1,188 @@
+import 'dart:convert';
+
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../theme/app_colors.dart';
+import 'notification_router.dart';
+
+/// Wires Firebase Cloud Messaging to the app: requests notification
+/// permission, keeps `public.users.fcm_token` in sync with whoever is
+/// signed in (that's how `supabase/functions/push/index.ts` knows which
+/// device to deliver to -- see `supabase/users_add_fcm_token.sql`), and
+/// routes a tapped notification to the right tab.
+///
+/// `supabase/functions/push/index.ts` sends a hybrid FCM payload (both
+/// `notification` and `data`). That means:
+///   - Background / terminated: the OS shows the notification itself from
+///     the `notification` block -- native, reliable, no Dart code involved.
+///   - Foreground: neither Android nor iOS shows anything on their own for
+///     *any* FCM message while the app is running, so this class shows a
+///     real notification via flutter_local_notifications here.
+/// Showing our own notification for the background/terminated case too
+/// would double up with the OS's native one, so flutter_local_notifications
+/// is only ever used for the foreground path.
+///
+/// Call [initialize] once, right after `Firebase.initializeApp()`.
+class PushNotificationService {
+  PushNotificationService._();
+
+  static final FlutterLocalNotificationsPlugin _localNotifications =
+      FlutterLocalNotificationsPlugin();
+
+  static const AndroidNotificationChannel _channel = AndroidNotificationChannel(
+    'push_default',
+    'General',
+    description: 'New messages and requests',
+    importance: Importance.high,
+  );
+
+  static bool _initialized = false;
+  static int _notificationId = 0;
+
+  static Future<void> initialize() async {
+    if (_initialized) return;
+    _initialized = true;
+
+    await _localNotifications.initialize(
+      // ic_notification: a plain white "PAO" silhouette (see
+      // android/app/src/main/res/drawable-*dpi/ic_notification.png), not
+      // the full-color launcher icon -- Android can only render a status
+      // bar icon from its alpha channel, so a solid, non-transparent icon
+      // like the launcher one just shows as a filled block.
+      settings: const InitializationSettings(
+        android: AndroidInitializationSettings('ic_notification'),
+        iOS: DarwinInitializationSettings(),
+      ),
+      onDidReceiveNotificationResponse: (response) =>
+          _handleTap(response.payload),
+    );
+    await _localNotifications
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >()
+        ?.createNotificationChannel(_channel);
+
+    final messaging = FirebaseMessaging.instance;
+    await messaging.requestPermission();
+
+    final auth = Supabase.instance.client.auth;
+    if (auth.currentUser != null) {
+      await _saveToken(await messaging.getToken());
+    }
+    messaging.onTokenRefresh.listen(_saveToken);
+
+    auth.onAuthStateChange.listen((state) async {
+      switch (state.event) {
+        case AuthChangeEvent.signedIn:
+        case AuthChangeEvent.tokenRefreshed:
+        case AuthChangeEvent.userUpdated:
+          await _saveToken(await messaging.getToken());
+          break;
+        case AuthChangeEvent.signedOut:
+          // Detach this device from the account that just signed out, so it
+          // stops receiving that account's notifications.
+          await _clearTokenForPreviousUser();
+          break;
+        default:
+          break;
+      }
+    });
+
+    // Foreground: show our own notification (see class doc).
+    FirebaseMessaging.onMessage.listen(_showForegroundNotification);
+
+    // Tapped while backgrounded (the OS's own notification).
+    FirebaseMessaging.onMessageOpenedApp.listen(
+      (message) => _handleTap(jsonEncode(message.data)),
+    );
+    // Tapped from a fully terminated state (cold start), same source.
+    final initialMessage = await messaging.getInitialMessage();
+    if (initialMessage != null) {
+      _handleTap(jsonEncode(initialMessage.data));
+    }
+
+    // Tapped from a fully terminated state, on a notification *we* showed
+    // (the app was foregrounded when it arrived, then closed without
+    // opening it).
+    final launchDetails = await _localNotifications
+        .getNotificationAppLaunchDetails();
+    if (launchDetails?.didNotificationLaunchApp ?? false) {
+      _handleTap(launchDetails!.notificationResponse?.payload);
+    }
+  }
+
+  static Future<void> _showForegroundNotification(RemoteMessage message) async {
+    final title = message.notification?.title ?? message.data['title'] as String?;
+    final body = message.notification?.body ?? message.data['body'] as String?;
+    if (title == null && body == null) return;
+
+    await _localNotifications.show(
+      id: _notificationId++,
+      title: title,
+      body: body,
+      notificationDetails: NotificationDetails(
+        android: AndroidNotificationDetails(
+          _channel.id,
+          _channel.name,
+          channelDescription: _channel.description,
+          importance: Importance.high,
+          priority: Priority.high,
+          // Matches android/app/src/main/res/values/colors.xml's
+          // notification_color, which tints the same icon for the
+          // background/terminated case (set via the manifest's
+          // default_notification_color meta-data).
+          color: AppColors.primary,
+        ),
+        iOS: const DarwinNotificationDetails(),
+      ),
+      payload: jsonEncode(message.data),
+    );
+  }
+
+  static String? _lastKnownUserId;
+
+  static Future<void> _saveToken(String? token) async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (token == null || user == null) return;
+    _lastKnownUserId = user.id;
+    try {
+      await Supabase.instance.client
+          .from('users')
+          .update({'fcm_token': token})
+          .eq('id', user.id);
+    } catch (e) {
+      debugPrint('Failed to save FCM token: $e');
+    }
+  }
+
+  static Future<void> _clearTokenForPreviousUser() async {
+    final userId = _lastKnownUserId;
+    _lastKnownUserId = null;
+    if (userId == null) return;
+    try {
+      await Supabase.instance.client
+          .from('users')
+          .update({'fcm_token': null})
+          .eq('id', userId);
+    } catch (e) {
+      debugPrint('Failed to clear FCM token: $e');
+    }
+  }
+
+  static void _handleTap(String? payload) {
+    if (payload == null || payload.isEmpty) return;
+    Map<String, dynamic> data;
+    try {
+      data = jsonDecode(payload) as Map<String, dynamic>;
+    } catch (_) {
+      return;
+    }
+    final type = data['type'] as String?;
+    final requestId = data['request_id'] as String?;
+    if ((type == 'message' || type == 'request') && requestId != null) {
+      NotificationRouter.openChat(requestId);
+    }
+  }
+}

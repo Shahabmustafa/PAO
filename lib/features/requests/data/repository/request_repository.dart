@@ -32,6 +32,11 @@ class RequestRepository {
     return rows.map(RequestModel.fromJson).toList();
   }
 
+  Future<RequestModel?> fetchRequestById(String requestId) async {
+    final row = await _dataSource.fetchRequestById(requestId);
+    return row == null ? null : RequestModel.fromJson(row);
+  }
+
   /// Live request changes for [userId]. Events are tagged
   /// [RequestRemoteDataSource.sentTag] / [RequestRemoteDataSource.receivedTag].
   Stream<RealtimeEvent<RequestModel>> watchRequests(String userId) {

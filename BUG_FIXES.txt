@@ -1,0 +1,222 @@
+PAO - BUG FIXES AND IMPROVEMENTS LOG
+====================================
+Source: git history (commits of 18-19 Sep 2026) + the current changes in the
+working tree. Every item below is taken from the actual code changes.
+"Reported by" is left blank on purpose - fill it in only where a tester
+really reported the issue. Do not invent tester feedback for the Play form.
+
+
+A. CHAT
+-------
+1. Deleted messages stayed on screen
+   Problem : Chat used a table stream. A message deleted while the user was
+             offline / reconnecting was never removed from the open chat.
+   Fix     : Chat now uses a realtime channel (INSERT / UPDATE / DELETE) and
+             re-loads the history when the channel re-joins, so the server
+             list is the truth.
+
+2. Duplicate message after sending
+   Problem : A sent message came back again over realtime and could be listed
+             twice.
+   Fix     : Messages are merged by id. The sent message is shown instantly and
+             the realtime copy just replaces it.
+
+3. Chat stuck on loading when realtime is down
+   Fix     : If realtime fails, the history is still loaded once, so the chat
+             opens with messages instead of an endless spinner.
+
+4. Accepted / closed status not updating in an open chat
+   Problem : If the owner accepted the request while the requester had the
+             chat open, the chat kept showing the old status.
+   Fix     : The chat listens to the request store and updates the status live.
+
+5. Message order
+   Fix     : Messages are always sorted oldest-first by created time, no matter
+             in what order realtime events arrive.
+
+
+B. REQUESTS
+-----------
+6. Duplicate request in the list
+   Problem : After sending a request, the local add and the realtime INSERT
+             could both add it.
+   Fix     : Requests are upserted by id, in newest-first position - never
+             duplicated, whichever arrives first.
+
+7. Requests of a deleted post stayed in the list
+   Fix     : When a post is deleted, its requests are removed from the local
+             cache too (RequestStore.removeForPost) and via realtime DELETE.
+
+8. Request lists empty when realtime is down / after reconnect
+   Fix     : Lists are loaded when the channel joins, loaded once even if
+             realtime errors, and re-synced after a dropped connection.
+
+9. User did not know about waiting requests
+   Fix     : The Requests tab in the bottom bar now shows a badge with the
+             number of received requests still pending.
+
+
+C. HOME FEED / PRODUCTS
+-----------------------
+10. Given-away posts kept showing in the feed
+    Problem : The realtime feed was filtered on is_given = false. When a post
+              was marked as given, it stopped matching the filter, so its
+              UPDATE never arrived and the post stayed on screen.
+    Fix     : The realtime channel is not filtered on is_given any more; the
+              app removes given / deleted posts itself.
+
+11. Deleted posts stayed in the feed
+    Fix     : Realtime DELETE events remove the product from the store and grid.
+
+12. Search / category / condition only worked on already-loaded items
+    Problem : Filtering was done on the client, so items not yet loaded could
+              never be found and pages were half empty.
+    Fix     : Server-side pagination. Search, category and condition are applied
+              by the server; every page is full of matching products.
+              Infinite scroll with a retry button when a page fails.
+
+13. Searching for "50%" matched everything
+    Fix     : LIKE wildcards (% and _) are escaped, so the text is matched
+              literally.
+
+14. Old search results overwriting new ones
+    Problem : A slow response for an old query could replace the results of the
+              new query.
+    Fix     : Every query has a version number; stale responses are ignored.
+
+15. Search fired a request on every key press
+    Fix     : Search is debounced (400 ms).
+
+16. Same product shown twice across pages
+    Problem : New posts pushed on top shift later pages, so a product could be
+              repeated.
+    Fix     : Pages are merged by id; the offset is adjusted when items are
+              added / removed live.
+
+17. Live changes lost while the first page was loading
+    Fix     : Changes arriving during the first load are queued and replayed
+              after the response.
+
+18. Posts without a category
+    Fix     : Old posts with no category are shown and filtered as "Other".
+
+19. Missed events after connection drop
+    Fix     : On reconnect the feed reloads (ProductStore.reconnected).
+
+20. Realtime UPDATE with missing columns
+    Problem : Realtime leaves out unchanged large values (for example a long
+              description), so the product could show an incomplete text.
+    Fix     : The app fetches that single row to complete the record.
+
+
+D. ADD / EDIT / DELETE PRODUCT
+------------------------------
+21. Owner could not edit a post
+    Fix     : Add Product screen doubles as an Edit Product screen (pre-filled).
+              Photos can be kept, added or removed.
+
+22. Owner could not delete a post
+    Fix     : Owner menu (Edit / Delete) with confirmation. Deleting removes the
+              post, its requests, chats, wishlist entries and feedback, and the
+              photos from storage.
+
+23. Old photos left in storage
+    Fix     : Removed / deleted photos are deleted from the bucket after the
+              post row is saved. A storage error never blocks the edit or delete.
+
+24. Edit by a non-owner
+    Fix     : Update is guarded by row-level security; a non-owner update
+              matches no row and fails safely instead of silently succeeding.
+              Delete throws if no row was deleted.
+
+25. Pickup location missing
+    Fix     : New "Address" field on the post (shown on the product page).
+              Older posts without an address still display correctly.
+
+26. Photo slot spacing bug
+    Problem : Extra space was added only after the first photo slot.
+    Fix     : Spacing is now between slots only.
+
+27. Add-item form UI
+    Fix     : Redesigned form - dashed photo slots, option chips, section labels,
+              dialog for camera / gallery instead of a bottom sheet.
+
+28. New "Used" condition and "Other" category
+    Fix     : Added both to the product options.
+
+
+E. PRODUCT DETAIL / PROFILE / WISHLIST
+--------------------------------------
+29. Owner saw the wishlist heart on their own product
+    Fix     : Owner sees an Edit / Delete menu instead of the heart. A given-away
+              product shows no menu.
+
+30. Profile tabs showed old data after an edit
+    Problem : After a post was edited, deleted or given away from a product page
+              opened on top of a profile, the profile tabs stayed stale.
+    Fix     : The profile reloads when that user's posts change in the store
+              (only when they really changed, not for every realtime event).
+
+31. Wishlist button on profile cards
+    Fix     : The heart is hidden in the profile grids.
+
+32. Wishlist grid spacing
+    Fix     : crossAxisSpacing 0 -> 12, so cards no longer touch each other.
+
+
+F. THEME / UI
+-------------
+33. Snackbar text unreadable in dark mode
+    Problem : ToastificationStyle.flatColored ignores backgroundColor and paints
+              a light tint, hiding the theme-colored text in dark mode.
+    Fix     : Changed to ToastificationStyle.flat, which honours the colors.
+
+34. App bar changed color on scroll in dark mode
+    Fix     : scrolledUnderElevation: 0 in the dark theme.
+
+35. Dark-mode text on legal pages, empty tile (commit 9855e1f)
+    Fix     : Dark-mode text fixed, empty tile removed, legal pages linked to
+              hosted URLs and redesigned (commit 7d0ccb4).
+
+36. Wishlist and Requests tabs missing from the bottom navigation
+    Fix     : Both tabs are shown now (commit 9d230e2).
+
+
+G. AUTH / ONBOARDING
+--------------------
+37. New users were not sent to Home after sign up
+    Fix     : They go straight to Home (commit 934aed0).
+
+38. Password-reset link did not open the app
+    Fix     : Reset links open in the app, with a new Reset Password screen
+              (commit c5c08ea).
+
+
+H. LOCALIZATION, TESTING, CLEAN-UP
+----------------------------------
+39. English and Urdu localization added (commit c9ed1b6); new strings added for
+    edit / delete / address.
+
+40. Tests
+    - Unit, widget and integration tests added (commit a8169d2).
+    - Tests extended for pagination, realtime chat / requests / posts,
+      edit / delete, owner actions and wishlist button visibility
+      (test/unit/**, test/widget/**).
+
+41. Clean-up
+    - Removed the unused Windows platform folder.
+    - Added AppLinks (Play Store link) and store assets (app icon 512,
+      feature graphic 1024x500).
+
+
+SUMMARY
+-------
+Total items logged : 41
+Areas covered      : Chat, Requests, Home feed, Add/Edit/Delete product,
+                     Product detail, Profile, Wishlist, Theme (dark mode),
+                     Auth, Localization, Tests
+
+NOTE FOR PLAY CONSOLE (production readiness section)
+- Use only what really happened. Mention which of these were found by testers
+  and which you found yourself while testing on your own devices.
+- Also note: devices / Android versions tested, and the result.

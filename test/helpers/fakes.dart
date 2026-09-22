@@ -449,6 +449,14 @@ class FakeRequestRepository implements RequestRepository {
       received;
 
   @override
+  Future<RequestModel?> fetchRequestById(String requestId) async {
+    for (final request in [...sent, ...received]) {
+      if (request.id == requestId) return request;
+    }
+    return null;
+  }
+
+  @override
   Stream<RealtimeEvent<RequestModel>> watchRequests(String userId) =>
       (eventsController ??=
               StreamController<RealtimeEvent<RequestModel>>.broadcast())
@@ -836,6 +844,14 @@ class FakeRequestDataSource implements RequestRemoteDataSource {
   Future<List<Map<String, dynamic>>> fetchReceivedRequests(
     String ownerId,
   ) async => rows;
+
+  @override
+  Future<Map<String, dynamic>?> fetchRequestById(String requestId) async {
+    for (final row in rows) {
+      if (row['id'] == requestId) return row;
+    }
+    return null;
+  }
 
   final events = StreamController<RealtimeEvent<Map<String, dynamic>>>();
 

@@ -2,6 +2,9 @@ import java.util.Properties
 
 plugins {
     id("com.android.application")
+    // START: FlutterFire Configuration
+    id("com.google.gms.google-services")
+    // END: FlutterFire Configuration
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
@@ -22,6 +25,8 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+        // Required by flutter_local_notifications.
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
@@ -63,4 +68,27 @@ android {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    // Required by flutter_local_notifications (core library desugaring).
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
+}
+
+// Works around an AGP bug: once core library desugaring is enabled but the
+// project has no actual baseline-profile source, :app:l8DexDesugarLibRelease
+// leaves its output directory empty instead of writing an empty
+// baseline-prof.txt, yet :app:compileReleaseArtProfile still requires that
+// exact file to exist as an input. An empty file is a valid "no extra
+// profile rules" baseline profile, so create it ourselves if L8 didn't.
+tasks.matching { it.name == "compileReleaseArtProfile" }.configureEach {
+    doFirst {
+        val desugarProfile = file(
+            "$buildDir/intermediates/l8_art_profile/release/l8DexDesugarLibRelease/baseline-prof.txt"
+        )
+        if (!desugarProfile.exists()) {
+            desugarProfile.parentFile.mkdirs()
+            desugarProfile.writeText("")
+        }
+    }
 }
