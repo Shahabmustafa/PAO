@@ -9,12 +9,16 @@ class AppIcons {
   static const String add = '$_base/add.svg';
   static const String addCircleOutline = '$_base/add_circle_outline.svg';
   static const String addCircleFilled = '$_base/add_circle_filled.svg';
+  static const String bug = '$_base/bug.svg';
   static const String camera = '$_base/camera.svg';
+  static const String check = '$_base/check.svg';
+  static const String checkAll = '$_base/check_all.svg';
   static const String checkCircle = '$_base/check_circle.svg';
   static const String chevronRight = '$_base/chevron_right.svg';
   static const String close = '$_base/close.svg';
   static const String darkMode = '$_base/dark_mode.svg';
   static const String lightMode = '$_base/light_mode.svg';
+  static const String lightbulb = '$_base/lightbulb.svg';
   static const String delete = '$_base/delete.svg';
   static const String description = '$_base/description.svg';
   static const String edit = '$_base/edit.svg';
@@ -37,6 +41,7 @@ class AppIcons {
   static const String radioChecked = '$_base/radio_checked.svg';
   static const String radioUnchecked = '$_base/radio_unchecked.svg';
   static const String search = '$_base/search.svg';
+  static const String send = '$_base/send.svg';
   static const String settingsOutline = '$_base/settings_outline.svg';
   static const String settingsFilled = '$_base/settings_filled.svg';
   static const String settingsSuggest = '$_base/settings_suggest.svg';

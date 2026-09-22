@@ -36,4 +36,17 @@ class ChatRepository {
 
   Future<void> deleteMessage(String messageId) =>
       _dataSource.deleteMessage(messageId);
+
+  Future<void> markMessagesRead({
+    required String requestId,
+    required String readerId,
+  }) => _dataSource.markMessagesRead(requestId: requestId, readerId: readerId);
+
+  Future<MessageModel> editMessage({
+    required String messageId,
+    required String body,
+  }) async {
+    final row = await _dataSource.editMessage(messageId: messageId, body: body);
+    return MessageModel.fromJson(row);
+  }
 }

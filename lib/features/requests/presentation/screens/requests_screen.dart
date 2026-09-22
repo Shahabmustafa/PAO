@@ -90,8 +90,35 @@ class _RequestsScreenState extends State<RequestsScreen> {
   }
 }
 
-class _SentRequestsTab extends StatelessWidget {
+class _SentRequestsTab extends StatefulWidget {
   const _SentRequestsTab();
+
+  @override
+  State<_SentRequestsTab> createState() => _SentRequestsTabState();
+}
+
+class _SentRequestsTabState extends State<_SentRequestsTab> {
+  final _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_loadMoreIfNearEnd);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_loadMoreIfNearEnd);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _loadMoreIfNearEnd() {
+    if (!_scrollController.hasClients) return;
+    final position = _scrollController.position;
+    if (!position.hasContentDimensions) return;
+    if (position.extentAfter < _loadMoreThreshold) RequestStore.loadMoreSent();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -104,25 +131,43 @@ class _SentRequestsTab extends StatelessWidget {
         return ValueListenableBuilder<List<Product>>(
           valueListenable: ProductStore.items,
           builder: (context, products, _) {
-            return ListView.separated(
-              padding: const EdgeInsets.all(20),
-              itemCount: requests.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                final request = requests[index];
-                Product? product;
-                for (final p in products) {
-                  if (p.id == request.postId) {
-                    product = p;
-                    break;
-                  }
-                }
-                return _RequestTile(
-                  request: request,
-                  productName: product?.name,
-                  productImageUrl: product?.imageUrl,
-                  otherUserId: request.ownerId,
-                  isSentTab: true,
+            return ValueListenableBuilder<bool>(
+              valueListenable: RequestStore.hasMoreSent,
+              builder: (context, hasMore, _) {
+                return ValueListenableBuilder<bool>(
+                  valueListenable: RequestStore.isLoadingMoreSent,
+                  builder: (context, isLoadingMore, _) {
+                    WidgetsBinding.instance.addPostFrameCallback(
+                      (_) => _loadMoreIfNearEnd(),
+                    );
+                    final itemCount = requests.length + (hasMore ? 1 : 0);
+                    return ListView.separated(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.all(20),
+                      itemCount: itemCount,
+                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      itemBuilder: (context, index) {
+                        if (index >= requests.length) {
+                          return _LoadMoreFooter(isLoading: isLoadingMore);
+                        }
+                        final request = requests[index];
+                        Product? product;
+                        for (final p in products) {
+                          if (p.id == request.postId) {
+                            product = p;
+                            break;
+                          }
+                        }
+                        return _RequestTile(
+                          request: request,
+                          productName: product?.name,
+                          productImageUrl: product?.imageUrl,
+                          otherUserId: request.ownerId,
+                          isSentTab: true,
+                        );
+                      },
+                    );
+                  },
                 );
               },
             );
@@ -133,8 +178,37 @@ class _SentRequestsTab extends StatelessWidget {
   }
 }
 
-class _ReceivedRequestsTab extends StatelessWidget {
+class _ReceivedRequestsTab extends StatefulWidget {
   const _ReceivedRequestsTab();
+
+  @override
+  State<_ReceivedRequestsTab> createState() => _ReceivedRequestsTabState();
+}
+
+class _ReceivedRequestsTabState extends State<_ReceivedRequestsTab> {
+  final _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_loadMoreIfNearEnd);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_loadMoreIfNearEnd);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _loadMoreIfNearEnd() {
+    if (!_scrollController.hasClients) return;
+    final position = _scrollController.position;
+    if (!position.hasContentDimensions) return;
+    if (position.extentAfter < _loadMoreThreshold) {
+      RequestStore.loadMoreReceived();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -147,31 +221,74 @@ class _ReceivedRequestsTab extends StatelessWidget {
         return ValueListenableBuilder<List<Product>>(
           valueListenable: ProductStore.items,
           builder: (context, products, _) {
-            return ListView.separated(
-              padding: const EdgeInsets.all(20),
-              itemCount: requests.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                final request = requests[index];
-                Product? product;
-                for (final p in products) {
-                  if (p.id == request.postId) {
-                    product = p;
-                    break;
-                  }
-                }
-                return _RequestTile(
-                  request: request,
-                  productName: product?.name,
-                  productImageUrl: product?.imageUrl,
-                  otherUserId: request.requesterId,
-                  isSentTab: false,
+            return ValueListenableBuilder<bool>(
+              valueListenable: RequestStore.hasMoreReceived,
+              builder: (context, hasMore, _) {
+                return ValueListenableBuilder<bool>(
+                  valueListenable: RequestStore.isLoadingMoreReceived,
+                  builder: (context, isLoadingMore, _) {
+                    WidgetsBinding.instance.addPostFrameCallback(
+                      (_) => _loadMoreIfNearEnd(),
+                    );
+                    final itemCount = requests.length + (hasMore ? 1 : 0);
+                    return ListView.separated(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.all(20),
+                      itemCount: itemCount,
+                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      itemBuilder: (context, index) {
+                        if (index >= requests.length) {
+                          return _LoadMoreFooter(isLoading: isLoadingMore);
+                        }
+                        final request = requests[index];
+                        Product? product;
+                        for (final p in products) {
+                          if (p.id == request.postId) {
+                            product = p;
+                            break;
+                          }
+                        }
+                        return _RequestTile(
+                          request: request,
+                          productName: product?.name,
+                          productImageUrl: product?.imageUrl,
+                          otherUserId: request.requesterId,
+                          isSentTab: false,
+                        );
+                      },
+                    );
+                  },
                 );
               },
             );
           },
         );
       },
+    );
+  }
+}
+
+/// How close to the bottom (in pixels) a tab's list must be before the next
+/// page is requested.
+const double _loadMoreThreshold = 300;
+
+class _LoadMoreFooter extends StatelessWidget {
+  final bool isLoading;
+
+  const _LoadMoreFooter({required this.isLoading});
+
+  @override
+  Widget build(BuildContext context) {
+    if (!isLoading) return const SizedBox.shrink();
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 16),
+      child: Center(
+        child: SizedBox(
+          height: 20,
+          width: 20,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      ),
     );
   }
 }

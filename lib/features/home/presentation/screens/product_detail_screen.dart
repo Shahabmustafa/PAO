@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../../../core/config/app_links.dart';
@@ -352,6 +353,15 @@ class _ProductDetailView extends StatelessWidget {
                           _DetailRow(
                             label: context.l10n.address,
                             value: product.address!,
+                          ),
+                        ],
+                        if (product.createdAt != null) ...[
+                          Divider(height: 1, color: context.appBorder),
+                          _DetailRow(
+                            label: context.l10n.postedOn,
+                            value: DateFormat(
+                              'd MMM yyyy',
+                            ).format(product.createdAt!.toLocal()),
                           ),
                         ],
                       ],

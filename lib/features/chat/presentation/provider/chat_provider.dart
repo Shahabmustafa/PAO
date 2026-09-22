@@ -31,6 +31,13 @@ class ChatProvider extends ChangeNotifier {
     // the requester has the chat open.
     RequestStore.sent.addListener(_syncRequestStatus);
     RequestStore.received.addListener(_syncRequestStatus);
+    // The other participant's online/last-seen status has no realtime
+    // channel of its own (see PresenceHeartbeat), so poll it while this
+    // chat is open.
+    _profileRefreshTimer = Timer.periodic(
+      const Duration(seconds: 25),
+      (_) => _loadOtherProfile(),
+    );
   }
 
   RequestModel request;
@@ -45,6 +52,7 @@ class ChatProvider extends ChangeNotifier {
   bool isSending = false;
   String? errorMessage;
   StreamSubscription<RealtimeEvent<MessageModel>>? _subscription;
+  Timer? _profileRefreshTimer;
   bool _disposed = false;
 
   ProfileModel? otherProfile;
@@ -85,6 +93,12 @@ class ChatProvider extends ChangeNotifier {
         final message = event.record;
         if (message == null || message.requestId != request.id) return;
         _upsert(message);
+        // A message just arrived while this chat is open -- that counts as
+        // seen right away.
+        if (event.type == RealtimeEventType.insert &&
+            message.senderId != currentUserId) {
+          unawaited(_markIncomingAsRead());
+        }
       case RealtimeEventType.delete:
         // Deletes can't be filtered to this chat, so most aren't ours.
         if (!messages.any((m) => m.id == event.id)) return;
@@ -111,12 +125,33 @@ class ChatProvider extends ChangeNotifier {
       }
       messages = _sorted(byId.values);
       errorMessage = null;
+      unawaited(_markIncomingAsRead());
     } catch (_) {
       if (_disposed) return;
       if (messages.isEmpty) errorMessage = l10nNow.failedToLoadMessages;
     }
     isLoading = false;
     notifyListeners();
+  }
+
+  /// Marks the other participant's unread messages as seen. Fire-and-forget:
+  /// the server's realtime UPDATE echo (not a local edit) is what actually
+  /// flips the ticks, for both participants alike.
+  Future<void> _markIncomingAsRead() async {
+    final userId = currentUserId;
+    if (userId == null) return;
+    final hasUnread = messages.any(
+      (m) => m.senderId != userId && m.readAt == null,
+    );
+    if (!hasUnread) return;
+    try {
+      await _repository.markMessagesRead(
+        requestId: request.id,
+        readerId: userId,
+      );
+    } catch (_) {
+      // Best-effort -- the ticks just catch up next time this runs.
+    }
   }
 
   void _failLoading() {
@@ -161,10 +196,10 @@ class ChatProvider extends ChangeNotifier {
       otherProfile = await _profileRepository.fetchPublicProfile(otherUserId);
     } catch (_) {
       // Keep the fallback name/avatar if the profile fails to load.
-    } finally {
-      isLoadingProfile = false;
-      notifyListeners();
     }
+    if (_disposed) return;
+    isLoadingProfile = false;
+    notifyListeners();
   }
 
   Future<void> _checkFeedback() async {
@@ -223,6 +258,28 @@ class ChatProvider extends ChangeNotifier {
     }
   }
 
+  /// Edits one of the current user's own messages.
+  Future<bool> editMessage(MessageModel message, String newBody) async {
+    final trimmed = newBody.trim();
+    if (trimmed.isEmpty ||
+        trimmed == message.body ||
+        message.senderId != currentUserId) {
+      return false;
+    }
+    try {
+      final updated = await _repository.editMessage(
+        messageId: message.id,
+        body: trimmed,
+      );
+      _upsert(updated);
+      return true;
+    } catch (_) {
+      errorMessage = l10nNow.failedToEditMessage;
+      notifyListeners();
+      return false;
+    }
+  }
+
   /// Deletes one of the current user's own messages. The bubble disappears
   /// right away and is put back if the delete fails.
   Future<bool> deleteMessage(MessageModel message) async {
@@ -246,6 +303,7 @@ class ChatProvider extends ChangeNotifier {
     RequestStore.sent.removeListener(_syncRequestStatus);
     RequestStore.received.removeListener(_syncRequestStatus);
     _subscription?.cancel();
+    _profileRefreshTimer?.cancel();
     super.dispose();
   }
 }

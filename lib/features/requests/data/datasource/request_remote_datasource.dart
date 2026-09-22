@@ -48,6 +48,42 @@ class RequestRemoteDataSource {
     return List<Map<String, dynamic>>.from(rows as List);
   }
 
+  /// One page of the requests [requesterId] sent, newest first. [offset] is
+  /// the number of matching rows to skip.
+  Future<List<Map<String, dynamic>>> fetchSentRequestsPage(
+    String requesterId, {
+    required int offset,
+    required int limit,
+  }) async {
+    final rows = await _client
+        .from('requests')
+        .select()
+        .eq('requester_id', requesterId)
+        .order('created_at', ascending: false)
+        // Tie-breaker so rows created at the same instant keep a stable
+        // order between pages.
+        .order('id')
+        .range(offset, offset + limit - 1);
+    return List<Map<String, dynamic>>.from(rows as List);
+  }
+
+  /// One page of the requests [ownerId] received, newest first. [offset] is
+  /// the number of matching rows to skip.
+  Future<List<Map<String, dynamic>>> fetchReceivedRequestsPage(
+    String ownerId, {
+    required int offset,
+    required int limit,
+  }) async {
+    final rows = await _client
+        .from('requests')
+        .select()
+        .eq('owner_id', ownerId)
+        .order('created_at', ascending: false)
+        .order('id')
+        .range(offset, offset + limit - 1);
+    return List<Map<String, dynamic>>.from(rows as List);
+  }
+
   /// A single request regardless of which side of it the caller is on --
   /// used to open a chat straight from a push notification, where only the
   /// request id is known up front.

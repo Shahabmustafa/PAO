@@ -89,6 +89,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get enterValidEmail => 'Enter a valid email';
 
   @override
+  String get emailCannotBeChanged => 'Your email can\'t be changed';
+
+  @override
   String get password => 'Password';
 
   @override
@@ -312,6 +315,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get postedBy => 'Posted by';
 
   @override
+  String get postedOn => 'Posted on';
+
+  @override
   String get description => 'Description';
 
   @override
@@ -463,6 +469,39 @@ class AppLocalizationsEn extends AppLocalizations {
   String get failedToSendMessage => 'Failed to send message.';
 
   @override
+  String get editMessage => 'Edit message';
+
+  @override
+  String get failedToEditMessage => 'Failed to edit message. Please try again.';
+
+  @override
+  String get editedLabel => '(edited)';
+
+  @override
+  String get online => 'Online';
+
+  @override
+  String lastSeenToday(String time) {
+    return 'last seen today at $time';
+  }
+
+  @override
+  String lastSeenYesterday(String time) {
+    return 'last seen yesterday at $time';
+  }
+
+  @override
+  String lastSeenOn(String date, String time) {
+    return 'last seen $date at $time';
+  }
+
+  @override
+  String get today => 'Today';
+
+  @override
+  String get yesterday => 'Yesterday';
+
+  @override
   String get profile => 'Profile';
 
   @override
@@ -605,6 +644,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get theme => 'Theme';
+
+  @override
+  String get notifications => 'Notifications';
 
   @override
   String get helpCenter => 'Help Center';
@@ -945,4 +987,86 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get failedToDeleteProduct =>
       'Failed to delete product. Please try again.';
+
+  @override
+  String get bugsAndFeatures => 'Bugs & Features';
+
+  @override
+  String get reportsIntro =>
+      'Found something broken, or have an idea to make PAO better? Tell us here — we read every report.';
+
+  @override
+  String get reportTypeBug => 'Report a bug';
+
+  @override
+  String get reportTypeBugCaption => 'Something isn\'t working';
+
+  @override
+  String get reportTypeFeature => 'Suggest a feature';
+
+  @override
+  String get reportTypeFeatureCaption => 'An idea to improve the app';
+
+  @override
+  String get reportBugTitleLabel => 'What went wrong?';
+
+  @override
+  String get reportBugTitleHint =>
+      'e.g. Chat doesn\'t open from a notification';
+
+  @override
+  String get reportFeatureTitleLabel => 'What\'s your idea?';
+
+  @override
+  String get reportFeatureTitleHint => 'e.g. Filter listings by distance';
+
+  @override
+  String get reportDetailsLabel => 'Details';
+
+  @override
+  String get reportBugDescriptionHint =>
+      'What did you do, what happened, and what did you expect to happen?';
+
+  @override
+  String get reportFeatureDescriptionHint =>
+      'Describe the feature and how it would help you.';
+
+  @override
+  String get reportTitleRequired => 'Please add a short title';
+
+  @override
+  String get reportDescriptionTooShort =>
+      'Please add a bit more detail (at least 10 characters)';
+
+  @override
+  String get reportSubmitted => 'Thanks! We\'ve received it.';
+
+  @override
+  String get failedToSubmitReport => 'Couldn\'t send it. Please try again.';
+
+  @override
+  String get mustBeLoggedInReport => 'You must be logged in to send a report.';
+
+  @override
+  String get myReports => 'Your reports';
+
+  @override
+  String get noReportsYet =>
+      'Nothing sent yet. Your bug reports and ideas will show up here.';
+
+  @override
+  String get failedToLoadReports =>
+      'Couldn\'t load your reports. Pull down to try again.';
+
+  @override
+  String get reportStatusOpen => 'Received';
+
+  @override
+  String get reportStatusInProgress => 'In progress';
+
+  @override
+  String get reportStatusDone => 'Done';
+
+  @override
+  String get reportStatusClosed => 'Closed';
 }

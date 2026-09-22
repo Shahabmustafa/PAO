@@ -248,6 +248,12 @@ abstract class AppLocalizations {
   /// **'Enter a valid email'**
   String get enterValidEmail;
 
+  /// No description provided for @emailCannotBeChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Your email can\'t be changed'**
+  String get emailCannotBeChanged;
+
   /// No description provided for @password.
   ///
   /// In en, this message translates to:
@@ -674,6 +680,12 @@ abstract class AppLocalizations {
   /// **'Posted by'**
   String get postedBy;
 
+  /// No description provided for @postedOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Posted on'**
+  String get postedOn;
+
   /// No description provided for @description.
   ///
   /// In en, this message translates to:
@@ -956,6 +968,60 @@ abstract class AppLocalizations {
   /// **'Failed to send message.'**
   String get failedToSendMessage;
 
+  /// No description provided for @editMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit message'**
+  String get editMessage;
+
+  /// No description provided for @failedToEditMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to edit message. Please try again.'**
+  String get failedToEditMessage;
+
+  /// No description provided for @editedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'(edited)'**
+  String get editedLabel;
+
+  /// No description provided for @online.
+  ///
+  /// In en, this message translates to:
+  /// **'Online'**
+  String get online;
+
+  /// No description provided for @lastSeenToday.
+  ///
+  /// In en, this message translates to:
+  /// **'last seen today at {time}'**
+  String lastSeenToday(String time);
+
+  /// No description provided for @lastSeenYesterday.
+  ///
+  /// In en, this message translates to:
+  /// **'last seen yesterday at {time}'**
+  String lastSeenYesterday(String time);
+
+  /// No description provided for @lastSeenOn.
+  ///
+  /// In en, this message translates to:
+  /// **'last seen {date} at {time}'**
+  String lastSeenOn(String date, String time);
+
+  /// No description provided for @today.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get today;
+
+  /// No description provided for @yesterday.
+  ///
+  /// In en, this message translates to:
+  /// **'Yesterday'**
+  String get yesterday;
+
   /// No description provided for @profile.
   ///
   /// In en, this message translates to:
@@ -1207,6 +1273,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Theme'**
   String get theme;
+
+  /// No description provided for @notifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get notifications;
 
   /// No description provided for @helpCenter.
   ///
@@ -1801,6 +1873,156 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Failed to delete product. Please try again.'**
   String get failedToDeleteProduct;
+
+  /// No description provided for @bugsAndFeatures.
+  ///
+  /// In en, this message translates to:
+  /// **'Bugs & Features'**
+  String get bugsAndFeatures;
+
+  /// No description provided for @reportsIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Found something broken, or have an idea to make PAO better? Tell us here — we read every report.'**
+  String get reportsIntro;
+
+  /// No description provided for @reportTypeBug.
+  ///
+  /// In en, this message translates to:
+  /// **'Report a bug'**
+  String get reportTypeBug;
+
+  /// No description provided for @reportTypeBugCaption.
+  ///
+  /// In en, this message translates to:
+  /// **'Something isn\'t working'**
+  String get reportTypeBugCaption;
+
+  /// No description provided for @reportTypeFeature.
+  ///
+  /// In en, this message translates to:
+  /// **'Suggest a feature'**
+  String get reportTypeFeature;
+
+  /// No description provided for @reportTypeFeatureCaption.
+  ///
+  /// In en, this message translates to:
+  /// **'An idea to improve the app'**
+  String get reportTypeFeatureCaption;
+
+  /// No description provided for @reportBugTitleLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'What went wrong?'**
+  String get reportBugTitleLabel;
+
+  /// No description provided for @reportBugTitleHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Chat doesn\'t open from a notification'**
+  String get reportBugTitleHint;
+
+  /// No description provided for @reportFeatureTitleLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'What\'s your idea?'**
+  String get reportFeatureTitleLabel;
+
+  /// No description provided for @reportFeatureTitleHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Filter listings by distance'**
+  String get reportFeatureTitleHint;
+
+  /// No description provided for @reportDetailsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Details'**
+  String get reportDetailsLabel;
+
+  /// No description provided for @reportBugDescriptionHint.
+  ///
+  /// In en, this message translates to:
+  /// **'What did you do, what happened, and what did you expect to happen?'**
+  String get reportBugDescriptionHint;
+
+  /// No description provided for @reportFeatureDescriptionHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe the feature and how it would help you.'**
+  String get reportFeatureDescriptionHint;
+
+  /// No description provided for @reportTitleRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please add a short title'**
+  String get reportTitleRequired;
+
+  /// No description provided for @reportDescriptionTooShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Please add a bit more detail (at least 10 characters)'**
+  String get reportDescriptionTooShort;
+
+  /// No description provided for @reportSubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Thanks! We\'ve received it.'**
+  String get reportSubmitted;
+
+  /// No description provided for @failedToSubmitReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t send it. Please try again.'**
+  String get failedToSubmitReport;
+
+  /// No description provided for @mustBeLoggedInReport.
+  ///
+  /// In en, this message translates to:
+  /// **'You must be logged in to send a report.'**
+  String get mustBeLoggedInReport;
+
+  /// No description provided for @myReports.
+  ///
+  /// In en, this message translates to:
+  /// **'Your reports'**
+  String get myReports;
+
+  /// No description provided for @noReportsYet.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing sent yet. Your bug reports and ideas will show up here.'**
+  String get noReportsYet;
+
+  /// No description provided for @failedToLoadReports.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load your reports. Pull down to try again.'**
+  String get failedToLoadReports;
+
+  /// No description provided for @reportStatusOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Received'**
+  String get reportStatusOpen;
+
+  /// No description provided for @reportStatusInProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'In progress'**
+  String get reportStatusInProgress;
+
+  /// No description provided for @reportStatusDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get reportStatusDone;
+
+  /// No description provided for @reportStatusClosed.
+  ///
+  /// In en, this message translates to:
+  /// **'Closed'**
+  String get reportStatusClosed;
 }
 
 class _AppLocalizationsDelegate

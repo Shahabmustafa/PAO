@@ -19,6 +19,9 @@ import 'package:pao/features/chat/data/repository/chat_repository.dart';
 import 'package:pao/features/feedback/data/datasource/feedback_remote_datasource.dart';
 import 'package:pao/features/feedback/data/model/feedback_model.dart';
 import 'package:pao/features/feedback/data/repository/feedback_repository.dart';
+import 'package:pao/features/reports/data/model/report_model.dart';
+import 'package:pao/features/reports/data/repository/report_repository.dart';
+import 'package:pao/features/reports/domain/report_type.dart';
 import 'package:pao/features/requests/data/datasource/request_remote_datasource.dart';
 import 'package:pao/features/requests/data/model/request_model.dart';
 import 'package:pao/features/requests/data/repository/request_repository.dart';
@@ -449,6 +452,32 @@ class FakeRequestRepository implements RequestRepository {
       received;
 
   @override
+  Future<List<RequestModel>> fetchSentRequestsPage(
+    String requesterId, {
+    required int offset,
+    required int limit,
+  }) async => _page(sent, offset: offset, limit: limit);
+
+  @override
+  Future<List<RequestModel>> fetchReceivedRequestsPage(
+    String ownerId, {
+    required int offset,
+    required int limit,
+  }) async => _page(received, offset: offset, limit: limit);
+
+  List<RequestModel> _page(
+    List<RequestModel> source, {
+    required int offset,
+    required int limit,
+  }) {
+    if (offset >= source.length) return [];
+    return source.sublist(
+      offset,
+      offset + limit > source.length ? source.length : offset + limit,
+    );
+  }
+
+  @override
   Future<RequestModel?> fetchRequestById(String requestId) async {
     for (final request in [...sent, ...received]) {
       if (request.id == requestId) return request;
@@ -589,6 +618,47 @@ class FakeFeedbackRepository implements FeedbackRepository {
   }) async {}
 }
 
+class FakeReportRepository implements ReportRepository {
+  List<ReportModel> existing = [];
+  Object? fetchError;
+  Object? submitError;
+  final submitCalls =
+      <({String userId, ReportType type, String title, String description})>[];
+
+  @override
+  Future<List<ReportModel>> fetchForUser(String userId) async {
+    if (fetchError != null) throw fetchError!;
+    return existing;
+  }
+
+  @override
+  Future<ReportModel> submit({
+    required String userId,
+    required ReportType type,
+    required String title,
+    required String description,
+    String? platform,
+  }) async {
+    if (submitError != null) throw submitError!;
+    submitCalls.add((
+      userId: userId,
+      type: type,
+      title: title,
+      description: description,
+    ));
+    return ReportModel(
+      id: 'r${submitCalls.length}',
+      userId: userId,
+      type: type,
+      title: title,
+      description: description,
+      status: ReportStatus.open,
+      platform: platform,
+      createdAt: DateTime(2026, 9, 23),
+    );
+  }
+}
+
 class FakeChatRepository implements ChatRepository {
   Object? sendError;
   Object? deleteError;
@@ -630,6 +700,41 @@ class FakeChatRepository implements ChatRepository {
   Future<void> deleteMessage(String messageId) async {
     if (deleteError != null) throw deleteError!;
     deleted.add(messageId);
+  }
+
+  Object? markReadError;
+  Object? editError;
+  final markReadCalls = <({String requestId, String readerId})>[];
+  final edited = <({String messageId, String body})>[];
+
+  @override
+  Future<void> markMessagesRead({
+    required String requestId,
+    required String readerId,
+  }) async {
+    if (markReadError != null) throw markReadError!;
+    markReadCalls.add((requestId: requestId, readerId: readerId));
+  }
+
+  @override
+  Future<MessageModel> editMessage({
+    required String messageId,
+    required String body,
+  }) async {
+    if (editError != null) throw editError!;
+    edited.add((messageId: messageId, body: body));
+    MessageModel? existing;
+    for (final m in history) {
+      if (m.id == messageId) existing = m;
+    }
+    return MessageModel(
+      id: messageId,
+      requestId: existing?.requestId ?? 'req-1',
+      senderId: existing?.senderId ?? 'requester-1',
+      body: body,
+      createdAt: existing?.createdAt ?? kCreatedAt,
+      editedAt: kCreatedAt,
+    );
   }
 }
 
@@ -846,6 +951,28 @@ class FakeRequestDataSource implements RequestRemoteDataSource {
   ) async => rows;
 
   @override
+  Future<List<Map<String, dynamic>>> fetchSentRequestsPage(
+    String requesterId, {
+    required int offset,
+    required int limit,
+  }) async => _page(offset: offset, limit: limit);
+
+  @override
+  Future<List<Map<String, dynamic>>> fetchReceivedRequestsPage(
+    String ownerId, {
+    required int offset,
+    required int limit,
+  }) async => _page(offset: offset, limit: limit);
+
+  List<Map<String, dynamic>> _page({required int offset, required int limit}) {
+    if (offset >= rows.length) return [];
+    return rows.sublist(
+      offset,
+      offset + limit > rows.length ? rows.length : offset + limit,
+    );
+  }
+
+  @override
   Future<Map<String, dynamic>?> fetchRequestById(String requestId) async {
     for (final row in rows) {
       if (row['id'] == requestId) return row;
@@ -951,6 +1078,28 @@ class FakeChatDataSource implements ChatRemoteDataSource {
   @override
   Future<void> deleteMessage(String messageId) async =>
       calls.add('delete:$messageId');
+
+  @override
+  Future<void> markMessagesRead({
+    required String requestId,
+    required String readerId,
+  }) async => calls.add('markRead:$requestId:$readerId');
+
+  @override
+  Future<Map<String, dynamic>> editMessage({
+    required String messageId,
+    required String body,
+  }) async {
+    calls.add('edit:$messageId:$body');
+    return {
+      'id': messageId,
+      'request_id': 'req-1',
+      'sender_id': 'requester-1',
+      'body': body,
+      'created_at': kCreatedAt.toIso8601String(),
+      'edited_at': kCreatedAt.toIso8601String(),
+    };
+  }
 }
 
 class FakeProfileDataSource implements ProfileRemoteDataSource {

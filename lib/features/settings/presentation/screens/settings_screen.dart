@@ -14,9 +14,11 @@ import '../../../requests/data/request_store.dart';
 import '../../../wishlist/data/wishlist_store.dart';
 import '../../../wishlist/presentation/screens/wishlist_screen.dart';
 import '../../data/language_store.dart';
+import '../../data/notification_settings_store.dart';
 import '../../domain/app_language.dart';
 import 'edit_profile_screen.dart';
 import 'help_center_screen.dart';
+import '../../../reports/presentation/screens/report_screen.dart';
 import 'language_screen.dart';
 import 'theme_screen.dart';
 import '../../../../core/l10n/l10n.dart';
@@ -259,6 +261,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       );
                     },
                   ),
+                  ValueListenableBuilder<bool>(
+                    valueListenable: NotificationSettingsStore.enabled,
+                    builder: (context, enabled, _) {
+                      return _SettingsSwitchTile(
+                        icon: AppIcons.notifications,
+                        label: context.l10n.notifications,
+                        value: enabled,
+                        onChanged: NotificationSettingsStore.setEnabled,
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
@@ -294,6 +307,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         MaterialPageRoute(
                           builder: (_) => const HelpCenterScreen(),
                         ),
+                      );
+                    },
+                  ),
+                  _SettingsTile(
+                    icon: AppIcons.bug,
+                    label: context.l10n.bugsAndFeatures,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const ReportScreen()),
                       );
                     },
                   ),
@@ -440,6 +463,41 @@ class _SettingsTile extends StatelessWidget {
             color: AppColors.primary,
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _SettingsSwitchTile extends StatelessWidget {
+  final String icon;
+  final String label;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  const _SettingsSwitchTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      onTap: () => onChanged(!value),
+      leading: AppIcon(icon, color: AppColors.primary),
+      title: Text(
+        label,
+        style: TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w500,
+          color: context.appTextPrimary,
+        ),
+      ),
+      trailing: Switch.adaptive(
+        value: value,
+        activeThumbColor: AppColors.primary,
+        onChanged: onChanged,
       ),
     );
   }

@@ -188,14 +188,14 @@ class _HomeViewState extends State<_HomeView> {
                       Expanded(
                         child: Container(
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(28),
                             boxShadow: [
                               BoxShadow(
                                 color: AppColors.textPrimary.withValues(
-                                  alpha: 0.04,
+                                  alpha: 0.06,
                                 ),
-                                blurRadius: 12,
-                                offset: const Offset(0, 4),
+                                blurRadius: 16,
+                                offset: const Offset(0, 6),
                               ),
                             ],
                           ),
@@ -203,14 +203,60 @@ class _HomeViewState extends State<_HomeView> {
                             controller: _searchController,
                             focusNode: _searchFocusNode,
                             onChanged: homeProvider.onSearchChanged,
+                            style: TextStyle(
+                              fontSize: 15,
+                              color: context.appTextPrimary,
+                            ),
                             decoration: InputDecoration(
+                              isDense: true,
                               hintText: context.l10n.searchHint,
+                              hintStyle: TextStyle(
+                                fontSize: 15,
+                                color: context.appTextSecondary,
+                              ),
+                              filled: true,
+                              fillColor: context.appSurface,
+                              contentPadding: const EdgeInsets.symmetric(
+                                vertical: 14,
+                              ),
                               prefixIcon: const Padding(
                                 padding: EdgeInsets.all(12),
                                 child: AppIcon(
                                   AppIcons.search,
                                   size: 20,
                                   color: AppColors.primary,
+                                ),
+                              ),
+                              suffixIcon: homeProvider.hasActiveSearch
+                                  ? IconButton(
+                                      icon: Icon(
+                                        Icons.close_rounded,
+                                        size: 18,
+                                        color: context.appTextSecondary,
+                                      ),
+                                      onPressed: () {
+                                        _searchController.clear();
+                                        homeProvider.clearSearch();
+                                      },
+                                    )
+                                  : null,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(28),
+                                borderSide: BorderSide(
+                                  color: context.appBorder,
+                                ),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(28),
+                                borderSide: BorderSide(
+                                  color: context.appBorder,
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(28),
+                                borderSide: const BorderSide(
+                                  color: AppColors.primary,
+                                  width: 1.5,
                                 ),
                               ),
                             ),
@@ -439,16 +485,23 @@ class _FilterButton extends StatelessWidget {
     final isActive = activeCount > 0;
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(26),
       child: Container(
         height: 52,
         width: 52,
         decoration: BoxDecoration(
           color: isActive ? AppColors.primary : context.appSurface,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(26),
           border: Border.all(
             color: isActive ? AppColors.primary : context.appBorder,
           ),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.textPrimary.withValues(alpha: 0.06),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
         ),
         child: Stack(
           clipBehavior: Clip.none,

@@ -32,6 +32,32 @@ class RequestRepository {
     return rows.map(RequestModel.fromJson).toList();
   }
 
+  Future<List<RequestModel>> fetchSentRequestsPage(
+    String requesterId, {
+    required int offset,
+    required int limit,
+  }) async {
+    final rows = await _dataSource.fetchSentRequestsPage(
+      requesterId,
+      offset: offset,
+      limit: limit,
+    );
+    return rows.map(RequestModel.fromJson).toList();
+  }
+
+  Future<List<RequestModel>> fetchReceivedRequestsPage(
+    String ownerId, {
+    required int offset,
+    required int limit,
+  }) async {
+    final rows = await _dataSource.fetchReceivedRequestsPage(
+      ownerId,
+      offset: offset,
+      limit: limit,
+    );
+    return rows.map(RequestModel.fromJson).toList();
+  }
+
   Future<RequestModel?> fetchRequestById(String requestId) async {
     final row = await _dataSource.fetchRequestById(requestId);
     return row == null ? null : RequestModel.fromJson(row);
