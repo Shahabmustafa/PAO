@@ -73,6 +73,10 @@ class AppLocalizationsUr extends AppLocalizations {
       'بہت زیادہ کوششیں ہو چکی ہیں۔ براہِ کرم کچھ دیر انتظار کریں اور دوبارہ کوشش کریں۔';
 
   @override
+  String get errorAccountBanned =>
+      'آپ کا اکاؤنٹ معطل کر دیا گیا ہے۔ اگر آپ کو لگتا ہے کہ یہ غلطی ہے تو سپورٹ سے رابطہ کریں۔';
+
+  @override
   String get welcomeBack => 'خوش آمدید';
 
   @override
@@ -89,6 +93,9 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get enterValidEmail => 'درست ای میل درج کریں';
+
+  @override
+  String get emailCannotBeChanged => 'آپ کی ای میل تبدیل نہیں کی جا سکتی';
 
   @override
   String get password => 'پاس ورڈ';
@@ -316,6 +323,9 @@ class AppLocalizationsUr extends AppLocalizations {
   String get postedBy => 'پوسٹ کرنے والا';
 
   @override
+  String get postedOn => 'پوسٹ کی تاریخ';
+
+  @override
   String get description => 'تفصیل';
 
   @override
@@ -469,6 +479,40 @@ class AppLocalizationsUr extends AppLocalizations {
   String get failedToSendMessage => 'پیغام بھیجنے میں ناکامی۔';
 
   @override
+  String get editMessage => 'پیغام میں ترمیم کریں';
+
+  @override
+  String get failedToEditMessage =>
+      'پیغام میں ترمیم کرنے میں ناکامی۔ براہِ کرم دوبارہ کوشش کریں۔';
+
+  @override
+  String get editedLabel => '(ترمیم شدہ)';
+
+  @override
+  String get online => 'آن لائن';
+
+  @override
+  String lastSeenToday(String time) {
+    return 'آخری بار آج $time پر دیکھا گیا';
+  }
+
+  @override
+  String lastSeenYesterday(String time) {
+    return 'آخری بار کل $time پر دیکھا گیا';
+  }
+
+  @override
+  String lastSeenOn(String date, String time) {
+    return 'آخری بار $date کو $time پر دیکھا گیا';
+  }
+
+  @override
+  String get today => 'آج';
+
+  @override
+  String get yesterday => 'کل';
+
+  @override
   String get profile => 'پروفائل';
 
   @override
@@ -611,6 +655,9 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get theme => 'تھیم';
+
+  @override
+  String get notifications => 'اطلاعات';
 
   @override
   String get helpCenter => 'مدد مرکز';
@@ -952,4 +999,87 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get failedToDeleteProduct =>
       'پروڈکٹ حذف کرنے میں ناکامی۔ براہِ کرم دوبارہ کوشش کریں۔';
+
+  @override
+  String get bugsAndFeatures => 'بگز اور فیچرز';
+
+  @override
+  String get reportsIntro =>
+      'کچھ ٹھیک کام نہیں کر رہا، یا PAO کو بہتر بنانے کا کوئی خیال ہے؟ یہاں بتائیں — ہم ہر رپورٹ پڑھتے ہیں۔';
+
+  @override
+  String get reportTypeBug => 'بگ رپورٹ کریں';
+
+  @override
+  String get reportTypeBugCaption => 'کچھ کام نہیں کر رہا';
+
+  @override
+  String get reportTypeFeature => 'فیچر تجویز کریں';
+
+  @override
+  String get reportTypeFeatureCaption => 'ایپ کو بہتر بنانے کا خیال';
+
+  @override
+  String get reportBugTitleLabel => 'کیا مسئلہ ہوا؟';
+
+  @override
+  String get reportBugTitleHint => 'مثلاً نوٹیفکیشن سے چیٹ نہیں کھلتی';
+
+  @override
+  String get reportFeatureTitleLabel => 'آپ کا خیال کیا ہے؟';
+
+  @override
+  String get reportFeatureTitleHint => 'مثلاً فاصلے کے لحاظ سے فلٹر';
+
+  @override
+  String get reportDetailsLabel => 'تفصیل';
+
+  @override
+  String get reportBugDescriptionHint =>
+      'آپ نے کیا کیا، کیا ہوا، اور آپ کیا ہونے کی توقع کر رہے تھے؟';
+
+  @override
+  String get reportFeatureDescriptionHint =>
+      'فیچر کی وضاحت کریں اور بتائیں کہ یہ آپ کی کیسے مدد کرے گا۔';
+
+  @override
+  String get reportTitleRequired => 'براہِ کرم مختصر عنوان لکھیں';
+
+  @override
+  String get reportDescriptionTooShort =>
+      'براہِ کرم کچھ مزید تفصیل لکھیں (کم از کم 10 حروف)';
+
+  @override
+  String get reportSubmitted => 'شکریہ! ہمیں موصول ہو گیا۔';
+
+  @override
+  String get failedToSubmitReport =>
+      'بھیجا نہیں جا سکا۔ براہِ کرم دوبارہ کوشش کریں۔';
+
+  @override
+  String get mustBeLoggedInReport =>
+      'رپورٹ بھیجنے کے لیے لاگ اِن ہونا ضروری ہے۔';
+
+  @override
+  String get myReports => 'آپ کی رپورٹس';
+
+  @override
+  String get noReportsYet =>
+      'ابھی کچھ نہیں بھیجا گیا۔ آپ کی بگ رپورٹس اور خیالات یہاں نظر آئیں گے۔';
+
+  @override
+  String get failedToLoadReports =>
+      'آپ کی رپورٹس لوڈ نہیں ہو سکیں۔ دوبارہ کوشش کے لیے نیچے کھینچیں۔';
+
+  @override
+  String get reportStatusOpen => 'موصول';
+
+  @override
+  String get reportStatusInProgress => 'جاری ہے';
+
+  @override
+  String get reportStatusDone => 'مکمل';
+
+  @override
+  String get reportStatusClosed => 'بند';
 }

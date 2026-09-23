@@ -143,6 +143,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                             AppAvatar(
                               radius: 44,
                               imageUrl: _profile?.avatarUrl,
+                              ring: true,
                             ),
                             const SizedBox(height: 12),
                             Text(

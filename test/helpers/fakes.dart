@@ -19,6 +19,9 @@ import 'package:pao/features/chat/data/repository/chat_repository.dart';
 import 'package:pao/features/feedback/data/datasource/feedback_remote_datasource.dart';
 import 'package:pao/features/feedback/data/model/feedback_model.dart';
 import 'package:pao/features/feedback/data/repository/feedback_repository.dart';
+import 'package:pao/features/reports/data/model/report_model.dart';
+import 'package:pao/features/reports/data/repository/report_repository.dart';
+import 'package:pao/features/reports/domain/report_type.dart';
 import 'package:pao/features/requests/data/datasource/request_remote_datasource.dart';
 import 'package:pao/features/requests/data/model/request_model.dart';
 import 'package:pao/features/requests/data/repository/request_repository.dart';
@@ -111,13 +114,15 @@ PostModel makePost({
 
 MessageModel makeMessage({
   String id = 'msg-1',
-  String requestId = 'req-1',
+  String? requestId = 'req-1',
   String senderId = 'owner-1',
+  String recipientId = 'requester-1',
   String body = 'Hello',
 }) => MessageModel(
   id: id,
   requestId: requestId,
   senderId: senderId,
+  recipientId: recipientId,
   body: body,
   createdAt: kCreatedAt,
 );
@@ -449,6 +454,32 @@ class FakeRequestRepository implements RequestRepository {
       received;
 
   @override
+  Future<List<RequestModel>> fetchSentRequestsPage(
+    String requesterId, {
+    required int offset,
+    required int limit,
+  }) async => _page(sent, offset: offset, limit: limit);
+
+  @override
+  Future<List<RequestModel>> fetchReceivedRequestsPage(
+    String ownerId, {
+    required int offset,
+    required int limit,
+  }) async => _page(received, offset: offset, limit: limit);
+
+  List<RequestModel> _page(
+    List<RequestModel> source, {
+    required int offset,
+    required int limit,
+  }) {
+    if (offset >= source.length) return [];
+    return source.sublist(
+      offset,
+      offset + limit > source.length ? source.length : offset + limit,
+    );
+  }
+
+  @override
   Future<RequestModel?> fetchRequestById(String requestId) async {
     for (final request in [...sent, ...received]) {
       if (request.id == requestId) return request;
@@ -589,6 +620,47 @@ class FakeFeedbackRepository implements FeedbackRepository {
   }) async {}
 }
 
+class FakeReportRepository implements ReportRepository {
+  List<ReportModel> existing = [];
+  Object? fetchError;
+  Object? submitError;
+  final submitCalls =
+      <({String userId, ReportType type, String title, String description})>[];
+
+  @override
+  Future<List<ReportModel>> fetchForUser(String userId) async {
+    if (fetchError != null) throw fetchError!;
+    return existing;
+  }
+
+  @override
+  Future<ReportModel> submit({
+    required String userId,
+    required ReportType type,
+    required String title,
+    required String description,
+    String? platform,
+  }) async {
+    if (submitError != null) throw submitError!;
+    submitCalls.add((
+      userId: userId,
+      type: type,
+      title: title,
+      description: description,
+    ));
+    return ReportModel(
+      id: 'r${submitCalls.length}',
+      userId: userId,
+      type: type,
+      title: title,
+      description: description,
+      status: ReportStatus.open,
+      platform: platform,
+      createdAt: DateTime(2026, 9, 23),
+    );
+  }
+}
+
 class FakeChatRepository implements ChatRepository {
   Object? sendError;
   Object? deleteError;
@@ -597,31 +669,42 @@ class FakeChatRepository implements ChatRepository {
   int fetchCalls = 0;
   final deleted = <String>[];
   final controller = StreamController<RealtimeEvent<MessageModel>>.broadcast();
-  final sent = <({String requestId, String senderId, String body})>[];
+  final sent =
+      <({String? requestId, String senderId, String recipientId, String body})>[];
 
   @override
-  Future<List<MessageModel>> fetchMessages(String requestId) async {
+  Future<List<MessageModel>> fetchMessages({
+    required String currentUserId,
+    required String otherUserId,
+  }) async {
     fetchCalls++;
     if (fetchError != null) throw fetchError!;
     return history;
   }
 
   @override
-  Stream<RealtimeEvent<MessageModel>> watchMessages(String requestId) =>
+  Stream<RealtimeEvent<MessageModel>> watchMessages(String currentUserId) =>
       controller.stream;
 
   @override
   Future<MessageModel> sendMessage({
-    required String requestId,
+    String? requestId,
     required String senderId,
+    required String recipientId,
     required String body,
   }) async {
     if (sendError != null) throw sendError!;
-    sent.add((requestId: requestId, senderId: senderId, body: body));
+    sent.add((
+      requestId: requestId,
+      senderId: senderId,
+      recipientId: recipientId,
+      body: body,
+    ));
     return makeMessage(
       id: 'sent-${sent.length}',
       requestId: requestId,
       senderId: senderId,
+      recipientId: recipientId,
       body: body,
     );
   }
@@ -631,6 +714,53 @@ class FakeChatRepository implements ChatRepository {
     if (deleteError != null) throw deleteError!;
     deleted.add(messageId);
   }
+
+  Object? markReadError;
+  Object? editError;
+  final markReadCalls = <({String otherUserId, String readerId})>[];
+  final edited = <({String messageId, String body})>[];
+
+  @override
+  Future<void> markMessagesRead({
+    required String readerId,
+    required String otherUserId,
+  }) async {
+    if (markReadError != null) throw markReadError!;
+    markReadCalls.add((otherUserId: otherUserId, readerId: readerId));
+  }
+
+  @override
+  Future<MessageModel> editMessage({
+    required String messageId,
+    required String body,
+  }) async {
+    if (editError != null) throw editError!;
+    edited.add((messageId: messageId, body: body));
+    MessageModel? existing;
+    for (final m in history) {
+      if (m.id == messageId) existing = m;
+    }
+    return MessageModel(
+      id: messageId,
+      requestId: existing?.requestId ?? 'req-1',
+      senderId: existing?.senderId ?? 'requester-1',
+      recipientId: existing?.recipientId ?? 'owner-1',
+      body: body,
+      createdAt: existing?.createdAt ?? kCreatedAt,
+      editedAt: kCreatedAt,
+    );
+  }
+
+  List<MessageModel> unread = [];
+  final unreadController =
+      StreamController<RealtimeEvent<MessageModel>>.broadcast();
+
+  @override
+  Future<List<MessageModel>> fetchUnread(String userId) async => unread;
+
+  @override
+  Stream<RealtimeEvent<MessageModel>> watchUnread(String userId) =>
+      unreadController.stream;
 }
 
 // ---------------------------------------------------------------------------
@@ -641,6 +771,7 @@ class FakeAuthDataSource implements AuthRemoteDataSource {
   User? user;
   AuthResponse? signInResponse;
   AuthResponse? signUpResponse;
+  bool isBannedResult = false;
   final calls = <String>[];
 
   @override
@@ -670,6 +801,9 @@ class FakeAuthDataSource implements AuthRemoteDataSource {
 
   @override
   Future<void> signOut() async => calls.add('signOut');
+
+  @override
+  Future<bool> isBanned(String userId) async => isBannedResult;
 
   @override
   Future<void> deleteAccount() async => calls.add('deleteAccount');
@@ -846,6 +980,28 @@ class FakeRequestDataSource implements RequestRemoteDataSource {
   ) async => rows;
 
   @override
+  Future<List<Map<String, dynamic>>> fetchSentRequestsPage(
+    String requesterId, {
+    required int offset,
+    required int limit,
+  }) async => _page(offset: offset, limit: limit);
+
+  @override
+  Future<List<Map<String, dynamic>>> fetchReceivedRequestsPage(
+    String ownerId, {
+    required int offset,
+    required int limit,
+  }) async => _page(offset: offset, limit: limit);
+
+  List<Map<String, dynamic>> _page({required int offset, required int limit}) {
+    if (offset >= rows.length) return [];
+    return rows.sublist(
+      offset,
+      offset + limit > rows.length ? rows.length : offset + limit,
+    );
+  }
+
+  @override
   Future<Map<String, dynamic>?> fetchRequestById(String requestId) async {
     for (final row in rows) {
       if (row['id'] == requestId) return row;
@@ -925,24 +1081,29 @@ class FakeChatDataSource implements ChatRemoteDataSource {
   final events = StreamController<RealtimeEvent<Map<String, dynamic>>>();
 
   @override
-  Future<List<Map<String, dynamic>>> fetchMessages(String requestId) async =>
-      rows;
+  Future<List<Map<String, dynamic>>> fetchMessages({
+    required String currentUserId,
+    required String otherUserId,
+  }) async => rows;
 
   @override
-  Stream<RealtimeEvent<Map<String, dynamic>>> watchMessages(String requestId) =>
-      events.stream;
+  Stream<RealtimeEvent<Map<String, dynamic>>> watchMessages(
+    String currentUserId,
+  ) => events.stream;
 
   @override
   Future<Map<String, dynamic>> sendMessage({
-    required String requestId,
+    String? requestId,
     required String senderId,
+    required String recipientId,
     required String body,
   }) async {
-    calls.add('send:$requestId:$senderId:$body');
+    calls.add('send:$requestId:$senderId:$recipientId:$body');
     return {
       'id': 'sent-1',
       'request_id': requestId,
       'sender_id': senderId,
+      'recipient_id': recipientId,
       'body': body,
       'created_at': kCreatedAt.toIso8601String(),
     };
@@ -951,6 +1112,40 @@ class FakeChatDataSource implements ChatRemoteDataSource {
   @override
   Future<void> deleteMessage(String messageId) async =>
       calls.add('delete:$messageId');
+
+  @override
+  Future<void> markMessagesRead({
+    required String readerId,
+    required String otherUserId,
+  }) async => calls.add('markRead:$readerId:$otherUserId');
+
+  @override
+  Future<Map<String, dynamic>> editMessage({
+    required String messageId,
+    required String body,
+  }) async {
+    calls.add('edit:$messageId:$body');
+    return {
+      'id': messageId,
+      'request_id': 'req-1',
+      'sender_id': 'requester-1',
+      'recipient_id': 'owner-1',
+      'body': body,
+      'created_at': kCreatedAt.toIso8601String(),
+      'edited_at': kCreatedAt.toIso8601String(),
+    };
+  }
+
+  List<Map<String, dynamic>> unreadRows = [];
+  final unreadEvents = StreamController<RealtimeEvent<Map<String, dynamic>>>();
+
+  @override
+  Future<List<Map<String, dynamic>>> fetchUnread(String userId) async =>
+      unreadRows;
+
+  @override
+  Stream<RealtimeEvent<Map<String, dynamic>>> watchUnread(String userId) =>
+      unreadEvents.stream;
 }
 
 class FakeProfileDataSource implements ProfileRemoteDataSource {

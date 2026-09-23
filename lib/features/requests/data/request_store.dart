@@ -21,6 +21,22 @@ class RequestStore {
   static final ValueNotifier<List<RequestModel>> received =
       ValueNotifier<List<RequestModel>>([]);
 
+  /// Requests are fetched from the server [pageSize] at a time.
+  static const int pageSize = 10;
+
+  static final ValueNotifier<bool> hasMoreSent = ValueNotifier<bool>(true);
+  static final ValueNotifier<bool> hasMoreReceived = ValueNotifier<bool>(true);
+  static final ValueNotifier<bool> isLoadingMoreSent = ValueNotifier<bool>(
+    false,
+  );
+  static final ValueNotifier<bool> isLoadingMoreReceived = ValueNotifier<bool>(
+    false,
+  );
+
+  // Rows already fetched for each list; the next page starts here.
+  static int _sentOffset = 0;
+  static int _receivedOffset = 0;
+
   static StreamSubscription<RealtimeEvent<RequestModel>>? _subscription;
   static bool _hasSynced = false;
 
@@ -69,19 +85,27 @@ class RequestStore {
         final request = event.record;
         if (request == null) return;
         if (event.tag == RequestRemoteDataSource.sentTag) {
+          final isNew = !sent.value.any((r) => r.id == request.id);
           sent.value = _upsert(sent.value, request);
+          // A brand-new row shifts every later page down by one, so the
+          // next page fetched from the server must skip one row further.
+          if (isNew) _sentOffset++;
         } else if (event.tag == RequestRemoteDataSource.receivedTag) {
+          final isNew = !received.value.any((r) => r.id == request.id);
           received.value = _upsert(received.value, request);
+          if (isNew) _receivedOffset++;
         }
       case RealtimeEventType.delete:
         // Deletes can't be filtered by user, so ignore ids we don't hold.
         if (sent.value.any((r) => r.id == event.id)) {
           sent.value = sent.value.where((r) => r.id != event.id).toList();
+          if (_sentOffset > 0) _sentOffset--;
         }
         if (received.value.any((r) => r.id == event.id)) {
           received.value = received.value
               .where((r) => r.id != event.id)
               .toList();
+          if (_receivedOffset > 0) _receivedOffset--;
         }
     }
   }
@@ -119,15 +143,31 @@ class RequestStore {
     _hasSynced = false;
     sent.value = [];
     received.value = [];
+    _sentOffset = 0;
+    _receivedOffset = 0;
+    hasMoreSent.value = true;
+    hasMoreReceived.value = true;
+    isLoadingMoreSent.value = false;
+    isLoadingMoreReceived.value = false;
   }
 
   /// Drops every request on [postId] from the local cache — used after the
   /// post is deleted, which removes its requests in Supabase too.
   static void removeForPost(String postId) {
+    final removedFromSent = sent.value.where((r) => r.postId == postId).length;
+    final removedFromReceived = received.value
+        .where((r) => r.postId == postId)
+        .length;
     sent.value = sent.value.where((r) => r.postId != postId).toList();
     received.value = received.value.where((r) => r.postId != postId).toList();
+    _sentOffset = (_sentOffset - removedFromSent).clamp(0, _sentOffset);
+    _receivedOffset = (_receivedOffset - removedFromReceived).clamp(
+      0,
+      _receivedOffset,
+    );
   }
 
+  /// Loads the first page (the most recent [pageSize] requests) for [sent].
   static Future<void> syncSentFromSupabase({
     RequestRepository? repository,
     AuthRepository? authRepository,
@@ -135,13 +175,19 @@ class RequestStore {
     final userId = (authRepository ?? AuthRepository()).currentUser?.id;
     if (userId == null) {
       sent.value = [];
+      _sentOffset = 0;
+      hasMoreSent.value = false;
       return;
     }
-    sent.value = await (repository ?? RequestRepository()).fetchSentRequests(
-      userId,
-    );
+    final page = await (repository ?? RequestRepository())
+        .fetchSentRequestsPage(userId, offset: 0, limit: pageSize);
+    sent.value = page;
+    _sentOffset = page.length;
+    hasMoreSent.value = page.length >= pageSize;
   }
 
+  /// Loads the first page (the most recent [pageSize] requests) for
+  /// [received].
   static Future<void> syncReceivedFromSupabase({
     RequestRepository? repository,
     AuthRepository? authRepository,
@@ -149,10 +195,72 @@ class RequestStore {
     final userId = (authRepository ?? AuthRepository()).currentUser?.id;
     if (userId == null) {
       received.value = [];
+      _receivedOffset = 0;
+      hasMoreReceived.value = false;
       return;
     }
-    received.value = await (repository ?? RequestRepository())
-        .fetchReceivedRequests(userId);
+    final page = await (repository ?? RequestRepository())
+        .fetchReceivedRequestsPage(userId, offset: 0, limit: pageSize);
+    received.value = page;
+    _receivedOffset = page.length;
+    hasMoreReceived.value = page.length >= pageSize;
+  }
+
+  /// Fetches the next page of [sent] and appends it. Safe to call while
+  /// already loading or once the server has no more rows — a no-op then.
+  static Future<void> loadMoreSent({
+    RequestRepository? repository,
+    AuthRepository? authRepository,
+  }) async {
+    if (isLoadingMoreSent.value || !hasMoreSent.value) return;
+    final userId = (authRepository ?? AuthRepository()).currentUser?.id;
+    if (userId == null) return;
+
+    isLoadingMoreSent.value = true;
+    try {
+      final page = await (repository ?? RequestRepository())
+          .fetchSentRequestsPage(userId, offset: _sentOffset, limit: pageSize);
+      final known = {for (final r in sent.value) r.id};
+      sent.value = [...sent.value, ...page.where((r) => !known.contains(r.id))];
+      _sentOffset += page.length;
+      hasMoreSent.value = page.length >= pageSize;
+    } catch (_) {
+      // Leave hasMoreSent as-is so the next scroll attempt retries.
+    } finally {
+      isLoadingMoreSent.value = false;
+    }
+  }
+
+  /// Fetches the next page of [received] and appends it. Safe to call while
+  /// already loading or once the server has no more rows — a no-op then.
+  static Future<void> loadMoreReceived({
+    RequestRepository? repository,
+    AuthRepository? authRepository,
+  }) async {
+    if (isLoadingMoreReceived.value || !hasMoreReceived.value) return;
+    final userId = (authRepository ?? AuthRepository()).currentUser?.id;
+    if (userId == null) return;
+
+    isLoadingMoreReceived.value = true;
+    try {
+      final page = await (repository ?? RequestRepository())
+          .fetchReceivedRequestsPage(
+            userId,
+            offset: _receivedOffset,
+            limit: pageSize,
+          );
+      final known = {for (final r in received.value) r.id};
+      received.value = [
+        ...received.value,
+        ...page.where((r) => !known.contains(r.id)),
+      ];
+      _receivedOffset += page.length;
+      hasMoreReceived.value = page.length >= pageSize;
+    } catch (_) {
+      // Leave hasMoreReceived as-is so the next scroll attempt retries.
+    } finally {
+      isLoadingMoreReceived.value = false;
+    }
   }
 
   static Future<RequestModel?> send({
@@ -175,6 +283,7 @@ class RequestStore {
     // The realtime INSERT for this row may land before or after this line;
     // upserting by id makes either order safe.
     sent.value = _upsert(sent.value, request);
+    _sentOffset++;
     return request;
   }
 

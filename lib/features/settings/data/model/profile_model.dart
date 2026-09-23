@@ -6,6 +6,7 @@ class ProfileModel {
     this.phone,
     this.bio,
     this.avatarUrl,
+    this.lastSeenAt,
   });
 
   final String id;
@@ -14,6 +15,7 @@ class ProfileModel {
   final String? phone;
   final String? bio;
   final String? avatarUrl;
+  final DateTime? lastSeenAt;
 
   factory ProfileModel.fromJson(Map<String, dynamic> json) {
     return ProfileModel(
@@ -23,6 +25,9 @@ class ProfileModel {
       phone: json['phone'] as String?,
       bio: json['bio'] as String?,
       avatarUrl: json['avatar_url'] as String?,
+      lastSeenAt: json['last_seen_at'] != null
+          ? DateTime.parse(json['last_seen_at'] as String)
+          : null,
     );
   }
 }

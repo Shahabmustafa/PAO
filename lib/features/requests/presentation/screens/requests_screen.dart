@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_icons.dart';
@@ -7,6 +8,7 @@ import '../../../../core/widgets/app_icon.dart';
 import '../../../../core/widgets/app_network_image.dart';
 import '../../../../core/widgets/app_shimmer.dart';
 import '../../../../core/widgets/app_snackbar.dart';
+import '../../../chat/data/chat_unread_store.dart';
 import '../../../chat/presentation/screens/chat_screen.dart';
 import '../../../feedback/presentation/widgets/feedback_dialog.dart';
 import '../../../home/data/product_store.dart';
@@ -29,6 +31,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
     super.initState();
     // Loads both lists when the channel joins, then keeps them live.
     RequestStore.startRealtimeSync();
+    ChatUnreadStore.startRealtimeSync();
   }
 
   @override
@@ -71,10 +74,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
                   ),
-                  tabs: [
-                    Tab(text: context.l10n.tabSent),
-                    Tab(text: context.l10n.tabReceived),
-                  ],
+                  tabs: const [_SentTabLabel(), _ReceivedTabLabel()],
                 ),
               ),
             ),
@@ -90,8 +90,140 @@ class _RequestsScreenState extends State<RequestsScreen> {
   }
 }
 
-class _SentRequestsTab extends StatelessWidget {
+/// "Sent" tab label with a badge counting unread messages across every
+/// conversation with an owner appearing in [RequestStore.sent] -- tells the
+/// user at a glance that new messages have arrived, and in which tab.
+class _SentTabLabel extends StatelessWidget {
+  const _SentTabLabel();
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<List<RequestModel>>(
+      valueListenable: RequestStore.sent,
+      builder: (context, requests, _) {
+        return ValueListenableBuilder<Map<String, int>>(
+          valueListenable: ChatUnreadStore.unreadBySender,
+          builder: (context, unread, _) {
+            final otherUserIds = {for (final r in requests) r.ownerId};
+            final count = otherUserIds.fold<int>(
+              0,
+              (sum, id) => sum + (unread[id] ?? 0),
+            );
+            return _TabLabel(label: context.l10n.tabSent, count: count);
+          },
+        );
+      },
+    );
+  }
+}
+
+/// Same as [_SentTabLabel], for the requesters appearing in
+/// [RequestStore.received].
+class _ReceivedTabLabel extends StatelessWidget {
+  const _ReceivedTabLabel();
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<List<RequestModel>>(
+      valueListenable: RequestStore.received,
+      builder: (context, requests, _) {
+        return ValueListenableBuilder<Map<String, int>>(
+          valueListenable: ChatUnreadStore.unreadBySender,
+          builder: (context, unread, _) {
+            final otherUserIds = {for (final r in requests) r.requesterId};
+            final count = otherUserIds.fold<int>(
+              0,
+              (sum, id) => sum + (unread[id] ?? 0),
+            );
+            return _TabLabel(label: context.l10n.tabReceived, count: count);
+          },
+        );
+      },
+    );
+  }
+}
+
+class _TabLabel extends StatelessWidget {
+  final String label;
+  final int count;
+
+  const _TabLabel({required this.label, required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    return Tab(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Flexible(child: Text(label, overflow: TextOverflow.ellipsis)),
+          if (count > 0) ...[
+            const SizedBox(width: 6),
+            _UnreadBadge(count: count),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Small red pill showing how many unread messages a conversation has,
+/// capped at "9+" so it never stretches the tile or tab it sits on.
+class _UnreadBadge extends StatelessWidget {
+  final int count;
+
+  const _UnreadBadge({required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+      constraints: const BoxConstraints(minWidth: 18),
+      decoration: BoxDecoration(
+        color: AppColors.error,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        count > 9 ? '9+' : '$count',
+        textAlign: TextAlign.center,
+        style: const TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          color: Colors.white,
+        ),
+      ),
+    );
+  }
+}
+
+class _SentRequestsTab extends StatefulWidget {
   const _SentRequestsTab();
+
+  @override
+  State<_SentRequestsTab> createState() => _SentRequestsTabState();
+}
+
+class _SentRequestsTabState extends State<_SentRequestsTab> {
+  final _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_loadMoreIfNearEnd);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_loadMoreIfNearEnd);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _loadMoreIfNearEnd() {
+    if (!_scrollController.hasClients) return;
+    final position = _scrollController.position;
+    if (!position.hasContentDimensions) return;
+    if (position.extentAfter < _loadMoreThreshold) RequestStore.loadMoreSent();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -104,25 +236,43 @@ class _SentRequestsTab extends StatelessWidget {
         return ValueListenableBuilder<List<Product>>(
           valueListenable: ProductStore.items,
           builder: (context, products, _) {
-            return ListView.separated(
-              padding: const EdgeInsets.all(20),
-              itemCount: requests.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                final request = requests[index];
-                Product? product;
-                for (final p in products) {
-                  if (p.id == request.postId) {
-                    product = p;
-                    break;
-                  }
-                }
-                return _RequestTile(
-                  request: request,
-                  productName: product?.name,
-                  productImageUrl: product?.imageUrl,
-                  otherUserId: request.ownerId,
-                  isSentTab: true,
+            return ValueListenableBuilder<bool>(
+              valueListenable: RequestStore.hasMoreSent,
+              builder: (context, hasMore, _) {
+                return ValueListenableBuilder<bool>(
+                  valueListenable: RequestStore.isLoadingMoreSent,
+                  builder: (context, isLoadingMore, _) {
+                    WidgetsBinding.instance.addPostFrameCallback(
+                      (_) => _loadMoreIfNearEnd(),
+                    );
+                    final itemCount = requests.length + (hasMore ? 1 : 0);
+                    return ListView.separated(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.all(20),
+                      itemCount: itemCount,
+                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      itemBuilder: (context, index) {
+                        if (index >= requests.length) {
+                          return _LoadMoreFooter(isLoading: isLoadingMore);
+                        }
+                        final request = requests[index];
+                        Product? product;
+                        for (final p in products) {
+                          if (p.id == request.postId) {
+                            product = p;
+                            break;
+                          }
+                        }
+                        return _RequestTile(
+                          request: request,
+                          productName: product?.name,
+                          productImageUrl: product?.imageUrl,
+                          otherUserId: request.ownerId,
+                          isSentTab: true,
+                        );
+                      },
+                    );
+                  },
                 );
               },
             );
@@ -133,8 +283,37 @@ class _SentRequestsTab extends StatelessWidget {
   }
 }
 
-class _ReceivedRequestsTab extends StatelessWidget {
+class _ReceivedRequestsTab extends StatefulWidget {
   const _ReceivedRequestsTab();
+
+  @override
+  State<_ReceivedRequestsTab> createState() => _ReceivedRequestsTabState();
+}
+
+class _ReceivedRequestsTabState extends State<_ReceivedRequestsTab> {
+  final _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_loadMoreIfNearEnd);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_loadMoreIfNearEnd);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _loadMoreIfNearEnd() {
+    if (!_scrollController.hasClients) return;
+    final position = _scrollController.position;
+    if (!position.hasContentDimensions) return;
+    if (position.extentAfter < _loadMoreThreshold) {
+      RequestStore.loadMoreReceived();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -147,31 +326,74 @@ class _ReceivedRequestsTab extends StatelessWidget {
         return ValueListenableBuilder<List<Product>>(
           valueListenable: ProductStore.items,
           builder: (context, products, _) {
-            return ListView.separated(
-              padding: const EdgeInsets.all(20),
-              itemCount: requests.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                final request = requests[index];
-                Product? product;
-                for (final p in products) {
-                  if (p.id == request.postId) {
-                    product = p;
-                    break;
-                  }
-                }
-                return _RequestTile(
-                  request: request,
-                  productName: product?.name,
-                  productImageUrl: product?.imageUrl,
-                  otherUserId: request.requesterId,
-                  isSentTab: false,
+            return ValueListenableBuilder<bool>(
+              valueListenable: RequestStore.hasMoreReceived,
+              builder: (context, hasMore, _) {
+                return ValueListenableBuilder<bool>(
+                  valueListenable: RequestStore.isLoadingMoreReceived,
+                  builder: (context, isLoadingMore, _) {
+                    WidgetsBinding.instance.addPostFrameCallback(
+                      (_) => _loadMoreIfNearEnd(),
+                    );
+                    final itemCount = requests.length + (hasMore ? 1 : 0);
+                    return ListView.separated(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.all(20),
+                      itemCount: itemCount,
+                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      itemBuilder: (context, index) {
+                        if (index >= requests.length) {
+                          return _LoadMoreFooter(isLoading: isLoadingMore);
+                        }
+                        final request = requests[index];
+                        Product? product;
+                        for (final p in products) {
+                          if (p.id == request.postId) {
+                            product = p;
+                            break;
+                          }
+                        }
+                        return _RequestTile(
+                          request: request,
+                          productName: product?.name,
+                          productImageUrl: product?.imageUrl,
+                          otherUserId: request.requesterId,
+                          isSentTab: false,
+                        );
+                      },
+                    );
+                  },
                 );
               },
             );
           },
         );
       },
+    );
+  }
+}
+
+/// How close to the bottom (in pixels) a tab's list must be before the next
+/// page is requested.
+const double _loadMoreThreshold = 300;
+
+class _LoadMoreFooter extends StatelessWidget {
+  final bool isLoading;
+
+  const _LoadMoreFooter({required this.isLoading});
+
+  @override
+  Widget build(BuildContext context) {
+    if (!isLoading) return const SizedBox.shrink();
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 16),
+      child: Center(
+        child: SizedBox(
+          height: 20,
+          width: 20,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      ),
     );
   }
 }
@@ -213,6 +435,9 @@ class _RequestTileView extends StatelessWidget {
   const _RequestTileView();
 
   void _openChat(BuildContext context, RequestTileProvider provider) {
+    // Clear the badge right away -- ChatScreen also marks the messages read
+    // server-side once it loads.
+    ChatUnreadStore.markSeen(provider.otherUserId);
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -271,6 +496,10 @@ class _RequestTileView extends StatelessWidget {
     }
   }
 
+  String _formattedDateTime(DateTime date) {
+    return DateFormat('d MMM yyyy • h:mm a').format(date.toLocal());
+  }
+
   Color _statusColor(String status) {
     switch (status) {
       case 'accepted':
@@ -303,22 +532,43 @@ class _RequestTileView extends StatelessWidget {
             borderRadius: BorderRadius.circular(10),
             child: Row(
               children: [
-                Container(
-                  height: 44,
-                  width: 44,
-                  clipBehavior: Clip.antiAlias,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: provider.isLoadingProduct
-                      ? const AppShimmer()
-                      : provider.productImageUrl != null
-                      ? AppNetworkImage(imageUrl: provider.productImageUrl!)
-                      : const Icon(
-                          Icons.inventory_2_outlined,
-                          color: AppColors.primary,
-                        ),
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Container(
+                      height: 44,
+                      width: 44,
+                      clipBehavior: Clip.antiAlias,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: provider.isLoadingProduct
+                          ? const AppShimmer()
+                          : provider.productImageUrl != null
+                          ? AppNetworkImage(imageUrl: provider.productImageUrl!)
+                          : const Icon(
+                              Icons.inventory_2_outlined,
+                              color: AppColors.primary,
+                            ),
+                    ),
+                    // How many unread messages this user has sent -- so a
+                    // new message is visible (and attributable to them,
+                    // via the name shown alongside) without opening the
+                    // chat.
+                    ValueListenableBuilder<Map<String, int>>(
+                      valueListenable: ChatUnreadStore.unreadBySender,
+                      builder: (context, unread, _) {
+                        final count = unread[provider.otherUserId] ?? 0;
+                        if (count <= 0) return const SizedBox.shrink();
+                        return PositionedDirectional(
+                          top: -6,
+                          end: -6,
+                          child: _UnreadBadge(count: count),
+                        );
+                      },
+                    ),
+                  ],
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -392,6 +642,14 @@ class _RequestTileView extends StatelessWidget {
                                 ),
                               ],
                             ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _formattedDateTime(request.createdAt),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: context.appTextSecondary,
+                        ),
+                      ),
                     ],
                   ),
                 ),

@@ -221,6 +221,7 @@ class _EditProfileViewState extends State<_EditProfileView> {
                         label: context.l10n.email,
                         hint: context.l10n.enterYourEmail,
                         keyboardType: TextInputType.emailAddress,
+                        enabled: false,
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return context.l10n.emailRequired;
@@ -230,6 +231,14 @@ class _EditProfileViewState extends State<_EditProfileView> {
                           }
                           return null;
                         },
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        context.l10n.emailCannotBeChanged,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: context.appTextSecondary,
+                        ),
                       ),
                       const SizedBox(height: 18),
                       CustomTextField(

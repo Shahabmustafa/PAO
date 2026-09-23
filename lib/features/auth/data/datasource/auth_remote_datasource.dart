@@ -34,6 +34,18 @@ class AuthRemoteDataSource {
 
   Future<void> signOut() => _client.auth.signOut();
 
+  /// Whether an admin has flagged this account banned (see
+  /// `supabase/users_add_role.sql`). RLS only lets an account read its own
+  /// `is_banned`, so this is only meaningful for the signed-in user.
+  Future<bool> isBanned(String userId) async {
+    final row = await _client
+        .from('users')
+        .select('is_banned')
+        .eq('id', userId)
+        .maybeSingle();
+    return row?['is_banned'] == true;
+  }
+
   /// Permanently deletes the signed-in user's account via the
   /// `delete_user` RPC (see supabase/delete_account_function.sql), which
   /// cascades to remove all of their data, then clears the local session.

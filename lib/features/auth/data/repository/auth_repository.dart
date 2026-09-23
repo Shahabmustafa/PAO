@@ -25,7 +25,15 @@ class AuthRepository {
   }) async {
     final response = await _dataSource.signIn(email: email, password: password);
     final user = response.user;
-    return user == null ? null : UserModel.fromSupabaseUser(user);
+    if (user == null) return null;
+    if (await _dataSource.isBanned(user.id)) {
+      await _dataSource.signOut();
+      throw AuthException(
+        'Your account has been suspended.',
+        code: 'account_banned',
+      );
+    }
+    return UserModel.fromSupabaseUser(user);
   }
 
   /// Returns the created [UserModel], or `null` when email confirmation is

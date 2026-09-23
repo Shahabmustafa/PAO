@@ -18,6 +18,7 @@ class Product {
   final List<String> imageUrls;
   final String? userId;
   final bool isGiven;
+  final DateTime? createdAt;
 
   const Product({
     required this.id,
@@ -31,6 +32,7 @@ class Product {
     this.imageUrls = const [],
     this.userId,
     this.isGiven = false,
+    this.createdAt,
   });
 
   /// First remote image, if any — used where only a single preview image
@@ -50,6 +52,7 @@ class Product {
       imageUrls: imageUrls,
       userId: userId,
       isGiven: isGiven ?? this.isGiven,
+      createdAt: createdAt,
     );
   }
 }

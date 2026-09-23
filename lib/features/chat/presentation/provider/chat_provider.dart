@@ -8,6 +8,7 @@ import '../../../requests/data/model/request_model.dart';
 import '../../../requests/data/request_store.dart';
 import '../../../settings/data/model/profile_model.dart';
 import '../../../settings/data/repository/profile_repository.dart';
+import '../../data/chat_unread_store.dart';
 import '../../data/model/message_model.dart';
 import '../../data/repository/chat_repository.dart';
 import '../../../../core/l10n/l10n.dart';
@@ -31,6 +32,13 @@ class ChatProvider extends ChangeNotifier {
     // the requester has the chat open.
     RequestStore.sent.addListener(_syncRequestStatus);
     RequestStore.received.addListener(_syncRequestStatus);
+    // The other participant's online/last-seen status has no realtime
+    // channel of its own (see PresenceHeartbeat), so poll it while this
+    // chat is open.
+    _profileRefreshTimer = Timer.periodic(
+      const Duration(seconds: 25),
+      (_) => _loadOtherProfile(),
+    );
   }
 
   RequestModel request;
@@ -45,6 +53,7 @@ class ChatProvider extends ChangeNotifier {
   bool isSending = false;
   String? errorMessage;
   StreamSubscription<RealtimeEvent<MessageModel>>? _subscription;
+  Timer? _profileRefreshTimer;
   bool _disposed = false;
 
   ProfileModel? otherProfile;
@@ -56,16 +65,27 @@ class ChatProvider extends ChangeNotifier {
   bool get isOwner => request.ownerId == currentUserId;
   bool get isRequester => request.requesterId == currentUserId;
 
+  /// True when [message] belongs to this conversation -- sent by either
+  /// participant, to the other.
+  bool _belongsToThisChat(MessageModel message) {
+    final userId = currentUserId;
+    if (userId == null) return false;
+    return (message.senderId == userId && message.recipientId == otherUserId) ||
+        (message.senderId == otherUserId && message.recipientId == userId);
+  }
+
   /// Subscribes to this conversation's realtime channel. Each INSERT /
   /// UPDATE / DELETE is applied to [messages] by message id — the history is
   /// only fetched when the channel (re)joins, never per event.
   void _subscribe() {
+    final userId = currentUserId;
+    if (userId == null) return;
     _subscription = _repository
-        .watchMessages(request.id)
+        .watchMessages(userId)
         .listen(
           _onEvent,
           onError: (Object e) {
-            realtimeLog('chat ${request.id} stream error: $e');
+            realtimeLog('chat with $otherUserId stream error: $e');
             _failLoading();
           },
         );
@@ -83,8 +103,14 @@ class ChatProvider extends ChangeNotifier {
       case RealtimeEventType.insert:
       case RealtimeEventType.update:
         final message = event.record;
-        if (message == null || message.requestId != request.id) return;
+        if (message == null || !_belongsToThisChat(message)) return;
         _upsert(message);
+        // A message just arrived while this chat is open -- that counts as
+        // seen right away.
+        if (event.type == RealtimeEventType.insert &&
+            message.senderId != currentUserId) {
+          unawaited(_markIncomingAsRead());
+        }
       case RealtimeEventType.delete:
         // Deletes can't be filtered to this chat, so most aren't ours.
         if (!messages.any((m) => m.id == event.id)) return;
@@ -94,8 +120,13 @@ class ChatProvider extends ChangeNotifier {
   }
 
   Future<void> _loadHistory() async {
+    final userId = currentUserId;
+    if (userId == null) return;
     try {
-      final history = await _repository.fetchMessages(request.id);
+      final history = await _repository.fetchMessages(
+        currentUserId: userId,
+        otherUserId: otherUserId,
+      );
       if (_disposed) return;
       // The server's list is the truth (so a message deleted while we were
       // disconnected disappears), except for messages newer than what it
@@ -111,12 +142,36 @@ class ChatProvider extends ChangeNotifier {
       }
       messages = _sorted(byId.values);
       errorMessage = null;
+      unawaited(_markIncomingAsRead());
     } catch (_) {
       if (_disposed) return;
       if (messages.isEmpty) errorMessage = l10nNow.failedToLoadMessages;
     }
     isLoading = false;
     notifyListeners();
+  }
+
+  /// Marks the other participant's unread messages as seen. Fire-and-forget:
+  /// the server's realtime UPDATE echo (not a local edit) is what actually
+  /// flips the ticks, for both participants alike.
+  Future<void> _markIncomingAsRead() async {
+    final userId = currentUserId;
+    if (userId == null) return;
+    // Clear this conversation's unread badge right away, ahead of the
+    // server confirming the messages as read.
+    ChatUnreadStore.markSeen(otherUserId);
+    final hasUnread = messages.any(
+      (m) => m.senderId != userId && m.readAt == null,
+    );
+    if (!hasUnread) return;
+    try {
+      await _repository.markMessagesRead(
+        readerId: userId,
+        otherUserId: otherUserId,
+      );
+    } catch (_) {
+      // Best-effort -- the ticks just catch up next time this runs.
+    }
   }
 
   void _failLoading() {
@@ -161,10 +216,10 @@ class ChatProvider extends ChangeNotifier {
       otherProfile = await _profileRepository.fetchPublicProfile(otherUserId);
     } catch (_) {
       // Keep the fallback name/avatar if the profile fails to load.
-    } finally {
-      isLoadingProfile = false;
-      notifyListeners();
     }
+    if (_disposed) return;
+    isLoadingProfile = false;
+    notifyListeners();
   }
 
   Future<void> _checkFeedback() async {
@@ -211,6 +266,7 @@ class ChatProvider extends ChangeNotifier {
       final message = await _repository.sendMessage(
         requestId: request.id,
         senderId: senderId,
+        recipientId: otherUserId,
         body: trimmed,
       );
       // Show it right away; the realtime INSERT for the same id is a no-op.
@@ -220,6 +276,28 @@ class ChatProvider extends ChangeNotifier {
     } finally {
       isSending = false;
       notifyListeners();
+    }
+  }
+
+  /// Edits one of the current user's own messages.
+  Future<bool> editMessage(MessageModel message, String newBody) async {
+    final trimmed = newBody.trim();
+    if (trimmed.isEmpty ||
+        trimmed == message.body ||
+        message.senderId != currentUserId) {
+      return false;
+    }
+    try {
+      final updated = await _repository.editMessage(
+        messageId: message.id,
+        body: trimmed,
+      );
+      _upsert(updated);
+      return true;
+    } catch (_) {
+      errorMessage = l10nNow.failedToEditMessage;
+      notifyListeners();
+      return false;
     }
   }
 
@@ -246,6 +324,7 @@ class ChatProvider extends ChangeNotifier {
     RequestStore.sent.removeListener(_syncRequestStatus);
     RequestStore.received.removeListener(_syncRequestStatus);
     _subscription?.cancel();
+    _profileRefreshTimer?.cancel();
     super.dispose();
   }
 }

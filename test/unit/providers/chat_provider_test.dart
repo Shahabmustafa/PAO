@@ -59,10 +59,12 @@ void main() {
       String id, {
       int minute = 0,
       String senderId = 'owner-1',
+      String recipientId = 'requester-1',
     }) => MessageModel(
       id: id,
       requestId: 'req-1',
       senderId: senderId,
+      recipientId: recipientId,
       body: 'body $id',
       createdAt: kCreatedAt.add(Duration(minutes: minute)),
     );
@@ -147,6 +149,7 @@ void main() {
             id: 'a',
             requestId: 'req-1',
             senderId: 'owner-1',
+            recipientId: 'requester-1',
             body: 'edited',
             createdAt: kCreatedAt,
           ),
@@ -178,27 +181,32 @@ void main() {
       },
     );
 
-    test('a message for another request is ignored', () async {
-      final provider = build();
-      chat.controller.add(subscribedEvent());
-      await pumpEventQueue();
+    test(
+      'a message between two other users is ignored, even with the same '
+      'request id',
+      () async {
+        final provider = build();
+        chat.controller.add(subscribedEvent());
+        await pumpEventQueue();
 
-      chat.controller.add(
-        insertEvent(
-          'x',
-          MessageModel(
-            id: 'x',
-            requestId: 'other-request',
-            senderId: 'owner-1',
-            body: 'wrong chat',
-            createdAt: kCreatedAt,
+        chat.controller.add(
+          insertEvent(
+            'x',
+            MessageModel(
+              id: 'x',
+              requestId: 'req-1',
+              senderId: 'someone-else',
+              recipientId: 'another-person',
+              body: 'wrong chat',
+              createdAt: kCreatedAt,
+            ),
           ),
-        ),
-      );
-      await pumpEventQueue();
+        );
+        await pumpEventQueue();
 
-      expect(provider.messages, isEmpty);
-    });
+        expect(provider.messages, isEmpty);
+      },
+    );
 
     test('re-joining after a dropped connection reloads the history', () async {
       chat.history = [msg('a')];
@@ -355,7 +363,12 @@ void main() {
         chat.controller.add(
           insertEvent(
             'sent-1',
-            makeMessage(id: 'sent-1', senderId: 'requester-1', body: 'hello'),
+            makeMessage(
+              id: 'sent-1',
+              senderId: 'requester-1',
+              recipientId: 'owner-1',
+              body: 'hello',
+            ),
           ),
         );
         await pumpEventQueue();

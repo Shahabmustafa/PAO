@@ -143,6 +143,7 @@ class ProductStore {
       imageUrls: post.imageUrls,
       userId: post.userId,
       isGiven: post.isGiven,
+      createdAt: post.createdAt,
     );
   }
 }

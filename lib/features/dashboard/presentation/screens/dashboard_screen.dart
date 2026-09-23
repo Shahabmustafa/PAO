@@ -71,12 +71,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Scaffold(
       body: BottomBar(
         controller: _barController,
-        // Home, Add Product and Settings hide the bar on scroll (down
-        // hides, up shows); other tabs keep it pinned and _onTabTapped/
-        // _onTabRequested force it back into view when navigating away.
+        // Home, Add Product, Requests and Settings hide the bar on scroll
+        // (down hides, up shows); Wishlist keeps it pinned and
+        // _onTabTapped/_onTabRequested force it back into view when
+        // navigating away.
         scrollBehavior: BottomBarScrollBehavior(
-          hideOnScroll:
-              _currentIndex == 0 || _currentIndex == 2 || _currentIndex == 4,
+          hideOnScroll: _currentIndex != 1,
         ),
         showIcon: false,
         // Zero offset and a transparent bar decoration: _FloatingNavBarContent

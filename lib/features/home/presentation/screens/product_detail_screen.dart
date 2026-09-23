@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../../../core/config/app_links.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_icons.dart';
 import '../../../../core/widgets/app_avatar.dart';
+import '../../../../core/widgets/app_dialog.dart';
 import '../../../../core/widgets/app_icon.dart';
 import '../../../../core/widgets/app_network_image.dart';
 import '../../../../core/widgets/app_shimmer.dart';
@@ -118,25 +120,16 @@ class _ProductDetailView extends StatelessWidget {
   }
 
   Future<void> _onDeletePressed(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(context.l10n.delete),
-        content: Text(context.l10n.deleteProductConfirm(product.name)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: Text(context.l10n.cancel),
-          ),
-          TextButton(
-            style: TextButton.styleFrom(foregroundColor: AppColors.error),
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: Text(context.l10n.delete),
-          ),
-        ],
-      ),
+    final confirmed = await AppDialog.confirm(
+      context,
+      title: context.l10n.delete,
+      message: context.l10n.deleteProductConfirm(product.name),
+      confirmText: context.l10n.delete,
+      cancelText: context.l10n.cancel,
+      isDestructive: true,
+      icon: AppIcons.delete,
     );
-    if (confirmed != true || !context.mounted) return;
+    if (!confirmed || !context.mounted) return;
 
     final provider = context.read<ProductDetailProvider>();
     final success = await provider.deleteProduct();
@@ -156,24 +149,15 @@ class _ProductDetailView extends StatelessWidget {
   }
 
   Future<void> _onMarkAsGivenPressed(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(context.l10n.markAsGiven),
-        content: Text(context.l10n.markAsGivenConfirm(product.name)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: Text(context.l10n.cancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: Text(context.l10n.yesGiven),
-          ),
-        ],
-      ),
+    final confirmed = await AppDialog.confirm(
+      context,
+      title: context.l10n.markAsGiven,
+      message: context.l10n.markAsGivenConfirm(product.name),
+      confirmText: context.l10n.yesGiven,
+      cancelText: context.l10n.cancel,
+      icon: AppIcons.checkCircle,
     );
-    if (confirmed != true) return;
+    if (!confirmed) return;
     if (!context.mounted) return;
 
     final provider = context.read<ProductDetailProvider>();
@@ -352,6 +336,15 @@ class _ProductDetailView extends StatelessWidget {
                           _DetailRow(
                             label: context.l10n.address,
                             value: product.address!,
+                          ),
+                        ],
+                        if (product.createdAt != null) ...[
+                          Divider(height: 1, color: context.appBorder),
+                          _DetailRow(
+                            label: context.l10n.postedOn,
+                            value: DateFormat(
+                              'd MMM yyyy',
+                            ).format(product.createdAt!.toLocal()),
                           ),
                         ],
                       ],

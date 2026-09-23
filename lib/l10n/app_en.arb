@@ -19,12 +19,14 @@
   "errorWeakPassword": "Please choose a stronger password.",
   "errorSamePassword": "Your new password must be different from your old one.",
   "errorRateLimited": "Too many attempts. Please wait a moment and try again.",
+  "errorAccountBanned": "Your account has been suspended. Contact support if you think this is a mistake.",
   "welcomeBack": "Welcome Back",
   "loginToContinue": "Login to continue",
   "email": "Email",
   "enterYourEmail": "Enter your email",
   "emailRequired": "Email is required",
   "enterValidEmail": "Enter a valid email",
+  "emailCannotBeChanged": "Your email can't be changed",
   "password": "Password",
   "enterYourPassword": "Enter your password",
   "passwordRequired": "Password is required",
@@ -117,6 +119,7 @@
   "messageOwner": "Message Owner",
   "giveMe": "Give Me",
   "postedBy": "Posted by",
+  "postedOn": "Posted on",
   "description": "Description",
   "noDescription": "No description available for this product.",
   "addProduct": "Add Product",
@@ -185,6 +188,39 @@
   "failedToDeleteMessage": "Failed to delete message. Please try again.",
   "failedToLoadMessages": "Failed to load messages.",
   "failedToSendMessage": "Failed to send message.",
+  "editMessage": "Edit message",
+  "failedToEditMessage": "Failed to edit message. Please try again.",
+  "editedLabel": "(edited)",
+  "online": "Online",
+  "lastSeenToday": "last seen today at {time}",
+  "@lastSeenToday": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "lastSeenYesterday": "last seen yesterday at {time}",
+  "@lastSeenYesterday": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "lastSeenOn": "last seen {date} at {time}",
+  "@lastSeenOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "today": "Today",
+  "yesterday": "Yesterday",
   "profile": "Profile",
   "tabPosts": "Posts",
   "tabGivenAway": "Given Away",
@@ -262,6 +298,7 @@
   "editProfile": "Edit Profile",
   "language": "Language",
   "theme": "Theme",
+  "notifications": "Notifications",
   "helpCenter": "Help Center",
   "about": "About",
   "logout": "Logout",
@@ -381,5 +418,30 @@
     }
   },
   "productDeleted": "Product deleted",
-  "failedToDeleteProduct": "Failed to delete product. Please try again."
+  "failedToDeleteProduct": "Failed to delete product. Please try again.",
+  "bugsAndFeatures": "Bugs & Features",
+  "reportsIntro": "Found something broken, or have an idea to make PAO better? Tell us here — we read every report.",
+  "reportTypeBug": "Report a bug",
+  "reportTypeBugCaption": "Something isn't working",
+  "reportTypeFeature": "Suggest a feature",
+  "reportTypeFeatureCaption": "An idea to improve the app",
+  "reportBugTitleLabel": "What went wrong?",
+  "reportBugTitleHint": "e.g. Chat doesn't open from a notification",
+  "reportFeatureTitleLabel": "What's your idea?",
+  "reportFeatureTitleHint": "e.g. Filter listings by distance",
+  "reportDetailsLabel": "Details",
+  "reportBugDescriptionHint": "What did you do, what happened, and what did you expect to happen?",
+  "reportFeatureDescriptionHint": "Describe the feature and how it would help you.",
+  "reportTitleRequired": "Please add a short title",
+  "reportDescriptionTooShort": "Please add a bit more detail (at least 10 characters)",
+  "reportSubmitted": "Thanks! We've received it.",
+  "failedToSubmitReport": "Couldn't send it. Please try again.",
+  "mustBeLoggedInReport": "You must be logged in to send a report.",
+  "myReports": "Your reports",
+  "noReportsYet": "Nothing sent yet. Your bug reports and ideas will show up here.",
+  "failedToLoadReports": "Couldn't load your reports. Pull down to try again.",
+  "reportStatusOpen": "Received",
+  "reportStatusInProgress": "In progress",
+  "reportStatusDone": "Done",
+  "reportStatusClosed": "Closed"
 }

@@ -4,6 +4,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../features/settings/data/notification_settings_store.dart';
 import '../theme/app_colors.dart';
 import 'notification_router.dart';
 
@@ -90,6 +91,11 @@ class PushNotificationService {
       }
     });
 
+    // Settings > Notifications toggle: mirror it server-side by
+    // saving/clearing this device's fcm_token, so a disabled device gets no
+    // push at all rather than just suppressing the in-app banner below.
+    NotificationSettingsStore.enabled.addListener(_handleSettingChanged);
+
     // Foreground: show our own notification (see class doc).
     FirebaseMessaging.onMessage.listen(_showForegroundNotification);
 
@@ -114,7 +120,10 @@ class PushNotificationService {
   }
 
   static Future<void> _showForegroundNotification(RemoteMessage message) async {
-    final title = message.notification?.title ?? message.data['title'] as String?;
+    if (!NotificationSettingsStore.enabled.value) return;
+
+    final title =
+        message.notification?.title ?? message.data['title'] as String?;
     final body = message.notification?.body ?? message.data['body'] as String?;
     if (title == null && body == null) return;
 
@@ -144,6 +153,7 @@ class PushNotificationService {
   static String? _lastKnownUserId;
 
   static Future<void> _saveToken(String? token) async {
+    if (!NotificationSettingsStore.enabled.value) return;
     final user = Supabase.instance.client.auth.currentUser;
     if (token == null || user == null) return;
     _lastKnownUserId = user.id;
@@ -157,10 +167,7 @@ class PushNotificationService {
     }
   }
 
-  static Future<void> _clearTokenForPreviousUser() async {
-    final userId = _lastKnownUserId;
-    _lastKnownUserId = null;
-    if (userId == null) return;
+  static Future<void> _clearToken(String userId) async {
     try {
       await Supabase.instance.client
           .from('users')
@@ -168,6 +175,26 @@ class PushNotificationService {
           .eq('id', userId);
     } catch (e) {
       debugPrint('Failed to clear FCM token: $e');
+    }
+  }
+
+  static Future<void> _clearTokenForPreviousUser() async {
+    final userId = _lastKnownUserId;
+    _lastKnownUserId = null;
+    if (userId == null) return;
+    await _clearToken(userId);
+  }
+
+  /// Reacts to the Settings > Notifications toggle: clears this device's
+  /// token when turned off (so the backend has nothing to send to), and
+  /// re-registers it when turned back on.
+  static Future<void> _handleSettingChanged() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) return;
+    if (NotificationSettingsStore.enabled.value) {
+      await _saveToken(await FirebaseMessaging.instance.getToken());
+    } else {
+      await _clearToken(user.id);
     }
   }
 

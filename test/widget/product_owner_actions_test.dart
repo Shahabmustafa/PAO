@@ -140,7 +140,7 @@ void main() {
       await openDetail(tester);
 
       await tapDelete(tester);
-      await tester.tap(find.widgetWithText(TextButton, 'Delete'));
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Delete'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
 
@@ -158,7 +158,7 @@ void main() {
       await openDetail(tester);
 
       await tapDelete(tester);
-      await tester.tap(find.widgetWithText(TextButton, 'Delete'));
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Delete'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
       await pumpUntilToastVisible(tester);
