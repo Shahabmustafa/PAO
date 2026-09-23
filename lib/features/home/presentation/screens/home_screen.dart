@@ -142,6 +142,7 @@ class _HomeViewState extends State<_HomeView> {
                               child: AppAvatar(
                                 radius: 24,
                                 imageUrl: currentUser?.avatarUrl,
+                                ring: true,
                               ),
                             ),
                             const SizedBox(width: 12),

@@ -111,6 +111,7 @@ void main() {
         'id': 'm1',
         'request_id': 'r1',
         'sender_id': 's1',
+        'recipient_id': 's2',
         'body': 'Assalam o Alaikum',
         'created_at': kCreatedAt.toIso8601String(),
       });
@@ -118,6 +119,7 @@ void main() {
       expect(message.id, 'm1');
       expect(message.requestId, 'r1');
       expect(message.senderId, 's1');
+      expect(message.recipientId, 's2');
       expect(message.body, 'Assalam o Alaikum');
       expect(message.createdAt, kCreatedAt);
     });

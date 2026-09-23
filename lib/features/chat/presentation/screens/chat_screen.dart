@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_icons.dart';
 import '../../../../core/widgets/app_avatar.dart';
+import '../../../../core/widgets/app_dialog.dart';
 import '../../../../core/widgets/app_icon.dart';
 import '../../../../core/widgets/app_shimmer.dart';
 import '../../../../core/widgets/app_snackbar.dart';
@@ -196,24 +197,15 @@ class _ChatViewState extends State<_ChatView> {
   }
 
   Future<void> _onAcceptPressed(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(context.l10n.giveThisItem),
-        content: Text(context.l10n.giveThisItemConfirm(widget.productName)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: Text(context.l10n.cancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: Text(context.l10n.yesGive),
-          ),
-        ],
-      ),
+    final confirmed = await AppDialog.confirm(
+      context,
+      title: context.l10n.giveThisItem,
+      message: context.l10n.giveThisItemConfirm(widget.productName),
+      confirmText: context.l10n.yesGive,
+      cancelText: context.l10n.cancel,
+      icon: AppIcons.checkCircle,
     );
-    if (confirmed != true) return;
+    if (!confirmed) return;
     if (!context.mounted) return;
 
     final provider = context.read<ChatProvider>();
@@ -236,27 +228,16 @@ class _ChatViewState extends State<_ChatView> {
     BuildContext context,
     MessageModel message,
   ) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(context.l10n.deleteMessage),
-        content: Text(context.l10n.deleteMessageConfirm),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: Text(context.l10n.cancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: Text(
-              context.l10n.delete,
-              style: const TextStyle(color: AppColors.error),
-            ),
-          ),
-        ],
-      ),
+    final confirmed = await AppDialog.confirm(
+      context,
+      title: context.l10n.deleteMessage,
+      message: context.l10n.deleteMessageConfirm,
+      confirmText: context.l10n.delete,
+      cancelText: context.l10n.cancel,
+      isDestructive: true,
+      icon: AppIcons.delete,
     );
-    if (confirmed != true || !context.mounted) return;
+    if (!confirmed || !context.mounted) return;
 
     final deleted = await context.read<ChatProvider>().deleteMessage(message);
     if (deleted || !context.mounted) return;

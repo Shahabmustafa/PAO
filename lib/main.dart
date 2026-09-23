@@ -4,6 +4,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:toastification/toastification.dart';
+import 'core/auth/ban_watcher.dart';
 import 'core/config/supabase_config.dart';
 import 'core/notifications/push_notification_service.dart';
 import 'core/presence/presence_heartbeat.dart';
@@ -29,6 +30,7 @@ Future<void> main() async {
   await NotificationSettingsStore.load();
   await PushNotificationService.initialize();
   PresenceHeartbeat.initialize();
+  BanWatcher.initialize();
   AppNavigator.listenForPasswordRecovery();
   await ThemeController.load();
   await LanguageStore.load();

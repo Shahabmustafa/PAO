@@ -212,6 +212,12 @@ abstract class AppLocalizations {
   /// **'Too many attempts. Please wait a moment and try again.'**
   String get errorRateLimited;
 
+  /// No description provided for @errorAccountBanned.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account has been suspended. Contact support if you think this is a mistake.'**
+  String get errorAccountBanned;
+
   /// No description provided for @welcomeBack.
   ///
   /// In en, this message translates to:

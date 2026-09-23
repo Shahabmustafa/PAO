@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import '../theme/app_colors.dart';
 import 'app_shimmer.dart';
 
 const _kDefaultAvatarAsset = 'assets/images/profile.jpg';
@@ -10,28 +11,61 @@ class AppAvatar extends StatelessWidget {
   final String? imageUrl;
   final double radius;
 
-  const AppAvatar({super.key, this.imageUrl, this.radius = 22});
+  /// Adds a subtle border + shadow ring around the photo, for avatars shown
+  /// on their own (profile headers, tappable greeting avatars) rather than
+  /// inline in a list.
+  final bool ring;
+
+  const AppAvatar({
+    super.key,
+    this.imageUrl,
+    this.radius = 22,
+    this.ring = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     final size = radius * 2;
-    return ClipOval(
+    final innerSize = ring ? size - 4 : size;
+
+    final photo = ClipOval(
       child: SizedBox(
-        width: size,
-        height: size,
+        width: innerSize,
+        height: innerSize,
         child: imageUrl == null
-            ? _Fallback(size: size)
+            ? _Fallback(size: innerSize)
             : CachedNetworkImage(
                 imageUrl: imageUrl!,
                 fit: BoxFit.cover,
                 placeholder: (context, url) => AppShimmer(
-                  width: size,
-                  height: size,
-                  borderRadius: BorderRadius.circular(radius),
+                  width: innerSize,
+                  height: innerSize,
+                  borderRadius: BorderRadius.circular(innerSize / 2),
                 ),
-                errorWidget: (context, url, error) => _Fallback(size: size),
+                errorWidget: (context, url, error) => _Fallback(size: innerSize),
               ),
       ),
+    );
+
+    if (!ring) return photo;
+
+    return Container(
+      width: size,
+      height: size,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: context.appSurface,
+        border: Border.all(color: context.appBorder),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: photo,
     );
   }
 }

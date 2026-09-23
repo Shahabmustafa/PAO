@@ -28,6 +28,8 @@ String authErrorMessage(AuthException error) {
     case 'over_request_rate_limit':
     case 'over_email_send_rate_limit':
       return l10n.errorRateLimited;
+    case 'account_banned':
+      return l10n.errorAccountBanned;
   }
   return error.message;
 }

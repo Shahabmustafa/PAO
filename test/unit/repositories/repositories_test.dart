@@ -57,6 +57,25 @@ void main() {
       expect(await repo.login(email: 'a@b.com', password: 'x'), isNull);
     });
 
+    test('login rejects and signs out a banned account', () async {
+      source.signInResponse = AuthResponse(
+        user: makeSupabaseUser(id: 'u1', email: 'a@b.com'),
+      );
+      source.isBannedResult = true;
+
+      await expectLater(
+        () => repo.login(email: 'a@b.com', password: 'secret1'),
+        throwsA(
+          isA<AuthException>().having(
+            (e) => e.code,
+            'code',
+            'account_banned',
+          ),
+        ),
+      );
+      expect(source.calls, ['signIn:a@b.com', 'signOut']);
+    });
+
     test('register returns the user when a session is issued', () async {
       final user = makeSupabaseUser(id: 'new', email: 'n@b.com');
       source.signUpResponse = AuthResponse(
@@ -521,30 +540,35 @@ void main() {
             'id': 'm1',
             'request_id': 'r1',
             'sender_id': 's',
+            'recipient_id': 'b',
             'body': 'hi',
             'created_at': kCreatedAt.toIso8601String(),
           },
         ];
       final repo = ChatRepository(dataSource: source);
 
-      final messages = await repo.fetchMessages('r1');
+      final messages = await repo.fetchMessages(
+        currentUserId: 'b',
+        otherUserId: 's',
+      );
       final sent = await repo.sendMessage(
         requestId: 'r1',
         senderId: 's',
+        recipientId: 'b',
         body: 'yo',
       );
 
       expect(messages.single.body, 'hi');
       expect(sent.body, 'yo');
       expect(sent.id, 'sent-1');
-      expect(source.calls, ['send:r1:s:yo']);
+      expect(source.calls, ['send:r1:s:b:yo']);
     });
 
     test('watchMessages maps insert and delete events', () async {
       final source = FakeChatDataSource();
       final repo = ChatRepository(dataSource: source);
       final events = <RealtimeEvent<MessageModel>>[];
-      final sub = repo.watchMessages('r1').listen(events.add);
+      final sub = repo.watchMessages('b').listen(events.add);
       addTearDown(sub.cancel);
 
       source.events
@@ -556,6 +580,7 @@ void main() {
               'id': 'm1',
               'request_id': 'r1',
               'sender_id': 's',
+              'recipient_id': 'b',
               'body': 'hi',
               'created_at': kCreatedAt.toIso8601String(),
             },

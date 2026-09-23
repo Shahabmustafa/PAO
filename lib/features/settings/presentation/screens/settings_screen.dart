@@ -6,9 +6,11 @@ import '../../../../core/theme/app_icons.dart';
 import '../../../../core/theme/theme_controller.dart';
 import '../../../../core/utils/legal_links.dart';
 import '../../../../core/widgets/app_avatar.dart';
+import '../../../../core/widgets/app_dialog.dart';
 import '../../../../core/widgets/app_icon.dart';
 import '../../../../core/widgets/app_snackbar.dart';
 import '../../../auth/data/repository/auth_repository.dart';
+import '../../../chat/data/chat_unread_store.dart';
 import '../../../profile/presentation/screens/user_profile_screen.dart';
 import '../../../requests/data/request_store.dart';
 import '../../../wishlist/data/wishlist_store.dart';
@@ -34,39 +36,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _authRepository = AuthRepository();
 
   Future<void> _confirmDeleteAccount(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(context.l10n.deleteAccount),
-        content: Text(context.l10n.deleteAccountConfirm),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: Text(context.l10n.cancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: Text(
-              context.l10n.delete,
-              style: const TextStyle(color: AppColors.error),
-            ),
-          ),
-        ],
-      ),
+    final confirmed = await AppDialog.confirm(
+      context,
+      title: context.l10n.deleteAccount,
+      message: context.l10n.deleteAccountConfirm,
+      confirmText: context.l10n.delete,
+      cancelText: context.l10n.cancel,
+      isDestructive: true,
+      icon: AppIcons.delete,
     );
 
-    if (confirmed != true || !context.mounted) return;
+    if (!confirmed || !context.mounted) return;
 
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator()),
-    );
+    AppDialog.loading(context);
 
     try {
       await _authRepository.deleteAccount();
       WishlistStore.items.value = [];
       RequestStore.reset();
+      ChatUnreadStore.reset();
       if (!context.mounted) return;
       Navigator.pop(context);
       Navigator.pushNamedAndRemoveUntil(
@@ -138,6 +126,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 AppAvatar(
                                   radius: 30,
                                   imageUrl: currentUser?.avatarUrl,
+                                  ring: true,
                                 ),
                                 const SizedBox(width: 16),
                                 Expanded(
@@ -343,6 +332,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       await _authRepository.logout();
                       WishlistStore.items.value = [];
                       RequestStore.reset();
+                      ChatUnreadStore.reset();
                       if (!context.mounted) return;
                       Navigator.pushNamedAndRemoveUntil(
                         context,

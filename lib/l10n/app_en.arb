@@ -19,6 +19,7 @@
   "errorWeakPassword": "Please choose a stronger password.",
   "errorSamePassword": "Your new password must be different from your old one.",
   "errorRateLimited": "Too many attempts. Please wait a moment and try again.",
+  "errorAccountBanned": "Your account has been suspended. Contact support if you think this is a mistake.",
   "welcomeBack": "Welcome Back",
   "loginToContinue": "Login to continue",
   "email": "Email",

@@ -73,6 +73,10 @@ class AppLocalizationsUr extends AppLocalizations {
       'بہت زیادہ کوششیں ہو چکی ہیں۔ براہِ کرم کچھ دیر انتظار کریں اور دوبارہ کوشش کریں۔';
 
   @override
+  String get errorAccountBanned =>
+      'آپ کا اکاؤنٹ معطل کر دیا گیا ہے۔ اگر آپ کو لگتا ہے کہ یہ غلطی ہے تو سپورٹ سے رابطہ کریں۔';
+
+  @override
   String get welcomeBack => 'خوش آمدید';
 
   @override

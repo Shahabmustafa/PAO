@@ -71,6 +71,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Too many attempts. Please wait a moment and try again.';
 
   @override
+  String get errorAccountBanned =>
+      'Your account has been suspended. Contact support if you think this is a mistake.';
+
+  @override
   String get welcomeBack => 'Welcome Back';
 
   @override
