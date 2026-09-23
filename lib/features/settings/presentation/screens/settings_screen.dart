@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_icons.dart';
+import '../../../../core/tour/app_tour.dart';
 import '../../../../core/theme/theme_controller.dart';
 import '../../../../core/utils/legal_links.dart';
 import '../../../../core/widgets/app_avatar.dart';
@@ -287,6 +288,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: _SettingsCard(
                 children: [
+                  _SettingsTile(
+                    icon: AppIcons.info,
+                    label: context.l10n.appTour,
+                    onTap: () async {
+                      await AppTour.reset();
+                      AppTour.replayRequests.value++;
+                    },
+                  ),
                   _SettingsTile(
                     icon: AppIcons.help,
                     label: context.l10n.helpCenter,

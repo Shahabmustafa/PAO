@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/realtime/realtime_event.dart';
 import '../../../../core/realtime/realtime_table_stream.dart';
@@ -67,21 +68,73 @@ class ChatRemoteDataSource {
     required String senderId,
     required String recipientId,
     required String body,
+    String? replyToId,
+    String? mediaType,
+    String? mediaPath,
+    int? mediaDurationMs,
   }) {
     return _client
         .from('messages')
         .insert({
+          'reply_to_id': replyToId,
           'request_id': requestId,
           'sender_id': senderId,
           'recipient_id': recipientId,
           'body': body,
+          'media_type': mediaType,
+          'media_path': mediaPath,
+          'media_duration_ms': mediaDurationMs,
         })
         .select()
         .single();
   }
 
+  static const _mediaBucket = 'chat_media';
+
+  /// Uploads [file] to the private chat-media bucket under the sender's own
+  /// folder (see supabase/messages_add_media.sql) and returns its path.
+  Future<String> uploadMedia({
+    required String userId,
+    required File file,
+    required String extension,
+    required String contentType,
+  }) async {
+    final path = '$userId/${DateTime.now().microsecondsSinceEpoch}.$extension';
+    await _client.storage
+        .from(_mediaBucket)
+        .upload(path, file, fileOptions: FileOptions(contentType: contentType));
+    return path;
+  }
+
+  /// A short-lived URL for reading a private media file.
+  Future<String> mediaUrl(String path) =>
+      _client.storage.from(_mediaBucket).createSignedUrl(path, 60 * 60 * 6);
+
+  /// Best-effort cleanup of a file whose message failed to send.
+  Future<void> removeMedia(String path) async {
+    await _client.storage.from(_mediaBucket).remove([path]);
+  }
+
   Future<void> deleteMessage(String messageId) {
     return _client.from('messages').delete().eq('id', messageId);
+  }
+
+  /// Sets the current user's reaction on [messageId], or removes it when
+  /// [emoji] is null.
+  Future<void> reactToMessage(String messageId, String? emoji) {
+    return _client.rpc(
+      'react_to_message',
+      params: {'p_message_id': messageId, 'p_emoji': emoji},
+    );
+  }
+
+  /// Hides [messageId] from the current user's view only (see
+  /// supabase/messages_add_deleted_for.sql).
+  Future<void> deleteMessageForMe(String messageId) {
+    return _client.rpc(
+      'delete_message_for_me',
+      params: {'p_message_id': messageId},
+    );
   }
 
   /// Marks every unread message [readerId] received from [otherUserId] as

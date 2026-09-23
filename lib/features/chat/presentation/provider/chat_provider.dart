@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import '../../../../core/realtime/realtime_event.dart';
 import '../../../../core/realtime/realtime_log.dart';
@@ -51,6 +52,7 @@ class ChatProvider extends ChangeNotifier {
   List<MessageModel> messages = [];
   bool isLoading = true;
   bool isSending = false;
+  bool isUploadingMedia = false;
   String? errorMessage;
   StreamSubscription<RealtimeEvent<MessageModel>>? _subscription;
   Timer? _profileRefreshTimer;
@@ -104,6 +106,10 @@ class ChatProvider extends ChangeNotifier {
       case RealtimeEventType.update:
         final message = event.record;
         if (message == null || !_belongsToThisChat(message)) return;
+        if (message.isDeletedFor(currentUserId!)) {
+          _removeLocally(message.id);
+          return;
+        }
         _upsert(message);
         // A message just arrived while this chat is open -- that counts as
         // seen right away.
@@ -114,9 +120,14 @@ class ChatProvider extends ChangeNotifier {
       case RealtimeEventType.delete:
         // Deletes can't be filtered to this chat, so most aren't ours.
         if (!messages.any((m) => m.id == event.id)) return;
-        messages = messages.where((m) => m.id != event.id).toList();
-        notifyListeners();
+        _removeLocally(event.id);
     }
+  }
+
+  void _removeLocally(String id) {
+    if (!messages.any((m) => m.id == id)) return;
+    messages = messages.where((m) => m.id != id).toList();
+    notifyListeners();
   }
 
   Future<void> _loadHistory() async {
@@ -136,7 +147,10 @@ class ChatProvider extends ChangeNotifier {
           : (isLoading
                 ? DateTime.fromMillisecondsSinceEpoch(0)
                 : DateTime.now().add(const Duration(days: 1)));
-      final byId = {for (final m in history) m.id: m};
+      final byId = {
+        for (final m in history)
+          if (!m.isDeletedFor(userId)) m.id: m,
+      };
       for (final m in messages) {
         if (m.createdAt.isAfter(cutoff)) byId[m.id] = m;
       }
@@ -254,7 +268,7 @@ class ChatProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> sendMessage(String body) async {
+  Future<void> sendMessage(String body, {String? replyToId}) async {
     final trimmed = body.trim();
     if (trimmed.isEmpty) return;
     final senderId = currentUserId;
@@ -265,6 +279,7 @@ class ChatProvider extends ChangeNotifier {
     try {
       final message = await _repository.sendMessage(
         requestId: request.id,
+        replyToId: replyToId,
         senderId: senderId,
         recipientId: otherUserId,
         body: trimmed,
@@ -278,6 +293,96 @@ class ChatProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  final _mediaUrls = <String, Future<String>>{};
+
+  /// A signed URL for a message's media file, fetched once per path.
+  Future<String> mediaUrl(String path) {
+    return _mediaUrls.putIfAbsent(path, () {
+      final url = _repository.mediaUrl(path);
+      url.catchError((_) {
+        _mediaUrls.remove(path);
+        return '';
+      });
+      return url;
+    });
+  }
+
+  /// Uploads [file] and sends it as a photo / video / voice message.
+  Future<bool> sendMedia(
+    File file,
+    MessageMediaType type, {
+    int? durationMs,
+  }) async {
+    final senderId = currentUserId;
+    if (senderId == null) return false;
+
+    isUploadingMedia = true;
+    notifyListeners();
+    String? uploadedPath;
+    try {
+      final dot = file.path.lastIndexOf('.');
+      final extension = dot >= 0
+          ? file.path.substring(dot + 1).toLowerCase()
+          : _defaultExtension(type);
+      uploadedPath = await _repository.uploadMedia(
+        userId: senderId,
+        file: file,
+        extension: extension,
+        contentType: _contentType(type, extension),
+      );
+      final message = await _repository.sendMessage(
+        requestId: request.id,
+        senderId: senderId,
+        recipientId: otherUserId,
+        body: '',
+        mediaType: type,
+        mediaPath: uploadedPath,
+        mediaDurationMs: durationMs,
+      );
+      _upsert(message);
+      return true;
+    } catch (_) {
+      if (uploadedPath != null) {
+        // The file went up but the message didn't -- don't leave it orphaned.
+        unawaited(_repository.removeMedia(uploadedPath).catchError((_) {}));
+      }
+      errorMessage = l10nNow.failedToSendMessage;
+      return false;
+    } finally {
+      isUploadingMedia = false;
+      notifyListeners();
+    }
+  }
+
+  static String _defaultExtension(MessageMediaType type) => switch (type) {
+    MessageMediaType.image => 'jpg',
+    MessageMediaType.video => 'mp4',
+    MessageMediaType.audio => 'm4a',
+  };
+
+  static String _contentType(MessageMediaType type, String extension) =>
+      switch (type) {
+        MessageMediaType.image => switch (extension) {
+          'png' => 'image/png',
+          'webp' => 'image/webp',
+          'gif' => 'image/gif',
+          'heic' => 'image/heic',
+          _ => 'image/jpeg',
+        },
+        MessageMediaType.video => switch (extension) {
+          'mov' => 'video/quicktime',
+          '3gp' => 'video/3gpp',
+          'webm' => 'video/webm',
+          _ => 'video/mp4',
+        },
+        MessageMediaType.audio => switch (extension) {
+          'mp3' => 'audio/mpeg',
+          'aac' => 'audio/aac',
+          'ogg' => 'audio/ogg',
+          _ => 'audio/mp4',
+        },
+      };
 
   /// Edits one of the current user's own messages.
   Future<bool> editMessage(MessageModel message, String newBody) async {
@@ -310,6 +415,58 @@ class ChatProvider extends ChangeNotifier {
     notifyListeners();
     try {
       await _repository.deleteMessage(message.id);
+      return true;
+    } catch (_) {
+      messages = previous;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// The loaded message with [id], or null (deleted / hidden / not loaded).
+  MessageModel? messageById(String? id) {
+    if (id == null) return null;
+    for (final m in messages) {
+      if (m.id == id) return m;
+    }
+    return null;
+  }
+
+  /// Sets the current user's reaction on [message]; reacting with the emoji
+  /// already chosen removes it. Applied locally first, put back on failure.
+  Future<bool> react(MessageModel message, String emoji) async {
+    final userId = currentUserId;
+    if (userId == null) return false;
+    final remove = message.reactions[userId] == emoji;
+    final previous = messages;
+    final updated = {...message.reactions};
+    if (remove) {
+      updated.remove(userId);
+    } else {
+      updated[userId] = emoji;
+    }
+    messages = [
+      for (final m in messages)
+        if (m.id == message.id) m.copyWith(reactions: updated) else m,
+    ];
+    notifyListeners();
+    try {
+      await _repository.reactToMessage(message.id, remove ? null : emoji);
+      return true;
+    } catch (_) {
+      messages = previous;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Hides any message (mine or theirs) from the current user's view only.
+  Future<bool> deleteMessageForMe(MessageModel message) async {
+    final previous = messages;
+    messages = messages.where((m) => m.id != message.id).toList();
+    notifyListeners();
+    try {
+      await _repository.deleteMessageForMe(message.id);
       return true;
     } catch (_) {
       messages = previous;

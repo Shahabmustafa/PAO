@@ -465,6 +465,25 @@ class AppLocalizationsUr extends AppLocalizations {
   String get deleteMessage => 'پیغام حذف کریں';
 
   @override
+  String get reply => 'جواب دیں';
+
+  @override
+  String get you => 'آپ';
+
+  @override
+  String get originalMessageUnavailable => 'اصل پیغام دستیاب نہیں';
+
+  @override
+  String get deleteForMe => 'صرف میرے لیے حذف کریں';
+
+  @override
+  String get deleteForEveryone => 'سب کے لیے حذف کریں';
+
+  @override
+  String get deleteForMeConfirm =>
+      'کیا یہ پیغام صرف آپ کے لیے حذف کرنا ہے؟ دوسرا شخص اسے پھر بھی دیکھے گا۔';
+
+  @override
   String get deleteMessageConfirm =>
       'کیا یہ پیغام حذف کرنا ہے؟ اس عمل کو واپس نہیں کیا جا سکتا۔';
 
@@ -660,6 +679,73 @@ class AppLocalizationsUr extends AppLocalizations {
   String get notifications => 'اطلاعات';
 
   @override
+  String get tourSkip => 'چھوڑیں';
+
+  @override
+  String get tourNext => 'آگے';
+
+  @override
+  String get tourDone => 'سمجھ گیا';
+
+  @override
+  String get appTour => 'ایپ ٹور';
+
+  @override
+  String get tourSearchTitle => 'تلاش';
+
+  @override
+  String get tourSearchBody =>
+      'یہاں لکھ کر وہ چیزیں تلاش کریں جو لوگ دے رہے ہیں۔';
+
+  @override
+  String get tourFilterTitle => 'فلٹر';
+
+  @override
+  String get tourFilterBody =>
+      'کیٹیگری، حالت، مقام اور ترتیب کے مطابق فہرست محدود کریں۔';
+
+  @override
+  String get tourWishlistTitle => 'پسندیدہ فہرست';
+
+  @override
+  String get tourWishlistBody =>
+      'جن چیزوں پر آپ دل کا نشان لگاتے ہیں وہ یہاں محفوظ ہو جاتی ہیں۔';
+
+  @override
+  String get tourAddTitle => 'کوئی چیز دیں';
+
+  @override
+  String get tourAddBody =>
+      'یہاں دبا کر تصاویر، تفصیل اور اپنے مقام کے ساتھ چیز پوسٹ کریں۔';
+
+  @override
+  String get tourRequestsTitle => 'درخواستیں اور چیٹ';
+
+  @override
+  String get tourRequestsBody =>
+      'آپ کی بھیجی اور موصول ہونے والی درخواستیں یہاں ہیں۔ کسی کو کھول کر دوسرے شخص سے چیٹ کریں۔';
+
+  @override
+  String get tourSettingsTitle => 'سیٹنگز';
+
+  @override
+  String get tourSettingsBody =>
+      'اپنا پروفائل بدلیں، زبان یا تھیم منتخب کریں اور نوٹیفکیشن سنبھالیں۔';
+
+  @override
+  String get tourRequestsTabsTitle => 'بھیجی اور موصول';
+
+  @override
+  String get tourRequestsTabsBody =>
+      'بھیجی میں وہ چیزیں ہیں جو آپ نے مانگیں۔ موصول میں آپ کی چیزوں کے طلبگار ہیں، جہاں آپ قبول یا رد کر سکتے ہیں۔';
+
+  @override
+  String get tourReplayTitle => 'ٹور دوبارہ دیکھیں';
+
+  @override
+  String get tourReplayBody => 'کسی بھی وقت یہاں دبا کر ایپ ٹور دوبارہ دیکھیں۔';
+
+  @override
   String get helpCenter => 'مدد مرکز';
 
   @override
@@ -834,14 +920,14 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get privacy1Body =>
-      'ہم وہ معلومات جمع کرتے ہیں جو آپ براہِ راست فراہم کرتے ہیں، جیسے آپ کا نام، ای میل ایڈریس، پروفائل فوٹو، اور وہ فہرستیں، درخواستیں یا پیغامات جو آپ بناتے ہیں۔ ہم ایپ کے استعمال سے پیدا ہونے والی معلومات بھی جمع کرتے ہیں، جیسے آپ کی پسندیدہ فہرست، محفوظ کردہ مقام/صوبہ، اور ایپ کی ترجیحات (تھیم، زبان)۔';
+      'ہم وہ معلومات جمع کرتے ہیں جو آپ براہِ راست فراہم کرتے ہیں، جیسے آپ کا نام، ای میل ایڈریس، پروفائل فوٹو، اور وہ فہرستیں، درخواستیں یا پیغامات جو آپ بناتے ہیں۔ اس میں وہ تصاویر، ویڈیوز اور وائس پیغامات شامل ہیں جو آپ چیٹ میں بھیجنے کا انتخاب کرتے ہیں؛ ان تک کیمرہ، فوٹو لائبریری یا مائیکروفون کے ذریعے صرف اسی وقت رسائی ہوتی ہے جب آپ یہ خصوصیات استعمال کریں۔ ہم ایپ کے استعمال سے پیدا ہونے والی معلومات بھی جمع کرتے ہیں، جیسے آپ کی پسندیدہ فہرست، محفوظ کردہ مقام/صوبہ، اور ایپ کی ترجیحات (تھیم، زبان)۔';
 
   @override
   String get privacy2Title => '2. ہم آپ کی معلومات کیسے استعمال کرتے ہیں';
 
   @override
   String get privacy2Body =>
-      'ہم آپ کی معلومات ایپ کی بنیادی خصوصیات چلانے کے لیے استعمال کرتے ہیں: آپ کا پروفائل دکھانا، فہرستوں اور درخواستوں کو ظاہر کرنا اور ملانا، صارفین کے درمیان چیٹ ممکن بنانا، آپ کی پسندیدہ فہرست برقرار رکھنا، اور آپ کی سیٹنگز یاد رکھنا۔';
+      'ہم آپ کی معلومات ایپ کی بنیادی خصوصیات چلانے کے لیے استعمال کرتے ہیں: آپ کا پروفائل دکھانا، فہرستوں اور درخواستوں کو ظاہر کرنا اور ملانا، صارفین کے درمیان چیٹ (متن، تصاویر، ویڈیوز اور وائس پیغامات) ممکن بنانا، آپ کی پسندیدہ فہرست برقرار رکھنا، اور آپ کی سیٹنگز یاد رکھنا۔';
 
   @override
   String get privacy3Title => '3. مقام کی معلومات';
@@ -855,21 +941,21 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get privacy4Body =>
-      'ایپ کے معمول کے مطابق کچھ معلومات دیگر صارفین کو نظر آتی ہیں، جیسے آپ کی پوسٹ کی گئی فہرستوں پر آپ کا پروفائل نام اور تصویر، اور چیٹ کے ذریعے بھیجے گئے آپ کے پیغامات۔ ہم آپ کی ذاتی معلومات تیسرے فریق کو فروخت نہیں کرتے۔';
+      'ایپ کے معمول کے مطابق کچھ معلومات دیگر صارفین کو نظر آتی ہیں، جیسے آپ کی پوسٹ کی گئی فہرستوں پر آپ کا پروفائل نام اور تصویر، اور چیٹ کے ذریعے بھیجے گئے آپ کے پیغامات، تصاویر، ویڈیوز یا وائس پیغامات (چیٹ میڈیا نجی طور پر محفوظ ہوتا ہے اور اسے صرف آپ اور وہ شخص کھول سکتا ہے جسے آپ نے بھیجا)۔ ہم آپ کی ذاتی معلومات تیسرے فریق کو فروخت نہیں کرتے۔';
 
   @override
   String get privacy5Title => '5. ڈیٹا کا ذخیرہ اور تحفظ';
 
   @override
   String get privacy5Body =>
-      'آپ کا اکاؤنٹ اور ایپ کا ڈیٹا ہمارے بیک اینڈ سروس فراہم کنندہ Supabase کے ذریعے، صنعتی معیار کے حفاظتی طریقوں کے ساتھ محفوظ کیا جاتا ہے۔ اگرچہ ہم آپ کے ڈیٹا کی حفاظت کے لیے معقول اقدامات کرتے ہیں، لیکن ذخیرے یا ترسیل کا کوئی بھی طریقہ 100% محفوظ نہیں ہوتا۔';
+      'آپ کا اکاؤنٹ اور ایپ کا ڈیٹا ہمارے بیک اینڈ سروس فراہم کنندہ Supabase کے ذریعے، صنعتی معیار کے حفاظتی طریقوں کے ساتھ محفوظ کیا جاتا ہے؛ اس میں آپ کی بھیجی ہوئی چیٹ تصاویر، ویڈیوز اور وائس پیغامات شامل ہیں۔ اگرچہ ہم آپ کے ڈیٹا کی حفاظت کے لیے معقول اقدامات کرتے ہیں، لیکن ذخیرے یا ترسیل کا کوئی بھی طریقہ 100% محفوظ نہیں ہوتا۔';
 
   @override
   String get privacy6Title => '6. آپ کے اختیارات اور حقوق';
 
   @override
   String get privacy6Body =>
-      'آپ سیٹنگز میں پروفائل میں ترمیم سے اپنا پروفائل کسی بھی وقت دیکھ اور اپ ڈیٹ کر سکتے ہیں۔ آپ سیٹنگز سے اپنا اکاؤنٹ حذف کرنے کی درخواست کر سکتے ہیں، جس سے آپ کا پروفائل، فہرستیں، پسندیدہ فہرست اور متعلقہ ڈیٹا ہمارے سسٹمز سے مستقل طور پر ہٹا دیا جاتا ہے۔';
+      'آپ سیٹنگز میں پروفائل میں ترمیم سے اپنا پروفائل کسی بھی وقت دیکھ اور اپ ڈیٹ کر سکتے ہیں۔ آپ سیٹنگز سے اپنا اکاؤنٹ حذف کرنے کی درخواست کر سکتے ہیں، جس سے آپ کا پروفائل، فہرستیں، پسندیدہ فہرست، آپ کا بھیجا ہوا چیٹ میڈیا اور متعلقہ ڈیٹا ہمارے سسٹمز سے مستقل طور پر ہٹا دیا جاتا ہے۔';
 
   @override
   String get privacy7Title => '7. ڈیٹا کی برقراری';
@@ -1082,4 +1168,45 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get reportStatusClosed => 'بند';
+
+  @override
+  String get attach => 'منسلک کریں';
+
+  @override
+  String get takePhoto => 'تصویر کھینچیں';
+
+  @override
+  String get photosFromGallery => 'گیلری سے تصاویر';
+
+  @override
+  String get recordVideo => 'ویڈیو ریکارڈ کریں';
+
+  @override
+  String get videoFromGallery => 'گیلری سے ویڈیو';
+
+  @override
+  String get slideToCancel => 'منسوخ کرنے کے لیے سلائیڈ کریں';
+
+  @override
+  String get releaseToCancel => 'منسوخ کرنے کے لیے چھوڑ دیں';
+
+  @override
+  String get holdToRecordVoice =>
+      'وائس پیغام ریکارڈ کرنے کے لیے مائیک بٹن دبائے رکھیں۔';
+
+  @override
+  String get microphonePermissionDenied =>
+      'وائس پیغام بھیجنے کے لیے سیٹنگز میں مائیکروفون کی اجازت دیں۔';
+
+  @override
+  String get mediaTooLarge => 'یہ فائل بہت بڑی ہے (زیادہ سے زیادہ 50 MB)۔';
+
+  @override
+  String get photoLabel => 'تصویر';
+
+  @override
+  String get videoLabel => 'ویڈیو';
+
+  @override
+  String get voiceMessageLabel => 'وائس پیغام';
 }

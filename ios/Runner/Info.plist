@@ -68,6 +68,8 @@
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>PAO needs access to your photos so you can add pictures to the products you post.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>PAO needs access to your camera so you can take pictures of the products you post.</string>
+	<string>PAO needs access to your camera so you can take pictures of the products you post and send photos and videos in chat.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>PAO needs access to your microphone so you can send voice messages and record videos in chat.</string>
 </dict>
 </plist>

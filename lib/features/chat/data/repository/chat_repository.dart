@@ -1,3 +1,4 @@
+import 'dart:io';
 import '../../../../core/realtime/realtime_event.dart';
 import '../datasource/chat_remote_datasource.dart';
 import '../model/message_model.dart';
@@ -32,18 +33,48 @@ class ChatRepository {
     required String senderId,
     required String recipientId,
     required String body,
+    String? replyToId,
+    MessageMediaType? mediaType,
+    String? mediaPath,
+    int? mediaDurationMs,
   }) async {
     final row = await _dataSource.sendMessage(
+      replyToId: replyToId,
       requestId: requestId,
       senderId: senderId,
       recipientId: recipientId,
       body: body,
+      mediaType: mediaType?.name,
+      mediaPath: mediaPath,
+      mediaDurationMs: mediaDurationMs,
     );
     return MessageModel.fromJson(row);
   }
 
+  Future<String> uploadMedia({
+    required String userId,
+    required File file,
+    required String extension,
+    required String contentType,
+  }) => _dataSource.uploadMedia(
+    userId: userId,
+    file: file,
+    extension: extension,
+    contentType: contentType,
+  );
+
+  Future<String> mediaUrl(String path) => _dataSource.mediaUrl(path);
+
+  Future<void> removeMedia(String path) => _dataSource.removeMedia(path);
+
   Future<void> deleteMessage(String messageId) =>
       _dataSource.deleteMessage(messageId);
+
+  Future<void> reactToMessage(String messageId, String? emoji) =>
+      _dataSource.reactToMessage(messageId, emoji);
+
+  Future<void> deleteMessageForMe(String messageId) =>
+      _dataSource.deleteMessageForMe(messageId);
 
   Future<void> markMessagesRead({
     required String readerId,

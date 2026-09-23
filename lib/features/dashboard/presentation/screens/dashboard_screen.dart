@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
 import '../../../../core/notifications/notification_router.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/tour/app_tour.dart';
 import '../../../../core/theme/app_icons.dart';
 import '../../../../core/widgets/app_icon.dart';
 import '../../../add_item/presentation/screens/add_item_screen.dart';
@@ -44,11 +45,70 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
     // ...or while it's already mounted.
     NotificationRouter.requestedTab.addListener(_onTabRequested);
+    AppTour.replayRequests.addListener(_onReplayRequested);
+    // First launch: walk the user through the main buttons.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowTour());
+  }
+
+  List<TourStep> _mainTourSteps(BuildContext context) {
+    final l10n = context.l10n;
+    return [
+      TourStep(
+        key: TourKeys.homeSearch,
+        title: l10n.tourSearchTitle,
+        body: l10n.tourSearchBody,
+      ),
+      TourStep(
+        key: TourKeys.homeFilter,
+        title: l10n.tourFilterTitle,
+        body: l10n.tourFilterBody,
+        circle: true,
+      ),
+      TourStep(
+        key: TourKeys.navWishlist,
+        title: l10n.tourWishlistTitle,
+        body: l10n.tourWishlistBody,
+        above: true,
+      ),
+      TourStep(
+        key: TourKeys.navAdd,
+        title: l10n.tourAddTitle,
+        body: l10n.tourAddBody,
+        circle: true,
+        above: true,
+      ),
+      TourStep(
+        key: TourKeys.navRequests,
+        title: l10n.tourRequestsTitle,
+        body: l10n.tourRequestsBody,
+        above: true,
+      ),
+      TourStep(
+        key: TourKeys.navSettings,
+        title: l10n.tourSettingsTitle,
+        body: l10n.tourSettingsBody,
+        above: true,
+      ),
+    ];
+  }
+
+  void _maybeShowTour() {
+    if (!mounted || _currentIndex != 0) return;
+    AppTour.maybeShow(context, 'main', _mainTourSteps);
+  }
+
+  void _onReplayRequested() {
+    setState(() => _currentIndex = 0);
+    _barController.show();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) AppTour.show(context, _mainTourSteps(context));
+    });
   }
 
   @override
   void dispose() {
     NotificationRouter.requestedTab.removeListener(_onTabRequested);
+    AppTour.replayRequests.removeListener(_onReplayRequested);
     _barController.dispose();
     super.dispose();
   }
@@ -64,6 +124,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void _onTabTapped(int index) {
     setState(() => _currentIndex = index);
     _barController.show();
+    if (index == 3) {
+      // First visit to Requests: explain the Sent / Received tabs.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || _currentIndex != 3) return;
+        AppTour.maybeShow(context, 'requests', (ctx) {
+          final l10n = ctx.l10n;
+          return [
+            TourStep(
+              key: TourKeys.requestsTabs,
+              title: l10n.tourRequestsTabsTitle,
+              body: l10n.tourRequestsTabsBody,
+            ),
+          ];
+        });
+      });
+    }
   }
 
   @override
@@ -146,6 +222,7 @@ class _FloatingNavBarContent extends StatelessWidget {
                 ),
                 Expanded(
                   child: _NavItem(
+                    tourKey: TourKeys.navWishlist,
                     icon: AppIcons.favoriteOutline,
                     activeIcon: AppIcons.favoriteFilled,
                     label: context.l10n.navWishlist,
@@ -159,6 +236,7 @@ class _FloatingNavBarContent extends StatelessWidget {
                   child: ValueListenableBuilder<List<RequestModel>>(
                     valueListenable: RequestStore.received,
                     builder: (context, received, _) => _NavItem(
+                      tourKey: TourKeys.navRequests,
                       icon: AppIcons.inbox,
                       label: context.l10n.navRequests,
                       isActive: currentIndex == 3,
@@ -169,6 +247,7 @@ class _FloatingNavBarContent extends StatelessWidget {
                 ),
                 Expanded(
                   child: _NavItem(
+                    tourKey: TourKeys.navSettings,
                     icon: AppIcons.settingsOutline,
                     activeIcon: AppIcons.settingsFilled,
                     label: context.l10n.navSettings,
@@ -178,7 +257,10 @@ class _FloatingNavBarContent extends StatelessWidget {
                 ),
               ],
             ),
-            Positioned(top: -14, child: _CreateButton(onTap: () => onTap(2))),
+            Positioned(
+              top: -14,
+              child: _CreateButton(key: TourKeys.navAdd, onTap: () => onTap(2)),
+            ),
           ],
         ),
       ),
@@ -193,8 +275,10 @@ class _NavItem extends StatelessWidget {
   final bool isActive;
   final int badgeCount;
   final VoidCallback onTap;
+  final GlobalKey? tourKey;
 
   const _NavItem({
+    this.tourKey,
     required this.icon,
     this.activeIcon,
     required this.label,
@@ -207,6 +291,7 @@ class _NavItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = isActive ? AppColors.primary : context.appTextSecondary;
     return InkWell(
+      key: tourKey,
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Padding(
@@ -277,7 +362,7 @@ class _CountBadge extends StatelessWidget {
 class _CreateButton extends StatelessWidget {
   final VoidCallback onTap;
 
-  const _CreateButton({required this.onTap});
+  const _CreateButton({super.key, required this.onTap});
 
   @override
   Widget build(BuildContext context) {

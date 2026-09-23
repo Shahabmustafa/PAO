@@ -950,6 +950,42 @@ abstract class AppLocalizations {
   /// **'Delete message'**
   String get deleteMessage;
 
+  /// No description provided for @reply.
+  ///
+  /// In en, this message translates to:
+  /// **'Reply'**
+  String get reply;
+
+  /// No description provided for @you.
+  ///
+  /// In en, this message translates to:
+  /// **'You'**
+  String get you;
+
+  /// No description provided for @originalMessageUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Original message unavailable'**
+  String get originalMessageUnavailable;
+
+  /// No description provided for @deleteForMe.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete for me'**
+  String get deleteForMe;
+
+  /// No description provided for @deleteForEveryone.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete for everyone'**
+  String get deleteForEveryone;
+
+  /// No description provided for @deleteForMeConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this message for you only? The other person will still see it.'**
+  String get deleteForMeConfirm;
+
   /// No description provided for @deleteMessageConfirm.
   ///
   /// In en, this message translates to:
@@ -1286,6 +1322,126 @@ abstract class AppLocalizations {
   /// **'Notifications'**
   String get notifications;
 
+  /// No description provided for @tourSkip.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip'**
+  String get tourSkip;
+
+  /// No description provided for @tourNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get tourNext;
+
+  /// No description provided for @tourDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Got it'**
+  String get tourDone;
+
+  /// No description provided for @appTour.
+  ///
+  /// In en, this message translates to:
+  /// **'App tour'**
+  String get appTour;
+
+  /// No description provided for @tourSearchTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get tourSearchTitle;
+
+  /// No description provided for @tourSearchBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Type here to find items people are giving away.'**
+  String get tourSearchBody;
+
+  /// No description provided for @tourFilterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Filters'**
+  String get tourFilterTitle;
+
+  /// No description provided for @tourFilterBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Narrow the list by category, condition, location and sort order.'**
+  String get tourFilterBody;
+
+  /// No description provided for @tourWishlistTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Wishlist'**
+  String get tourWishlistTitle;
+
+  /// No description provided for @tourWishlistBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Items you tapped the heart on are saved here so you can find them later.'**
+  String get tourWishlistBody;
+
+  /// No description provided for @tourAddTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Give something away'**
+  String get tourAddTitle;
+
+  /// No description provided for @tourAddBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap here to post an item with photos, a description and your location.'**
+  String get tourAddBody;
+
+  /// No description provided for @tourRequestsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Requests & chats'**
+  String get tourRequestsTitle;
+
+  /// No description provided for @tourRequestsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Requests you sent and received live here. Open one to chat with the other person.'**
+  String get tourRequestsBody;
+
+  /// No description provided for @tourSettingsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
+  String get tourSettingsTitle;
+
+  /// No description provided for @tourSettingsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit your profile, change language or theme, and manage notifications.'**
+  String get tourSettingsBody;
+
+  /// No description provided for @tourRequestsTabsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent and Received'**
+  String get tourRequestsTabsTitle;
+
+  /// No description provided for @tourRequestsTabsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent shows items you asked for. Received shows people asking for your items, where you can accept or decline.'**
+  String get tourRequestsTabsBody;
+
+  /// No description provided for @tourReplayTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Replay this tour'**
+  String get tourReplayTitle;
+
+  /// No description provided for @tourReplayBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap here any time to see the app tour again.'**
+  String get tourReplayBody;
+
   /// No description provided for @helpCenter.
   ///
   /// In en, this message translates to:
@@ -1595,7 +1751,7 @@ abstract class AppLocalizations {
   /// No description provided for @privacy1Body.
   ///
   /// In en, this message translates to:
-  /// **'We collect information you provide directly, such as your name, email address, profile photo, and the listings, requests, or messages you create. We also collect information generated by using the app, such as your wishlist, saved location/province, and app preferences (theme, language).'**
+  /// **'We collect information you provide directly, such as your name, email address, profile photo, and the listings, requests, or messages you create. This includes photos, videos, and voice messages you choose to send in chat, which are accessed through your camera, photo library, or microphone only when you use those features. We also collect information generated by using the app, such as your wishlist, saved location/province, and app preferences (theme, language).'**
   String get privacy1Body;
 
   /// No description provided for @privacy2Title.
@@ -1607,7 +1763,7 @@ abstract class AppLocalizations {
   /// No description provided for @privacy2Body.
   ///
   /// In en, this message translates to:
-  /// **'We use your information to operate the app\'s core features: showing your profile, displaying and matching listings and requests, enabling chat between users, maintaining your wishlist, and remembering your settings.'**
+  /// **'We use your information to operate the app\'s core features: showing your profile, displaying and matching listings and requests, enabling chat (text, photos, videos, and voice messages) between users, maintaining your wishlist, and remembering your settings.'**
   String get privacy2Body;
 
   /// No description provided for @privacy3Title.
@@ -1631,7 +1787,7 @@ abstract class AppLocalizations {
   /// No description provided for @privacy4Body.
   ///
   /// In en, this message translates to:
-  /// **'Certain information is visible to other users as part of the app\'s normal operation, such as your profile name and photo on listings you post, and any messages you send through chat. We do not sell your personal information to third parties.'**
+  /// **'Certain information is visible to other users as part of the app\'s normal operation, such as your profile name and photo on listings you post, and any messages, photos, videos, or voice messages you send through chat (chat media is stored privately and can only be opened by you and the person you sent it to). We do not sell your personal information to third parties.'**
   String get privacy4Body;
 
   /// No description provided for @privacy5Title.
@@ -1643,7 +1799,7 @@ abstract class AppLocalizations {
   /// No description provided for @privacy5Body.
   ///
   /// In en, this message translates to:
-  /// **'Your account and app data are stored using Supabase, our backend service provider, with industry-standard security practices. While we take reasonable steps to protect your data, no method of storage or transmission is 100% secure.'**
+  /// **'Your account and app data are stored using Supabase, our backend service provider, with industry-standard security practices; this includes the chat photos, videos, and voice messages you send. While we take reasonable steps to protect your data, no method of storage or transmission is 100% secure.'**
   String get privacy5Body;
 
   /// No description provided for @privacy6Title.
@@ -1655,7 +1811,7 @@ abstract class AppLocalizations {
   /// No description provided for @privacy6Body.
   ///
   /// In en, this message translates to:
-  /// **'You can review and update your profile at any time from Edit Profile in Settings. You may request deletion of your account from Settings, which permanently removes your profile, listings, wishlist, and associated data from our systems.'**
+  /// **'You can review and update your profile at any time from Edit Profile in Settings. You may request deletion of your account from Settings, which permanently removes your profile, listings, wishlist, chat media you sent, and associated data from our systems.'**
   String get privacy6Body;
 
   /// No description provided for @privacy7Title.
@@ -2029,6 +2185,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Closed'**
   String get reportStatusClosed;
+
+  /// No description provided for @attach.
+  ///
+  /// In en, this message translates to:
+  /// **'Attach'**
+  String get attach;
+
+  /// No description provided for @takePhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Take a photo'**
+  String get takePhoto;
+
+  /// No description provided for @photosFromGallery.
+  ///
+  /// In en, this message translates to:
+  /// **'Photos from gallery'**
+  String get photosFromGallery;
+
+  /// No description provided for @recordVideo.
+  ///
+  /// In en, this message translates to:
+  /// **'Record a video'**
+  String get recordVideo;
+
+  /// No description provided for @videoFromGallery.
+  ///
+  /// In en, this message translates to:
+  /// **'Video from gallery'**
+  String get videoFromGallery;
+
+  /// No description provided for @slideToCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Slide to cancel'**
+  String get slideToCancel;
+
+  /// No description provided for @releaseToCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Release to cancel'**
+  String get releaseToCancel;
+
+  /// No description provided for @holdToRecordVoice.
+  ///
+  /// In en, this message translates to:
+  /// **'Hold the mic button to record a voice message.'**
+  String get holdToRecordVoice;
+
+  /// No description provided for @microphonePermissionDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow microphone access in Settings to send voice messages.'**
+  String get microphonePermissionDenied;
+
+  /// No description provided for @mediaTooLarge.
+  ///
+  /// In en, this message translates to:
+  /// **'That file is too large (max 50 MB).'**
+  String get mediaTooLarge;
+
+  /// No description provided for @photoLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo'**
+  String get photoLabel;
+
+  /// No description provided for @videoLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Video'**
+  String get videoLabel;
+
+  /// No description provided for @voiceMessageLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice message'**
+  String get voiceMessageLabel;
 }
 
 class _AppLocalizationsDelegate

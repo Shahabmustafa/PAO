@@ -4,6 +4,7 @@
 // `implements` the real class: no constructor runs, which means no
 // Supabase client is ever touched.
 import 'dart:async';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:pao/core/realtime/realtime_event.dart';
@@ -670,7 +671,9 @@ class FakeChatRepository implements ChatRepository {
   final deleted = <String>[];
   final controller = StreamController<RealtimeEvent<MessageModel>>.broadcast();
   final sent =
-      <({String? requestId, String senderId, String recipientId, String body})>[];
+      <
+        ({String? requestId, String senderId, String recipientId, String body})
+      >[];
 
   @override
   Future<List<MessageModel>> fetchMessages({
@@ -692,6 +695,10 @@ class FakeChatRepository implements ChatRepository {
     required String senderId,
     required String recipientId,
     required String body,
+    String? replyToId,
+    MessageMediaType? mediaType,
+    String? mediaPath,
+    int? mediaDurationMs,
   }) async {
     if (sendError != null) throw sendError!;
     sent.add((
@@ -710,9 +717,34 @@ class FakeChatRepository implements ChatRepository {
   }
 
   @override
+  Future<String> uploadMedia({
+    required String userId,
+    required File file,
+    required String extension,
+    required String contentType,
+  }) async => '$userId/fake.$extension';
+
+  @override
+  Future<String> mediaUrl(String path) async => 'https://example.com/$path';
+
+  @override
+  Future<void> removeMedia(String path) async {}
+
+  @override
   Future<void> deleteMessage(String messageId) async {
     if (deleteError != null) throw deleteError!;
     deleted.add(messageId);
+  }
+
+  @override
+  Future<void> reactToMessage(String messageId, String? emoji) async {}
+
+  final deletedForMe = <String>[];
+
+  @override
+  Future<void> deleteMessageForMe(String messageId) async {
+    if (deleteError != null) throw deleteError!;
+    deletedForMe.add(messageId);
   }
 
   Object? markReadError;
@@ -1097,6 +1129,10 @@ class FakeChatDataSource implements ChatRemoteDataSource {
     required String senderId,
     required String recipientId,
     required String body,
+    String? replyToId,
+    String? mediaType,
+    String? mediaPath,
+    int? mediaDurationMs,
   }) async {
     calls.add('send:$requestId:$senderId:$recipientId:$body');
     return {
@@ -1110,8 +1146,30 @@ class FakeChatDataSource implements ChatRemoteDataSource {
   }
 
   @override
+  Future<String> uploadMedia({
+    required String userId,
+    required File file,
+    required String extension,
+    required String contentType,
+  }) async => '$userId/fake.$extension';
+
+  @override
+  Future<String> mediaUrl(String path) async => 'https://example.com/$path';
+
+  @override
+  Future<void> removeMedia(String path) async {}
+
+  @override
   Future<void> deleteMessage(String messageId) async =>
       calls.add('delete:$messageId');
+
+  @override
+  Future<void> reactToMessage(String messageId, String? emoji) async =>
+      calls.add('react:$messageId:$emoji');
+
+  @override
+  Future<void> deleteMessageForMe(String messageId) async =>
+      calls.add('deleteForMe:$messageId');
 
   @override
   Future<void> markMessagesRead({

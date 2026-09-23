@@ -72,7 +72,7 @@ class ChatUnreadStore {
       case RealtimeEventType.update:
         final message = event.record;
         if (message == null) return;
-        if (message.readAt != null) {
+        if (message.readAt != null || message.isDeletedFor(userId)) {
           if (_unreadSenders.remove(message.id) != null) _recompute();
         }
       case RealtimeEventType.delete:
@@ -85,7 +85,11 @@ class ChatUnreadStore {
       final unread = await repo.fetchUnread(userId);
       _unreadSenders
         ..clear()
-        ..addEntries(unread.map((m) => MapEntry(m.id, m.senderId)));
+        ..addEntries(
+          unread
+              .where((m) => !m.isDeletedFor(userId))
+              .map((m) => MapEntry(m.id, m.senderId)),
+        );
       _recompute();
     } catch (_) {
       // Best-effort -- the next realtime event or reconnect catches up.

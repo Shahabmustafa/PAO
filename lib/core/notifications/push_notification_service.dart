@@ -5,7 +5,6 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../features/settings/data/notification_settings_store.dart';
-import '../theme/app_colors.dart';
 import 'notification_router.dart';
 
 /// Wires Firebase Cloud Messaging to the app: requests notification
@@ -19,11 +18,8 @@ import 'notification_router.dart';
 ///   - Background / terminated: the OS shows the notification itself from
 ///     the `notification` block -- native, reliable, no Dart code involved.
 ///   - Foreground: neither Android nor iOS shows anything on their own for
-///     *any* FCM message while the app is running, so this class shows a
-///     real notification via flutter_local_notifications here.
-/// Showing our own notification for the background/terminated case too
-/// would double up with the OS's native one, so flutter_local_notifications
-/// is only ever used for the foreground path.
+///     *any* FCM message while the app is running, and we deliberately don't
+///     add one -- no notification while the app is open.
 ///
 /// Call [initialize] once, right after `Firebase.initializeApp()`.
 class PushNotificationService {
@@ -40,7 +36,6 @@ class PushNotificationService {
   );
 
   static bool _initialized = false;
-  static int _notificationId = 0;
 
   static Future<void> initialize() async {
     if (_initialized) return;
@@ -96,8 +91,8 @@ class PushNotificationService {
     // push at all rather than just suppressing the in-app banner below.
     NotificationSettingsStore.enabled.addListener(_handleSettingChanged);
 
-    // Foreground: show our own notification (see class doc).
-    FirebaseMessaging.onMessage.listen(_showForegroundNotification);
+    // Foreground: intentionally show nothing -- the user is already in the
+    // app, and chat/requests update live via realtime.
 
     // Tapped while backgrounded (the OS's own notification).
     FirebaseMessaging.onMessageOpenedApp.listen(
@@ -117,37 +112,6 @@ class PushNotificationService {
     if (launchDetails?.didNotificationLaunchApp ?? false) {
       _handleTap(launchDetails!.notificationResponse?.payload);
     }
-  }
-
-  static Future<void> _showForegroundNotification(RemoteMessage message) async {
-    if (!NotificationSettingsStore.enabled.value) return;
-
-    final title =
-        message.notification?.title ?? message.data['title'] as String?;
-    final body = message.notification?.body ?? message.data['body'] as String?;
-    if (title == null && body == null) return;
-
-    await _localNotifications.show(
-      id: _notificationId++,
-      title: title,
-      body: body,
-      notificationDetails: NotificationDetails(
-        android: AndroidNotificationDetails(
-          _channel.id,
-          _channel.name,
-          channelDescription: _channel.description,
-          importance: Importance.high,
-          priority: Priority.high,
-          // Matches android/app/src/main/res/values/colors.xml's
-          // notification_color, which tints the same icon for the
-          // background/terminated case (set via the manifest's
-          // default_notification_color meta-data).
-          color: AppColors.primary,
-        ),
-        iOS: const DarwinNotificationDetails(),
-      ),
-      payload: jsonEncode(message.data),
-    );
   }
 
   static String? _lastKnownUserId;

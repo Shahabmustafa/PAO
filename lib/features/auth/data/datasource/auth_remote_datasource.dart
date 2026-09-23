@@ -50,8 +50,26 @@ class AuthRemoteDataSource {
   /// `delete_user` RPC (see supabase/delete_account_function.sql), which
   /// cascades to remove all of their data, then clears the local session.
   Future<void> deleteAccount() async {
+    await _removeChatMedia();
     await _client.rpc('delete_user');
     await _client.auth.signOut();
+  }
+
+  /// Deletes the photos / videos / voice notes this user sent. The cascade
+  /// in `delete_user` removes their message rows but not storage files.
+  /// Best-effort: a failure here must not block deleting the account.
+  Future<void> _removeChatMedia() async {
+    final userId = currentUser?.id;
+    if (userId == null) return;
+    try {
+      final bucket = _client.storage.from('chat_media');
+      final files = await bucket.list(
+        path: userId,
+        searchOptions: const SearchOptions(limit: 1000),
+      );
+      if (files.isEmpty) return;
+      await bucket.remove([for (final f in files) '$userId/${f.name}']);
+    } catch (_) {}
   }
 
   Future<void> resetPassword(String email) {

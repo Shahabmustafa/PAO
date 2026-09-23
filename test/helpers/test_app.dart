@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pao/core/theme/app_theme.dart';
+import 'package:pao/core/tour/app_tour.dart';
 import 'package:pao/features/settings/domain/app_language.dart';
 import 'package:pao/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -15,6 +16,7 @@ bool _supabaseReady = false;
 /// The client is signed out and nothing here touches the network.
 Future<void> initFakeSupabase() async {
   TestWidgetsFlutterBinding.ensureInitialized();
+  AppTour.autoStart = false;
   SharedPreferences.setMockInitialValues({});
   if (_supabaseReady) return;
   await Supabase.initialize(

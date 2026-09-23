@@ -1,4 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:video_player/video_player.dart';
 import 'package:intl/intl.dart' show DateFormat;
 import 'package:provider/provider.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -13,6 +16,9 @@ import '../../../feedback/presentation/widgets/feedback_dialog.dart';
 import '../../../requests/data/model/request_model.dart';
 import '../../data/model/message_model.dart';
 import '../provider/chat_provider.dart';
+import '../widgets/chat_composer_widgets.dart';
+import '../widgets/chat_media_widgets.dart';
+import '../widgets/voice_recorder.dart';
 import '../../../../core/l10n/l10n.dart';
 
 class ChatScreen extends StatelessWidget {
@@ -86,11 +92,121 @@ class _ChatView extends StatefulWidget {
 class _ChatViewState extends State<_ChatView> {
   final _messageController = TextEditingController();
   MessageModel? _editingMessage;
+  MessageModel? _replyingTo;
+
+  static const _reactionEmojis = ['👍', '👎', '❤️', '😂', '😮', '😢'];
+
+  final _voice = VoiceRecorderController();
+  final _picker = ImagePicker();
+  static const _maxMediaBytes = 50 * 1024 * 1024;
 
   @override
   void dispose() {
     _messageController.dispose();
+    _voice.dispose();
     super.dispose();
+  }
+
+  Future<void> _attach(BuildContext context) async {
+    final choice = await showAttachmentSheet(context);
+    if (choice == null || !context.mounted) return;
+    final provider = context.read<ChatProvider>();
+    try {
+      final files = <XFile>[];
+      var type = MessageMediaType.image;
+      switch (choice) {
+        case AttachmentChoice.photoCamera:
+          final file = await _picker.pickImage(
+            source: ImageSource.camera,
+            imageQuality: 80,
+            maxWidth: 1920,
+          );
+          if (file != null) files.add(file);
+        case AttachmentChoice.photoGallery:
+          files.addAll(
+            await _picker.pickMultiImage(
+              imageQuality: 80,
+              maxWidth: 1920,
+              limit: 10,
+            ),
+          );
+        case AttachmentChoice.videoCamera:
+          type = MessageMediaType.video;
+          final file = await _picker.pickVideo(
+            source: ImageSource.camera,
+            maxDuration: const Duration(minutes: 3),
+          );
+          if (file != null) files.add(file);
+        case AttachmentChoice.videoGallery:
+          type = MessageMediaType.video;
+          final file = await _picker.pickVideo(source: ImageSource.gallery);
+          if (file != null) files.add(file);
+      }
+      for (final xfile in files) {
+        if (!context.mounted) return;
+        final file = File(xfile.path);
+        final durationMs = type == MessageMediaType.video
+            ? await _videoDurationMs(file)
+            : null;
+        if (!context.mounted) return;
+        await _sendMedia(context, provider, file, type, durationMs: durationMs);
+      }
+    } catch (_) {
+      // Camera / gallery permission denied or the picker failed.
+      if (!context.mounted) return;
+      AppSnackbar.show(
+        context,
+        context.l10n.failedToSendMessage,
+        icon: Icons.error_outline,
+        color: AppColors.error,
+      );
+    }
+  }
+
+  Future<int?> _videoDurationMs(File file) async {
+    final controller = VideoPlayerController.file(file);
+    try {
+      await controller.initialize();
+      return controller.value.duration.inMilliseconds;
+    } catch (_) {
+      return null;
+    } finally {
+      await controller.dispose();
+    }
+  }
+
+  Future<void> _sendMedia(
+    BuildContext context,
+    ChatProvider provider,
+    File file,
+    MessageMediaType type, {
+    int? durationMs,
+  }) async {
+    if (await file.length() > _maxMediaBytes) {
+      if (!context.mounted) return;
+      AppSnackbar.show(
+        context,
+        context.l10n.mediaTooLarge,
+        icon: Icons.error_outline,
+        color: AppColors.error,
+      );
+      return;
+    }
+    final sent = await provider.sendMedia(file, type, durationMs: durationMs);
+    if (type == MessageMediaType.audio) {
+      // Voice notes are temp files -- nothing else needs them once sent.
+      try {
+        await file.delete();
+      } catch (_) {}
+    }
+    if (!sent && context.mounted) {
+      AppSnackbar.show(
+        context,
+        provider.errorMessage ?? context.l10n.failedToSendMessage,
+        icon: Icons.error_outline,
+        color: AppColors.error,
+      );
+    }
   }
 
   String _formatTime(DateTime dateTime) {
@@ -124,12 +240,42 @@ class _ChatViewState extends State<_ChatView> {
 
   void _startEditing(MessageModel message) {
     setState(() {
+      _replyingTo = null;
       _editingMessage = message;
       _messageController.text = message.body;
       _messageController.selection = TextSelection.collapsed(
         offset: _messageController.text.length,
       );
     });
+  }
+
+  void _startReplying(MessageModel message) {
+    setState(() {
+      _editingMessage = null;
+      _replyingTo = message;
+    });
+  }
+
+  Future<void> _react(
+    BuildContext context,
+    MessageModel message,
+    String emoji,
+  ) async {
+    final ok = await context.read<ChatProvider>().react(message, emoji);
+    if (ok || !context.mounted) return;
+    AppSnackbar.show(
+      context,
+      context.l10n.failedToUpdate,
+      icon: Icons.error_outline,
+      color: AppColors.error,
+    );
+  }
+
+  String _senderLabel(BuildContext context, MessageModel message) {
+    final provider = context.read<ChatProvider>();
+    return message.senderId == provider.currentUserId
+        ? context.l10n.you
+        : (provider.otherProfile?.fullName ?? '');
   }
 
   void _cancelEditing() {
@@ -158,37 +304,82 @@ class _ChatViewState extends State<_ChatView> {
       }
     } else {
       _messageController.clear();
-      await provider.sendMessage(text);
+      final replyTo = _replyingTo;
+      setState(() => _replyingTo = null);
+      await provider.sendMessage(text, replyToId: replyTo?.id);
     }
   }
 
   Future<void> _showMessageActions(
     BuildContext context,
-    MessageModel message,
-  ) async {
+    MessageModel message, {
+    required bool isMine,
+  }) async {
     final action = await showModalBottomSheet<VoidCallback>(
       context: context,
       builder: (sheetContext) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ListTile(
-              leading: AppIcon(AppIcons.edit, color: AppColors.primary),
-              title: Text(sheetContext.l10n.edit),
-              onTap: () =>
-                  Navigator.pop(sheetContext, () => _startEditing(message)),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  for (final emoji in _reactionEmojis)
+                    InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: () => Navigator.pop(
+                        sheetContext,
+                        () => _react(context, message, emoji),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Text(
+                          emoji,
+                          style: const TextStyle(fontSize: 26),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
+            ListTile(
+              leading: Icon(Icons.reply, color: AppColors.primary),
+              title: Text(sheetContext.l10n.reply),
+              onTap: () =>
+                  Navigator.pop(sheetContext, () => _startReplying(message)),
+            ),
+            if (isMine && !message.hasMedia)
+              ListTile(
+                leading: AppIcon(AppIcons.edit, color: AppColors.primary),
+                title: Text(sheetContext.l10n.edit),
+                onTap: () =>
+                    Navigator.pop(sheetContext, () => _startEditing(message)),
+              ),
             ListTile(
               leading: const AppIcon(AppIcons.delete, color: AppColors.error),
               title: Text(
-                sheetContext.l10n.delete,
+                sheetContext.l10n.deleteForMe,
                 style: const TextStyle(color: AppColors.error),
               ),
               onTap: () => Navigator.pop(
                 sheetContext,
-                () => _onDeleteMessagePressed(context, message),
+                () => _onDeleteForMePressed(context, message),
               ),
             ),
+            if (isMine)
+              ListTile(
+                leading: const AppIcon(AppIcons.delete, color: AppColors.error),
+                title: Text(
+                  sheetContext.l10n.deleteForEveryone,
+                  style: const TextStyle(color: AppColors.error),
+                ),
+                onTap: () => Navigator.pop(
+                  sheetContext,
+                  () => _onDeleteMessagePressed(context, message),
+                ),
+              ),
           ],
         ),
       ),
@@ -222,6 +413,33 @@ class _ChatViewState extends State<_ChatView> {
         color: AppColors.error,
       );
     }
+  }
+
+  Future<void> _onDeleteForMePressed(
+    BuildContext context,
+    MessageModel message,
+  ) async {
+    final confirmed = await AppDialog.confirm(
+      context,
+      title: context.l10n.deleteForMe,
+      message: context.l10n.deleteForMeConfirm,
+      confirmText: context.l10n.delete,
+      cancelText: context.l10n.cancel,
+      isDestructive: true,
+      icon: AppIcons.delete,
+    );
+    if (!confirmed || !context.mounted) return;
+
+    final deleted = await context.read<ChatProvider>().deleteMessageForMe(
+      message,
+    );
+    if (deleted || !context.mounted) return;
+    AppSnackbar.show(
+      context,
+      context.l10n.failedToDeleteMessage,
+      icon: Icons.error_outline,
+      color: AppColors.error,
+    );
   }
 
   Future<void> _onDeleteMessagePressed(
@@ -455,15 +673,86 @@ class _ChatViewState extends State<_ChatView> {
                               showTail: startsGroup,
                               topSpacing: startsGroup && !startsNewDay ? 8 : 2,
                               time: _formatTime(message.createdAt),
-                              onLongPress: isMine
-                                  ? () => _showMessageActions(context, message)
-                                  : null,
+                              currentUserId: currentUserId,
+                              replyTo: message.replyToId == null
+                                  ? null
+                                  : (provider.messageById(message.replyToId)),
+                              replySenderName: message.replyToId == null
+                                  ? null
+                                  : (provider.messageById(message.replyToId) ==
+                                            null
+                                        ? null
+                                        : _senderLabel(
+                                            context,
+                                            provider.messageById(
+                                              message.replyToId,
+                                            )!,
+                                          )),
+                              onLongPress: () => _showMessageActions(
+                                context,
+                                message,
+                                isMine: isMine,
+                              ),
                             ),
                           ],
                         );
                       },
                     ),
             ),
+            if (_replyingTo != null)
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.fromLTRB(8, 0, 8, 0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: colors.composer,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(12),
+                  ),
+                  border: BorderDirectional(
+                    start: BorderSide(color: AppColors.primary, width: 4),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.reply, size: 18, color: colors.meta),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            _senderLabel(context, _replyingTo!),
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: colors.text,
+                            ),
+                          ),
+                          Text(
+                            messagePreview(context, _replyingTo!),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 12, color: colors.meta),
+                          ),
+                        ],
+                      ),
+                    ),
+                    InkWell(
+                      onTap: () => setState(() => _replyingTo = null),
+                      child: AppIcon(
+                        AppIcons.close,
+                        size: 18,
+                        color: colors.meta,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             if (_editingMessage != null)
               Container(
                 width: double.infinity,
@@ -518,66 +807,125 @@ class _ChatViewState extends State<_ChatView> {
                   ],
                 ),
               ),
+            if (provider.isUploadingMedia)
+              const LinearProgressIndicator(minHeight: 2),
             Padding(
               padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: colors.composer,
-                        borderRadius: _editingMessage != null
-                            ? const BorderRadius.vertical(
-                                bottom: Radius.circular(24),
-                              )
-                            : BorderRadius.circular(24),
-                      ),
-                      child: TextField(
-                        controller: _messageController,
-                        textCapitalization: TextCapitalization.sentences,
-                        minLines: 1,
-                        maxLines: 5,
-                        textInputAction: TextInputAction.send,
-                        style: TextStyle(fontSize: 15, color: colors.text),
-                        decoration: InputDecoration(
-                          hintText: context.l10n.typeMessageHint,
-                          hintStyle: TextStyle(color: colors.meta),
-                          filled: false,
-                          border: InputBorder.none,
-                          enabledBorder: InputBorder.none,
-                          focusedBorder: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 18,
-                            vertical: 12,
-                          ),
-                        ),
-                        onSubmitted: (_) => _submit(context),
-                      ),
+                    child: ListenableBuilder(
+                      listenable: _voice,
+                      builder: (context, _) => _voice.isRecording
+                          ? RecordingBar(
+                              controller: _voice,
+                              background: colors.composer,
+                              textColor: colors.text,
+                              hintColor: colors.meta,
+                            )
+                          : Container(
+                              decoration: BoxDecoration(
+                                color: colors.composer,
+                                borderRadius:
+                                    (_editingMessage != null ||
+                                        _replyingTo != null)
+                                    ? const BorderRadius.vertical(
+                                        bottom: Radius.circular(24),
+                                      )
+                                    : BorderRadius.circular(24),
+                              ),
+                              child: TextField(
+                                controller: _messageController,
+                                textCapitalization:
+                                    TextCapitalization.sentences,
+                                minLines: 1,
+                                maxLines: 5,
+                                // Enter adds a new line (like WhatsApp); the send
+                                // button submits.
+                                keyboardType: TextInputType.multiline,
+                                textInputAction: TextInputAction.newline,
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  color: colors.text,
+                                ),
+                                decoration: InputDecoration(
+                                  suffixIcon: _editingMessage == null
+                                      ? IconButton(
+                                          tooltip: context.l10n.attach,
+                                          icon: Icon(
+                                            Icons.attach_file,
+                                            color: colors.meta,
+                                          ),
+                                          onPressed: () => _attach(context),
+                                        )
+                                      : null,
+                                  hintText: context.l10n.typeMessageHint,
+                                  hintStyle: TextStyle(color: colors.meta),
+                                  filled: false,
+                                  border: InputBorder.none,
+                                  enabledBorder: InputBorder.none,
+                                  focusedBorder: InputBorder.none,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 18,
+                                    vertical: 12,
+                                  ),
+                                ),
+                              ),
+                            ),
                     ),
                   ),
                   const SizedBox(width: 6),
-                  Material(
-                    color: AppColors.primary,
-                    shape: const CircleBorder(),
-                    child: InkWell(
-                      customBorder: const CircleBorder(),
-                      onTap: () => _submit(context),
-                      child: SizedBox(
-                        width: 48,
-                        height: 48,
-                        child: Center(
-                          child: AppIcon(
-                            _editingMessage != null
-                                ? AppIcons.check
-                                : AppIcons.send,
-                            size: 22,
-                            mirrorInRtl: _editingMessage == null,
-                            color: AppColors.onPrimary,
+                  ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: _messageController,
+                    builder: (context, value, _) {
+                      if (value.text.trim().isEmpty &&
+                          _editingMessage == null) {
+                        return VoiceMicButton(
+                          controller: _voice,
+                          onRecorded: (recording) => _sendMedia(
+                            context,
+                            context.read<ChatProvider>(),
+                            recording.file,
+                            MessageMediaType.audio,
+                            durationMs: recording.duration.inMilliseconds,
+                          ),
+                          onPermissionDenied: () => AppSnackbar.show(
+                            context,
+                            context.l10n.microphonePermissionDenied,
+                            icon: Icons.mic_off,
+                            color: AppColors.error,
+                          ),
+                          onTooShort: () => AppSnackbar.show(
+                            context,
+                            context.l10n.holdToRecordVoice,
+                            icon: Icons.mic,
+                          ),
+                        );
+                      }
+                      return Material(
+                        color: AppColors.primary,
+                        shape: const CircleBorder(),
+                        child: InkWell(
+                          customBorder: const CircleBorder(),
+                          onTap: () => _submit(context),
+                          child: SizedBox(
+                            width: 48,
+                            height: 48,
+                            child: Center(
+                              child: AppIcon(
+                                _editingMessage != null
+                                    ? AppIcons.check
+                                    : AppIcons.send,
+                                size: 22,
+                                mirrorInRtl: _editingMessage == null,
+                                color: AppColors.onPrimary,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                    ),
+                      );
+                    },
                   ),
                 ],
               ),
@@ -658,6 +1006,9 @@ class _MessageBubble extends StatelessWidget {
   final double topSpacing;
   final String time;
   final VoidCallback? onLongPress;
+  final String? currentUserId;
+  final MessageModel? replyTo;
+  final String? replySenderName;
 
   const _MessageBubble({
     required this.message,
@@ -666,6 +1017,9 @@ class _MessageBubble extends StatelessWidget {
     required this.topSpacing,
     required this.time,
     this.onLongPress,
+    this.currentUserId,
+    this.replyTo,
+    this.replySenderName,
   });
 
   static const _tailWidth = 8.0;
@@ -702,6 +1056,28 @@ class _MessageBubble extends StatelessWidget {
       ],
     );
 
+    // Photos and videos fill the bubble edge to edge, with the time and
+    // ticks laid over the picture (WhatsApp style).
+    final isVisualMedia =
+        message.hasMedia && message.mediaType != MessageMediaType.audio;
+    final overlayMeta = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          '$editedText$time',
+          style: const TextStyle(fontSize: 11, color: Colors.white),
+        ),
+        if (isMine) ...[
+          const SizedBox(width: 3),
+          AppIcon(
+            isRead ? AppIcons.checkAll : AppIcons.check,
+            size: 15,
+            color: isRead ? const Color(0xFF53BDEB) : Colors.white,
+          ),
+        ],
+      ],
+    );
+
     return Padding(
       padding: EdgeInsetsDirectional.only(
         top: topSpacing,
@@ -724,7 +1100,9 @@ class _MessageBubble extends StatelessWidget {
               clipBehavior: Clip.none,
               children: [
                 Container(
-                  padding: const EdgeInsets.fromLTRB(9, 6, 9, 6),
+                  padding: isVisualMedia
+                      ? const EdgeInsets.all(3)
+                      : const EdgeInsets.fromLTRB(9, 6, 9, 6),
                   decoration: BoxDecoration(
                     color: bubbleColor,
                     borderRadius: BorderRadiusDirectional.only(
@@ -741,29 +1119,77 @@ class _MessageBubble extends StatelessWidget {
                       ),
                     ],
                   ),
-                  child: Stack(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text.rich(
-                        TextSpan(
-                          text: message.body,
-                          style: TextStyle(
-                            fontSize: 15,
-                            height: 1.3,
-                            color: isMine ? colors.outgoingText : colors.text,
-                          ),
+                      if (message.replyToId != null)
+                        _ReplyQuote(
+                          senderName: replySenderName,
+                          body: replyTo == null
+                              ? null
+                              : messagePreview(context, replyTo!),
+                          isMine: isMine,
+                        ),
+                      if (message.hasMedia)
+                        ChatMediaContent(
+                          message: message,
+                          foreground: isMine
+                              ? colors.outgoingText
+                              : colors.text,
+                          accent: isMine
+                              ? colors.outgoingText
+                              : AppColors.primary,
+                          meta: meta,
+                          overlayMeta: overlayMeta,
+                        )
+                      else
+                        Stack(
                           children: [
-                            TextSpan(
-                              text: '   $editedText$time',
-                              style: metaStyle.copyWith(
-                                color: Colors.transparent,
+                            Text.rich(
+                              TextSpan(
+                                text: message.body,
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  height: 1.3,
+                                  color: isMine
+                                      ? colors.outgoingText
+                                      : colors.text,
+                                ),
+                                children: [
+                                  TextSpan(
+                                    text: '   $editedText$time',
+                                    style: metaStyle.copyWith(
+                                      color: Colors.transparent,
+                                    ),
+                                  ),
+                                  if (isMine)
+                                    const WidgetSpan(
+                                      child: SizedBox(width: 18),
+                                    ),
+                                ],
                               ),
                             ),
-                            if (isMine)
-                              const WidgetSpan(child: SizedBox(width: 18)),
+                            PositionedDirectional(
+                              end: 0,
+                              bottom: 0,
+                              child: meta,
+                            ),
                           ],
                         ),
-                      ),
-                      PositionedDirectional(end: 0, bottom: 0, child: meta),
+                      if (message.reactions.isNotEmpty)
+                        Padding(
+                          padding: EdgeInsets.only(
+                            top: 4,
+                            left: isVisualMedia ? 6 : 0,
+                            right: isVisualMedia ? 6 : 0,
+                            bottom: isVisualMedia ? 3 : 0,
+                          ),
+                          child: _ReactionChips(
+                            reactions: message.reactions,
+                            currentUserId: currentUserId,
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -785,6 +1211,104 @@ class _MessageBubble extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// The quoted message shown at the top of a reply bubble.
+class _ReplyQuote extends StatelessWidget {
+  final String? senderName;
+  final String? body;
+  final bool isMine;
+
+  const _ReplyQuote({
+    required this.senderName,
+    required this.body,
+    required this.isMine,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = _ChatColors.of(context);
+    final textColor = isMine ? colors.outgoingText : colors.text;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 4),
+      padding: const EdgeInsetsDirectional.fromSTEB(8, 4, 8, 4),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(6),
+        border: BorderDirectional(
+          start: BorderSide(
+            color: isMine ? AppColors.primaryDark : AppColors.primary,
+            width: 3,
+          ),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (senderName != null)
+            Text(
+              senderName!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: textColor,
+              ),
+            ),
+          Text(
+            body ?? context.l10n.originalMessageUnavailable,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 13,
+              fontStyle: body == null ? FontStyle.italic : FontStyle.normal,
+              color: textColor.withValues(alpha: 0.8),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Emoji reactions under a bubble, grouped with a count when more than one
+/// participant used the same emoji.
+class _ReactionChips extends StatelessWidget {
+  final Map<String, String> reactions;
+  final String? currentUserId;
+
+  const _ReactionChips({required this.reactions, required this.currentUserId});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = _ChatColors.of(context);
+    final counts = <String, int>{};
+    for (final emoji in reactions.values) {
+      counts[emoji] = (counts[emoji] ?? 0) + 1;
+    }
+    return Wrap(
+      spacing: 4,
+      children: [
+        for (final e in counts.entries)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: colors.chip,
+              borderRadius: BorderRadius.circular(12),
+              border: reactions[currentUserId] == e.key
+                  ? Border.all(color: AppColors.primary, width: 1.5)
+                  : null,
+            ),
+            child: Text(
+              e.value > 1 ? '${e.key} ${e.value}' : e.key,
+              style: TextStyle(fontSize: 13, color: colors.text),
+            ),
+          ),
+      ],
     );
   }
 }

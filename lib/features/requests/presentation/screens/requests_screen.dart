@@ -1,3 +1,4 @@
+import '../../../../core/tour/app_tour.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -49,6 +50,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
               child: Container(
+                key: TourKeys.requestsTabs,
                 height: 44,
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(

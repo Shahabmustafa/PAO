@@ -1,3 +1,4 @@
+import '../../../../core/tour/app_tour.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:provider/provider.dart';
@@ -188,6 +189,7 @@ class _HomeViewState extends State<_HomeView> {
                     children: [
                       Expanded(
                         child: Container(
+                          key: TourKeys.homeSearch,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(28),
                             boxShadow: [
@@ -266,6 +268,7 @@ class _HomeViewState extends State<_HomeView> {
                       ),
                       const SizedBox(width: 10),
                       _FilterButton(
+                        key: TourKeys.homeFilter,
                         activeCount: activeFilterCount,
                         onTap: _onFilterTapped,
                       ),
@@ -479,7 +482,11 @@ class _FilterButton extends StatelessWidget {
   final int activeCount;
   final VoidCallback onTap;
 
-  const _FilterButton({required this.activeCount, required this.onTap});
+  const _FilterButton({
+    super.key,
+    required this.activeCount,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
