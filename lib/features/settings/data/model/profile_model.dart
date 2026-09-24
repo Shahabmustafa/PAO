@@ -30,4 +30,14 @@ class ProfileModel {
           : null,
     );
   }
+
+  /// Only what is safe and useful to keep on the device for fast rendering
+  /// -- deliberately without e-mail or phone.
+  Map<String, dynamic> toCacheJson() => {
+    'id': id,
+    'full_name': fullName,
+    'bio': bio,
+    'avatar_url': avatarUrl,
+    'last_seen_at': lastSeenAt?.toUtc().toIso8601String(),
+  };
 }

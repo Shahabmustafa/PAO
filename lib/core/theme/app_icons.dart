@@ -5,6 +5,12 @@ class AppIcons {
 
   static const String _base = 'assets/icons';
 
+  static const String chat = '$_base/chat.svg';
+  static const String donateOutline = '$_base/donate_outline.svg';
+  static const String donateFilled = '$_base/donate_filled.svg';
+  static const String medalGold = '$_base/medal_gold.svg';
+  static const String medalSilver = '$_base/medal_silver.svg';
+  static const String medalBronze = '$_base/medal_bronze.svg';
   static const String wallet = '$_base/wallet.svg';
   static const String add = '$_base/add.svg';
   static const String addCircleOutline = '$_base/add_circle_outline.svg';

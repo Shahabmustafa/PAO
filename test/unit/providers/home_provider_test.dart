@@ -30,6 +30,7 @@ void main() {
   setUp(() {
     auth = FakeAuthRepository(user: const UserModel(id: 'me'));
     posts = FakePostRepository();
+    ProductStore.items.value = []; // nothing cached from an earlier test
   });
 
   tearDown(() => provider.dispose());
@@ -55,19 +56,22 @@ void main() {
   List<String> names() => provider.products.map((p) => p.name).toList();
 
   group('first page', () {
-    test('loads only 8 products and knows more are available', () async {
-      seed(20);
+    test(
+      'loads only one page of products and knows more are available',
+      () async {
+        seed(50);
 
-      await create();
+        await create();
 
-      expect(provider.products, hasLength(8));
-      expect(names().first, 'Item 1');
-      expect(names().last, 'Item 8');
-      expect(provider.isLoading, isFalse);
-      expect(provider.hasMore, isTrue);
-      expect(posts.pageCalls.single.offset, 0);
-      expect(posts.pageCalls.single.limit, 8);
-    });
+        expect(provider.products, hasLength(20));
+        expect(names().first, 'Item 1');
+        expect(names().last, 'Item 20');
+        expect(provider.isLoading, isFalse);
+        expect(provider.hasMore, isTrue);
+        expect(posts.pageCalls.single.afterId, isNull);
+        expect(posts.pageCalls.single.limit, 20);
+      },
+    );
 
     test('is loading until the server answers', () async {
       seed(3);
@@ -129,25 +133,26 @@ void main() {
   });
 
   group('loadMore', () {
-    test('appends the next page of 8', () async {
-      seed(20);
+    test('appends the next page, using the last row as the cursor', () async {
+      seed(50);
       await create();
 
       await provider.loadMore();
 
-      expect(provider.products, hasLength(16));
-      expect(names()[8], 'Item 9');
-      expect(posts.pageCalls.last.offset, 8);
+      expect(provider.products, hasLength(40));
+      expect(names()[20], 'Item 21');
+      expect(posts.pageCalls.last.afterId, 'p20');
       expect(provider.hasMore, isTrue);
 
       await provider.loadMore();
 
-      expect(provider.products, hasLength(20));
-      expect(provider.hasMore, isFalse, reason: 'last page had only 4');
+      expect(provider.products, hasLength(50));
+      expect(posts.pageCalls.last.afterId, 'p40');
+      expect(provider.hasMore, isFalse, reason: 'last page had only 10');
     });
 
     test('shows the loading state while a page is in flight', () async {
-      seed(20);
+      seed(50);
       await create();
       posts.pageGate = Completer<void>();
 
@@ -158,11 +163,11 @@ void main() {
       posts.pageGate!.complete();
       await pending;
       expect(provider.isLoadingMore, isFalse);
-      expect(provider.products, hasLength(16));
+      expect(provider.products, hasLength(40));
     });
 
     test('ignores calls while a page is already loading', () async {
-      seed(20);
+      seed(50);
       await create();
       posts.pageGate = Completer<void>();
 
@@ -173,25 +178,25 @@ void main() {
       await first;
 
       expect(posts.pageCalls, hasLength(2), reason: 'initial + one page');
-      expect(provider.products, hasLength(16));
+      expect(provider.products, hasLength(40));
     });
 
-    test('does not duplicate a product that moved between pages', () async {
-      seed(20);
+    test('a post added above does not shift or repeat later pages', () async {
+      seed(50);
       await create();
-      // A new post arrives, pushing "Item 8" onto the second page.
+      // Offset paging would now repeat "Item 20" on the second page.
       posts.available = [makePost(id: 'new', title: 'New'), ...posts.available];
 
       await provider.loadMore();
 
       final ids = provider.products.map((p) => p.id).toList();
       expect(ids.toSet(), hasLength(ids.length));
-      expect(ids.where((id) => id == 'p8'), hasLength(1));
-      expect(ids, hasLength(15), reason: 'the repeated product is skipped');
+      expect(ids, hasLength(40));
+      expect(names()[20], 'Item 21');
     });
 
     test('a failure keeps the products and can be retried', () async {
-      seed(20);
+      seed(50);
       await create();
       posts.pageError = Exception('offline');
 
@@ -199,13 +204,13 @@ void main() {
 
       expect(provider.loadMoreFailed, isTrue);
       expect(provider.isLoadingMore, isFalse);
-      expect(provider.products, hasLength(8));
+      expect(provider.products, hasLength(20));
 
       posts.pageError = null;
       await provider.loadMore();
 
       expect(provider.loadMoreFailed, isFalse);
-      expect(provider.products, hasLength(16));
+      expect(provider.products, hasLength(40));
     });
   });
 
@@ -249,7 +254,7 @@ void main() {
       await pumpEventQueue();
 
       expect(posts.pageCalls.last.search, 'head');
-      expect(posts.pageCalls.last.offset, 0);
+      expect(posts.pageCalls.last.afterId, isNull);
       expect(names(), ['Wireless Headphones']);
     });
 
@@ -323,16 +328,16 @@ void main() {
     });
 
     test('changing the query starts again from the first page', () async {
-      seed(20);
+      seed(50);
       await create();
       await provider.loadMore();
-      expect(provider.products, hasLength(16));
+      expect(provider.products, hasLength(40));
 
       provider.applyFilters(const FilterOptions(category: 'Electronics'));
       await pumpEventQueue();
 
-      expect(posts.pageCalls.last.offset, 0);
-      expect(provider.products, hasLength(8));
+      expect(posts.pageCalls.last.afterId, isNull);
+      expect(provider.products, hasLength(20));
     });
 
     test('a slow answer for an old query is ignored', () async {
@@ -558,7 +563,7 @@ void main() {
     });
 
     test('paging stays aligned after live inserts and removals', () async {
-      seed(20);
+      seed(50);
       await create();
 
       // One new post on top, one loaded post removed: net zero.
@@ -567,7 +572,7 @@ void main() {
       await pumpEventQueue();
       await provider.loadMore();
 
-      expect(posts.pageCalls.last.offset, 8);
+      expect(posts.pageCalls.last.afterId, 'p20');
       final ids = provider.products.map((p) => p.id).toList();
       expect(ids.toSet(), hasLength(ids.length), reason: 'no duplicates');
     });

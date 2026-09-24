@@ -39,31 +39,39 @@ class PostRemoteDataSource {
     await _client.storage.from(_bucket).remove(paths);
   }
 
+  /// The columns [PostModel] reads -- listed so a query never pulls
+  /// anything the app doesn't use.
+  static const postColumns =
+      'id, user_id, title, description, category, address, condition, '
+      'image_urls, is_given, created_at';
+
   Future<void> markAsGiven(String postId) {
     return _client.from('posts').update({'is_given': true}).eq('id', postId);
   }
 
-  Future<List<Map<String, dynamic>>> fetchAvailablePosts() async {
-    final rows = await _client
-        .from('posts')
-        .select()
-        .eq('is_given', false)
-        .order('created_at', ascending: false);
-    return List<Map<String, dynamic>>.from(rows as List);
-  }
-
   /// One page of available posts, newest first, filtered on the server so a
-  /// page always holds up to [limit] matching rows. [offset] is the number of
-  /// matching rows to skip.
+  /// page always holds up to [limit] matching rows.
+  ///
+  /// Keyset pagination: pass the last row of the previous page as
+  /// [afterCreatedAt] / [afterId] to get the rows that follow it in
+  /// `created_at desc, id desc` order. Unlike OFFSET this stays fast on deep
+  /// pages, and new posts arriving meanwhile can't shift or repeat rows.
   Future<List<Map<String, dynamic>>> fetchAvailablePostsPage({
-    required int offset,
+    DateTime? afterCreatedAt,
+    String? afterId,
     required int limit,
     String? excludeUserId,
     String? category,
     String? condition,
     String? search,
   }) async {
-    var query = _client.from('posts').select().eq('is_given', false);
+    var query = _client.from('posts').select(postColumns).eq('is_given', false);
+    if (afterCreatedAt != null && afterId != null) {
+      final at = afterCreatedAt.toUtc().toIso8601String();
+      query = query.or(
+        'created_at.lt.$at,and(created_at.eq.$at,id.lt.$afterId)',
+      );
+    }
     if (excludeUserId != null) query = query.neq('user_id', excludeUserId);
     if (category == 'Other') {
       // The app shows a post without a category as "Other".
@@ -79,8 +87,8 @@ class PostRemoteDataSource {
         .order('created_at', ascending: false)
         // Tie-breaker so rows created at the same instant keep a stable order
         // between pages.
-        .order('id')
-        .range(offset, offset + limit - 1);
+        .order('id', ascending: false)
+        .limit(limit);
     return List<Map<String, dynamic>>.from(rows as List);
   }
 
@@ -95,7 +103,7 @@ class PostRemoteDataSource {
   Future<List<Map<String, dynamic>>> fetchPostsByUser(String userId) async {
     final rows = await _client
         .from('posts')
-        .select()
+        .select(postColumns)
         .eq('user_id', userId)
         .order('created_at', ascending: false);
     return List<Map<String, dynamic>>.from(rows as List);
@@ -120,7 +128,34 @@ class PostRemoteDataSource {
   }
 
   Future<Map<String, dynamic>?> fetchPostById(String postId) {
-    return _client.from('posts').select().eq('id', postId).maybeSingle();
+    return _client
+        .from('posts')
+        .select(postColumns)
+        .eq('id', postId)
+        .maybeSingle();
+  }
+
+  /// Several posts by id in one round trip (wishlist / request lookups).
+  Future<List<Map<String, dynamic>>> fetchPostsByIds(List<String> ids) async {
+    if (ids.isEmpty) return const [];
+    final rows = await _client
+        .from('posts')
+        .select(postColumns)
+        .inFilter('id', ids);
+    return List<Map<String, dynamic>>.from(rows as List);
+  }
+
+  /// `user_id` of every given-away post (one entry per donation), used to
+  /// rank donors.
+  Future<List<String>> fetchGivenPostOwners() async {
+    final rows = await _client
+        .from('posts')
+        .select('user_id')
+        .eq('is_given', true);
+    return [
+      for (final r in rows as List)
+        if (r['user_id'] != null) r['user_id'] as String,
+    ];
   }
 
   Future<int> fetchDonatedCount(String userId) async {
@@ -152,7 +187,7 @@ class PostRemoteDataSource {
           'address': address,
           'image_urls': imageUrls,
         })
-        .select()
+        .select(postColumns)
         .single();
   }
 
@@ -178,7 +213,7 @@ class PostRemoteDataSource {
           'image_urls': imageUrls,
         })
         .eq('id', postId)
-        .select()
+        .select(postColumns)
         .single();
   }
 

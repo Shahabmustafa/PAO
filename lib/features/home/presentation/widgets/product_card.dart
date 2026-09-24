@@ -65,6 +65,13 @@ class ProductCard extends StatelessWidget {
                         : product.imageUrl != null
                         ? AppNetworkImage(
                             imageUrl: product.imageUrl!,
+                            // A card is about half the screen wide.
+                            memCacheWidth:
+                                AppNetworkImage.pixelWidth(
+                                  context,
+                                  MediaQuery.sizeOf(context).width,
+                                ) ~/
+                                2,
                             errorBuilder: (context) =>
                                 _ProductInitial(product: product),
                           )

@@ -149,7 +149,7 @@ void main() {
     });
 
     test('stops the loading state on failure and rethrows', () async {
-      repo.fetchError = Exception('offline');
+      repo.pageError = Exception('offline');
 
       await expectLater(
         ProductStore.syncFromSupabase(repository: repo),

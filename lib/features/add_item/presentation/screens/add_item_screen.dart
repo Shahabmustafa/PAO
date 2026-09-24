@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../../../core/media/media_compressor.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_icons.dart';
@@ -106,7 +107,9 @@ class _AddItemViewState extends State<_AddItemView> {
       maxHeight: 1600,
     );
     if (picked == null) return;
-    final bytes = await picked.readAsBytes();
+    final bytes = await MediaCompressor.compressImageBytes(
+      await picked.readAsBytes(),
+    );
     if (!mounted) return;
     setState(() => _images[index] = _Photo.picked(bytes));
   }
@@ -117,7 +120,9 @@ class _AddItemViewState extends State<_AddItemView> {
     if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
     final response = await _picker.retrieveLostData();
     if (response.isEmpty || response.file == null) return;
-    final bytes = await response.file!.readAsBytes();
+    final bytes = await MediaCompressor.compressImageBytes(
+      await response.file!.readAsBytes(),
+    );
     if (!mounted) return;
     final slot = _images.indexWhere((image) => image == null);
     setState(() => _images[slot == -1 ? 0 : slot] = _Photo.picked(bytes));

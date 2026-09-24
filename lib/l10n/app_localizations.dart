@@ -482,6 +482,90 @@ abstract class AppLocalizations {
   /// **'Wishlist'**
   String get navWishlist;
 
+  /// No description provided for @requestWantsItem.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} wants this item'**
+  String requestWantsItem(String name);
+
+  /// No description provided for @requestYouAsked.
+  ///
+  /// In en, this message translates to:
+  /// **'You asked for this item'**
+  String get requestYouAsked;
+
+  /// No description provided for @navChats.
+  ///
+  /// In en, this message translates to:
+  /// **'Chats'**
+  String get navChats;
+
+  /// No description provided for @noChatsYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No chats yet'**
+  String get noChatsYet;
+
+  /// No description provided for @emptyChatsMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap \"Give Me\" on a product to start a chat with its owner'**
+  String get emptyChatsMessage;
+
+  /// No description provided for @rejectRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Reject'**
+  String get rejectRequest;
+
+  /// No description provided for @rejectRequestTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reject this request?'**
+  String get rejectRequestTitle;
+
+  /// No description provided for @rejectRequestConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'\"{name}\" will not be given to this person.'**
+  String rejectRequestConfirm(String name);
+
+  /// No description provided for @requestRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Request rejected'**
+  String get requestRejected;
+
+  /// No description provided for @navDonors.
+  ///
+  /// In en, this message translates to:
+  /// **'Donors'**
+  String get navDonors;
+
+  /// No description provided for @donorsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Top Donors'**
+  String get donorsTitle;
+
+  /// No description provided for @donorsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No donations yet'**
+  String get donorsEmpty;
+
+  /// No description provided for @donorsEmptyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'People who give items away will show up here.'**
+  String get donorsEmptyHint;
+
+  /// No description provided for @donationCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 donation} other{{count} donations}}'**
+  String donationCount(int count);
+
   /// No description provided for @navRequests.
   ///
   /// In en, this message translates to:

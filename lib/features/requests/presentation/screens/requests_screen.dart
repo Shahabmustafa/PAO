@@ -1,4 +1,3 @@
-import '../../../../core/tour/app_tour.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -6,12 +5,11 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_icons.dart';
 import '../../../../core/widgets/app_avatar.dart';
 import '../../../../core/widgets/app_icon.dart';
-import '../../../../core/widgets/app_network_image.dart';
 import '../../../../core/widgets/app_shimmer.dart';
-import '../../../../core/widgets/app_snackbar.dart';
 import '../../../chat/data/chat_unread_store.dart';
+import '../../../chat/presentation/widgets/chat_media_widgets.dart'
+    show messagePreview;
 import '../../../chat/presentation/screens/chat_screen.dart';
-import '../../../feedback/presentation/widgets/feedback_dialog.dart';
 import '../../../home/data/product_store.dart';
 import '../../../home/domain/product.dart';
 import '../../data/model/request_model.dart';
@@ -37,133 +35,14 @@ class _RequestsScreenState extends State<RequestsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(
-            context.l10n.requests,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          bottom: PreferredSize(
-            preferredSize: const Size.fromHeight(60),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
-              child: Container(
-                key: TourKeys.requestsTabs,
-                height: 44,
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: context.appSurface,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: context.appBorder),
-                ),
-                child: TabBar(
-                  indicator: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(9),
-                  ),
-                  indicatorSize: TabBarIndicatorSize.tab,
-                  dividerColor: Colors.transparent,
-                  splashBorderRadius: BorderRadius.circular(9),
-                  labelColor: AppColors.onPrimary,
-                  unselectedLabelColor: context.appTextSecondary,
-                  labelStyle: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  unselectedLabelStyle: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  tabs: const [_SentTabLabel(), _ReceivedTabLabel()],
-                ),
-              ),
-            ),
-          ),
-        ),
-        body: const SafeArea(
-          child: TabBarView(
-            children: [_SentRequestsTab(), _ReceivedRequestsTab()],
-          ),
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          context.l10n.navChats,
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
-    );
-  }
-}
-
-/// "Sent" tab label with a badge counting unread messages across every
-/// conversation with an owner appearing in [RequestStore.sent] -- tells the
-/// user at a glance that new messages have arrived, and in which tab.
-class _SentTabLabel extends StatelessWidget {
-  const _SentTabLabel();
-
-  @override
-  Widget build(BuildContext context) {
-    return ValueListenableBuilder<List<RequestModel>>(
-      valueListenable: RequestStore.sent,
-      builder: (context, requests, _) {
-        return ValueListenableBuilder<Map<String, int>>(
-          valueListenable: ChatUnreadStore.unreadBySender,
-          builder: (context, unread, _) {
-            final otherUserIds = {for (final r in requests) r.ownerId};
-            final count = otherUserIds.fold<int>(
-              0,
-              (sum, id) => sum + (unread[id] ?? 0),
-            );
-            return _TabLabel(label: context.l10n.tabSent, count: count);
-          },
-        );
-      },
-    );
-  }
-}
-
-/// Same as [_SentTabLabel], for the requesters appearing in
-/// [RequestStore.received].
-class _ReceivedTabLabel extends StatelessWidget {
-  const _ReceivedTabLabel();
-
-  @override
-  Widget build(BuildContext context) {
-    return ValueListenableBuilder<List<RequestModel>>(
-      valueListenable: RequestStore.received,
-      builder: (context, requests, _) {
-        return ValueListenableBuilder<Map<String, int>>(
-          valueListenable: ChatUnreadStore.unreadBySender,
-          builder: (context, unread, _) {
-            final otherUserIds = {for (final r in requests) r.requesterId};
-            final count = otherUserIds.fold<int>(
-              0,
-              (sum, id) => sum + (unread[id] ?? 0),
-            );
-            return _TabLabel(label: context.l10n.tabReceived, count: count);
-          },
-        );
-      },
-    );
-  }
-}
-
-class _TabLabel extends StatelessWidget {
-  final String label;
-  final int count;
-
-  const _TabLabel({required this.label, required this.count});
-
-  @override
-  Widget build(BuildContext context) {
-    return Tab(
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Flexible(child: Text(label, overflow: TextOverflow.ellipsis)),
-          if (count > 0) ...[
-            const SizedBox(width: 6),
-            _UnreadBadge(count: count),
-          ],
-        ],
-      ),
+      body: const SafeArea(child: _ChatsList()),
     );
   }
 }
@@ -197,103 +76,27 @@ class _UnreadBadge extends StatelessWidget {
   }
 }
 
-class _SentRequestsTab extends StatefulWidget {
-  const _SentRequestsTab();
+/// Every conversation -- requests the user sent and received -- newest
+/// first. Accepting and giving happens inside each chat.
+class _ChatsList extends StatefulWidget {
+  const _ChatsList();
 
   @override
-  State<_SentRequestsTab> createState() => _SentRequestsTabState();
+  State<_ChatsList> createState() => _ChatsListState();
 }
 
-class _SentRequestsTabState extends State<_SentRequestsTab> {
+class _ChatsListState extends State<_ChatsList> {
   final _scrollController = ScrollController();
 
-  @override
-  void initState() {
-    super.initState();
-    _scrollController.addListener(_loadMoreIfNearEnd);
-  }
-
-  @override
-  void dispose() {
-    _scrollController.removeListener(_loadMoreIfNearEnd);
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  void _loadMoreIfNearEnd() {
-    if (!_scrollController.hasClients) return;
-    final position = _scrollController.position;
-    if (!position.hasContentDimensions) return;
-    if (position.extentAfter < _loadMoreThreshold) RequestStore.loadMoreSent();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ValueListenableBuilder<List<RequestModel>>(
-      valueListenable: RequestStore.sent,
-      builder: (context, requests, _) {
-        if (requests.isEmpty) {
-          return _EmptyState(message: context.l10n.emptySentMessage);
-        }
-        return ValueListenableBuilder<List<Product>>(
-          valueListenable: ProductStore.items,
-          builder: (context, products, _) {
-            return ValueListenableBuilder<bool>(
-              valueListenable: RequestStore.hasMoreSent,
-              builder: (context, hasMore, _) {
-                return ValueListenableBuilder<bool>(
-                  valueListenable: RequestStore.isLoadingMoreSent,
-                  builder: (context, isLoadingMore, _) {
-                    WidgetsBinding.instance.addPostFrameCallback(
-                      (_) => _loadMoreIfNearEnd(),
-                    );
-                    final itemCount = requests.length + (hasMore ? 1 : 0);
-                    return ListView.separated(
-                      controller: _scrollController,
-                      padding: const EdgeInsets.all(20),
-                      itemCount: itemCount,
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
-                      itemBuilder: (context, index) {
-                        if (index >= requests.length) {
-                          return _LoadMoreFooter(isLoading: isLoadingMore);
-                        }
-                        final request = requests[index];
-                        Product? product;
-                        for (final p in products) {
-                          if (p.id == request.postId) {
-                            product = p;
-                            break;
-                          }
-                        }
-                        return _RequestTile(
-                          request: request,
-                          productName: product?.name,
-                          productImageUrl: product?.imageUrl,
-                          otherUserId: request.ownerId,
-                          isSentTab: true,
-                        );
-                      },
-                    );
-                  },
-                );
-              },
-            );
-          },
-        );
-      },
-    );
-  }
-}
-
-class _ReceivedRequestsTab extends StatefulWidget {
-  const _ReceivedRequestsTab();
-
-  @override
-  State<_ReceivedRequestsTab> createState() => _ReceivedRequestsTabState();
-}
-
-class _ReceivedRequestsTabState extends State<_ReceivedRequestsTab> {
-  final _scrollController = ScrollController();
+  late final Listenable _sources = Listenable.merge([
+    RequestStore.sent,
+    RequestStore.received,
+    ProductStore.items,
+    RequestStore.hasMoreSent,
+    RequestStore.hasMoreReceived,
+    RequestStore.isLoadingMoreSent,
+    RequestStore.isLoadingMoreReceived,
+  ]);
 
   @override
   void initState() {
@@ -313,60 +116,63 @@ class _ReceivedRequestsTabState extends State<_ReceivedRequestsTab> {
     final position = _scrollController.position;
     if (!position.hasContentDimensions) return;
     if (position.extentAfter < _loadMoreThreshold) {
+      RequestStore.loadMoreSent();
       RequestStore.loadMoreReceived();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<List<RequestModel>>(
-      valueListenable: RequestStore.received,
-      builder: (context, requests, _) {
-        if (requests.isEmpty) {
-          return _EmptyState(message: context.l10n.emptyReceivedMessage);
+    return ListenableBuilder(
+      listenable: _sources,
+      builder: (context, _) {
+        final entries = [
+          for (final r in RequestStore.sent.value) (request: r, isSent: true),
+          for (final r in RequestStore.received.value)
+            (request: r, isSent: false),
+        ]..sort((a, b) => b.request.createdAt.compareTo(a.request.createdAt));
+        // One chat per person: their most recent request.
+        final seen = <String>{};
+        entries.retainWhere((e) {
+          final other = e.isSent ? e.request.ownerId : e.request.requesterId;
+          return seen.add(other);
+        });
+        if (entries.isEmpty) {
+          return _EmptyState(message: context.l10n.emptyChatsMessage);
         }
-        return ValueListenableBuilder<List<Product>>(
-          valueListenable: ProductStore.items,
-          builder: (context, products, _) {
-            return ValueListenableBuilder<bool>(
-              valueListenable: RequestStore.hasMoreReceived,
-              builder: (context, hasMore, _) {
-                return ValueListenableBuilder<bool>(
-                  valueListenable: RequestStore.isLoadingMoreReceived,
-                  builder: (context, isLoadingMore, _) {
-                    WidgetsBinding.instance.addPostFrameCallback(
-                      (_) => _loadMoreIfNearEnd(),
-                    );
-                    final itemCount = requests.length + (hasMore ? 1 : 0);
-                    return ListView.separated(
-                      controller: _scrollController,
-                      padding: const EdgeInsets.all(20),
-                      itemCount: itemCount,
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
-                      itemBuilder: (context, index) {
-                        if (index >= requests.length) {
-                          return _LoadMoreFooter(isLoading: isLoadingMore);
-                        }
-                        final request = requests[index];
-                        Product? product;
-                        for (final p in products) {
-                          if (p.id == request.postId) {
-                            product = p;
-                            break;
-                          }
-                        }
-                        return _RequestTile(
-                          request: request,
-                          productName: product?.name,
-                          productImageUrl: product?.imageUrl,
-                          otherUserId: request.requesterId,
-                          isSentTab: false,
-                        );
-                      },
-                    );
-                  },
-                );
-              },
+        final products = ProductStore.items.value;
+        final hasMore =
+            RequestStore.hasMoreSent.value ||
+            RequestStore.hasMoreReceived.value;
+        final isLoadingMore =
+            RequestStore.isLoadingMoreSent.value ||
+            RequestStore.isLoadingMoreReceived.value;
+        WidgetsBinding.instance.addPostFrameCallback(
+          (_) => _loadMoreIfNearEnd(),
+        );
+        return ListView.separated(
+          controller: _scrollController,
+          padding: const EdgeInsets.all(20),
+          itemCount: entries.length + (hasMore ? 1 : 0),
+          separatorBuilder: (_, __) => const SizedBox(height: 12),
+          itemBuilder: (context, index) {
+            if (index >= entries.length) {
+              return _LoadMoreFooter(isLoading: isLoadingMore);
+            }
+            final (:request, :isSent) = entries[index];
+            Product? product;
+            for (final p in products) {
+              if (p.id == request.postId) {
+                product = p;
+                break;
+              }
+            }
+            return _RequestTile(
+              request: request,
+              productName: product?.name,
+              productImageUrl: product?.imageUrl,
+              otherUserId: isSent ? request.ownerId : request.requesterId,
+              isSentTab: isSent,
             );
           },
         );
@@ -436,11 +242,14 @@ class _RequestTile extends StatelessWidget {
 class _RequestTileView extends StatelessWidget {
   const _RequestTileView();
 
-  void _openChat(BuildContext context, RequestTileProvider provider) {
+  Future<void> _openChat(
+    BuildContext context,
+    RequestTileProvider provider,
+  ) async {
     // Clear the badge right away -- ChatScreen also marks the messages read
     // server-side once it loads.
     ChatUnreadStore.markSeen(provider.otherUserId);
-    Navigator.push(
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => ChatScreen(
@@ -450,265 +259,152 @@ class _RequestTileView extends StatelessWidget {
         ),
       ),
     );
+    // Messages sent from inside the chat change the preview.
+    provider.loadLastMessage();
   }
 
-  Future<void> _onAcceptPressed(
-    BuildContext context,
-    RequestTileProvider provider,
-  ) async {
-    final success = await provider.accept();
-    if (!context.mounted || success) return;
-    AppSnackbar.show(
-      context,
-      provider.errorMessage ?? context.l10n.failedToUpdate,
-      icon: Icons.error_outline,
-      color: AppColors.error,
-    );
+  static final Listenable _badgeSources = Listenable.merge([
+    ChatUnreadStore.unreadBySender,
+    RequestStore.received,
+  ]);
+
+  /// Unread messages from [otherUserId] plus their requests still waiting
+  /// for an answer -- what the Chats tab badge adds up.
+  int _badgeCount(String otherUserId) =>
+      (ChatUnreadStore.unreadBySender.value[otherUserId] ?? 0) +
+      RequestStore.received.value
+          .where((r) => r.requesterId == otherUserId && r.isPending)
+          .length;
+
+  String _timeLabel(BuildContext context, DateTime dateTime) {
+    final local = dateTime.toLocal();
+    final now = DateTime.now();
+    final days = DateTime(
+      now.year,
+      now.month,
+      now.day,
+    ).difference(DateTime(local.year, local.month, local.day)).inDays;
+    if (days == 0) return DateFormat.Hm().format(local);
+    if (days == 1) return context.l10n.yesterday;
+    return DateFormat.MMMd(
+      Localizations.localeOf(context).toString(),
+    ).format(local);
   }
 
-  Future<void> _onLeaveFeedbackPressed(
-    BuildContext context,
-    RequestTileProvider provider,
-  ) async {
-    final userId = provider.currentUserId;
-    if (userId == null) return;
-    final submitted = await showFeedbackDialog(
-      context,
-      requestId: provider.request.id,
-      postId: provider.request.postId,
-      fromUserId: userId,
-      toUserId: provider.request.ownerId,
-    );
-    if (submitted == true) {
-      provider.markFeedbackGiven();
-    }
-  }
-
-  String _statusLabel(BuildContext context, String status) {
-    final l10n = context.l10n;
-    switch (status) {
-      case 'accepted':
-        return l10n.statusGivenToYou;
-      case 'closed':
-        return l10n.statusNotSelected;
-      case 'declined':
-        return l10n.statusDeclined;
-      default:
-        return l10n.statusPending;
-    }
-  }
-
-  String _formattedDateTime(DateTime date) {
-    return DateFormat('d MMM yyyy • h:mm a').format(date.toLocal());
-  }
-
-  Color _statusColor(String status) {
-    switch (status) {
-      case 'accepted':
-        return Colors.green;
-      case 'closed':
-      case 'declined':
-        return AppColors.textSecondary;
-      default:
-        return AppColors.primary;
-    }
+  String? _previewText(BuildContext context, RequestTileProvider provider) {
+    final message = provider.lastMessage;
+    if (message == null) return null;
+    final text = messagePreview(context, message);
+    return message.senderId == provider.currentUserId
+        ? '${context.l10n.you}: $text'
+        : text;
   }
 
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<RequestTileProvider>();
-    final request = provider.request;
 
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: context.appSurface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: context.appBorder),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          InkWell(
-            onTap: () => _openChat(context, provider),
-            borderRadius: BorderRadius.circular(10),
-            child: Row(
-              children: [
-                Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Container(
-                      height: 44,
-                      width: 44,
-                      clipBehavior: Clip.antiAlias,
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: provider.isLoadingProduct
-                          ? const AppShimmer()
-                          : provider.productImageUrl != null
-                          ? AppNetworkImage(imageUrl: provider.productImageUrl!)
-                          : const Icon(
-                              Icons.inventory_2_outlined,
-                              color: AppColors.primary,
-                            ),
-                    ),
-                    // How many unread messages this user has sent -- so a
-                    // new message is visible (and attributable to them,
-                    // via the name shown alongside) without opening the
-                    // chat.
-                    ValueListenableBuilder<Map<String, int>>(
-                      valueListenable: ChatUnreadStore.unreadBySender,
-                      builder: (context, unread, _) {
-                        final count = unread[provider.otherUserId] ?? 0;
-                        if (count <= 0) return const SizedBox.shrink();
-                        return PositionedDirectional(
-                          top: -6,
-                          end: -6,
-                          child: _UnreadBadge(count: count),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
+    return InkWell(
+      onTap: () => _openChat(context, provider),
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: context.appSurface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: context.appBorder),
+        ),
+        child: Row(
+          children: [
+            provider.isLoadingProfile
+                ? const AppShimmer(
+                    width: 48,
+                    height: 48,
+                    borderRadius: BorderRadius.all(Radius.circular(24)),
+                  )
+                : AppAvatar(radius: 24, imageUrl: provider.profile?.avatarUrl),
+            const SizedBox(width: 14),
+            Expanded(
+              child: ListenableBuilder(
+                listenable: _badgeSources,
+                builder: (context, _) {
+                  final count = _badgeCount(provider.otherUserId);
+                  final preview = _previewText(context, provider);
+                  return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      provider.isLoadingProduct
+                      provider.isLoadingProfile
                           ? const AppShimmer(
                               width: 120,
-                              height: 12,
+                              height: 14,
                               borderRadius: BorderRadius.all(
                                 Radius.circular(4),
                               ),
                             )
                           : Text(
-                              provider.productName ?? context.l10n.paoItem,
+                              provider.profile?.fullName ??
+                                  context.l10n.paoUser,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                fontSize: 15,
+                                fontSize: 16,
                                 fontWeight: FontWeight.w600,
                                 color: context.appTextPrimary,
                               ),
                             ),
-                      const SizedBox(height: 4),
-                      provider.isLoadingProfile
-                          ? const Row(
-                              children: [
-                                AppShimmer(
-                                  width: 16,
-                                  height: 16,
-                                  borderRadius: BorderRadius.all(
-                                    Radius.circular(8),
-                                  ),
-                                ),
-                                SizedBox(width: 6),
-                                AppShimmer(
-                                  width: 90,
-                                  height: 10,
-                                  borderRadius: BorderRadius.all(
-                                    Radius.circular(4),
-                                  ),
-                                ),
-                              ],
-                            )
-                          : Row(
-                              children: [
-                                AppAvatar(
-                                  radius: 8,
-                                  imageUrl: provider.profile?.avatarUrl,
-                                ),
-                                const SizedBox(width: 6),
-                                Expanded(
-                                  child: Text(
-                                    provider.isSentTab
-                                        ? context.l10n.requestTo(
-                                            provider.profile?.fullName ??
-                                                context.l10n.paoUser,
-                                          )
-                                        : context.l10n.requestFrom(
-                                            provider.profile?.fullName ??
-                                                context.l10n.paoUser,
-                                          ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: context.appTextSecondary,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _formattedDateTime(request.createdAt),
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: context.appTextSecondary,
+                      if (preview != null) ...[
+                        const SizedBox(height: 3),
+                        Text(
+                          preview,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: count > 0
+                                ? FontWeight.w600
+                                : FontWeight.normal,
+                            color: count > 0
+                                ? context.appTextPrimary
+                                : context.appTextSecondary,
+                          ),
                         ),
-                      ),
+                      ],
                     ],
-                  ),
-                ),
-                Column(
+                  );
+                },
+              ),
+            ),
+            const SizedBox(width: 10),
+            ListenableBuilder(
+              listenable: _badgeSources,
+              builder: (context, _) {
+                final count = _badgeCount(provider.otherUserId);
+                return Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      _statusLabel(context, request.status),
+                      _timeLabel(
+                        context,
+                        provider.lastMessage?.createdAt ??
+                            provider.request.createdAt,
+                      ),
                       style: TextStyle(
                         fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: _statusColor(request.status),
+                        color: count > 0
+                            ? AppColors.primary
+                            : context.appTextSecondary,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    const AppIcon(
-                      AppIcons.chevronRight,
-                      mirrorInRtl: true,
-                      size: 18,
-                      color: AppColors.primary,
-                    ),
+                    if (count > 0) ...[
+                      const SizedBox(height: 6),
+                      _UnreadBadge(count: count),
+                    ],
                   ],
-                ),
-              ],
-            ),
-          ),
-          if (!provider.isSentTab && request.isPending) ...[
-            const SizedBox(height: 10),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                onPressed: provider.isAccepting
-                    ? null
-                    : () => _onAcceptPressed(context, provider),
-                child: provider.isAccepting
-                    ? const SizedBox(
-                        height: 16,
-                        width: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Text(context.l10n.acceptAndGive),
-              ),
+                );
+              },
             ),
           ],
-          if (provider.isSentTab &&
-              request.isAccepted &&
-              !provider.feedbackGiven) ...[
-            const SizedBox(height: 10),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                onPressed: () => _onLeaveFeedbackPressed(context, provider),
-                child: Text(context.l10n.leaveFeedback),
-              ),
-            ),
-          ],
-        ],
+        ),
       ),
     );
   }
@@ -733,16 +429,12 @@ class _EmptyState extends StatelessWidget {
               shape: BoxShape.circle,
             ),
             child: const Center(
-              child: AppIcon(
-                AppIcons.checkCircle,
-                size: 36,
-                color: AppColors.primary,
-              ),
+              child: AppIcon(AppIcons.chat, size: 36, color: AppColors.primary),
             ),
           ),
           const SizedBox(height: 16),
           Text(
-            context.l10n.noRequestsYet,
+            context.l10n.noChatsYet,
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,

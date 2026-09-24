@@ -7,11 +7,11 @@ import '../../../../core/theme/app_icons.dart';
 import '../../../../core/widgets/app_icon.dart';
 import '../../../add_item/presentation/screens/add_item_screen.dart';
 import '../../../home/presentation/screens/home_screen.dart';
-import '../../../requests/data/model/request_model.dart';
+import '../../../chat/data/chat_unread_store.dart';
 import '../../../requests/data/request_store.dart';
 import '../../../requests/presentation/screens/requests_screen.dart';
 import '../../../settings/presentation/screens/settings_screen.dart';
-import '../../../wishlist/presentation/screens/wishlist_screen.dart';
+import '../../../donors/presentation/screens/donors_screen.dart';
 import '../../../../core/l10n/l10n.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -27,7 +27,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   final List<Widget> _screens = const [
     HomeScreen(),
-    WishlistScreen(),
+    DonorsScreen(),
     AddItemScreen(),
     RequestsScreen(),
     SettingsScreen(),
@@ -68,7 +68,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         key: TourKeys.navWishlist,
         title: l10n.tourWishlistTitle,
         body: l10n.tourWishlistBody,
-        above: true,
+        circle: true,
       ),
       TourStep(
         key: TourKeys.navAdd,
@@ -124,22 +124,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void _onTabTapped(int index) {
     setState(() => _currentIndex = index);
     _barController.show();
-    if (index == 3) {
-      // First visit to Requests: explain the Sent / Received tabs.
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted || _currentIndex != 3) return;
-        AppTour.maybeShow(context, 'requests', (ctx) {
-          final l10n = ctx.l10n;
-          return [
-            TourStep(
-              key: TourKeys.requestsTabs,
-              title: l10n.tourRequestsTabsTitle,
-              body: l10n.tourRequestsTabsBody,
-            ),
-          ];
-        });
-      });
-    }
   }
 
   @override
@@ -147,13 +131,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Scaffold(
       body: BottomBar(
         controller: _barController,
-        // Home, Add Product, Requests and Settings hide the bar on scroll
-        // (down hides, up shows); Wishlist keeps it pinned and
+        // Every tab hides the bar on scroll (down hides, up shows);
         // _onTabTapped/_onTabRequested force it back into view when
         // navigating away.
-        scrollBehavior: BottomBarScrollBehavior(
-          hideOnScroll: _currentIndex != 1,
-        ),
+        scrollBehavior: const BottomBarScrollBehavior(),
         showIcon: false,
         // Zero offset and a transparent bar decoration: _FloatingNavBarContent
         // draws its own margin and pill background already, exactly like the
@@ -222,10 +203,9 @@ class _FloatingNavBarContent extends StatelessWidget {
                 ),
                 Expanded(
                   child: _NavItem(
-                    tourKey: TourKeys.navWishlist,
-                    icon: AppIcons.favoriteOutline,
-                    activeIcon: AppIcons.favoriteFilled,
-                    label: context.l10n.navWishlist,
+                    icon: AppIcons.donateOutline,
+                    activeIcon: AppIcons.donateFilled,
+                    label: context.l10n.navDonors,
                     isActive: currentIndex == 1,
                     onTap: () => onTap(1),
                   ),
@@ -233,14 +213,26 @@ class _FloatingNavBarContent extends StatelessWidget {
                 const SizedBox(width: 64),
                 Expanded(
                   // Received requests still waiting for the user's answer.
-                  child: ValueListenableBuilder<List<RequestModel>>(
-                    valueListenable: RequestStore.received,
-                    builder: (context, received, _) => _NavItem(
+                  // Unread messages plus received requests still waiting for
+                  // the user's answer -- the same things each chat row shows.
+                  child: ListenableBuilder(
+                    listenable: Listenable.merge([
+                      RequestStore.received,
+                      ChatUnreadStore.unreadBySender,
+                    ]),
+                    builder: (context, _) => _NavItem(
                       tourKey: TourKeys.navRequests,
-                      icon: AppIcons.inbox,
-                      label: context.l10n.navRequests,
+                      icon: AppIcons.chat,
+                      label: context.l10n.navChats,
                       isActive: currentIndex == 3,
-                      badgeCount: received.where((r) => r.isPending).length,
+                      badgeCount:
+                          RequestStore.received.value
+                              .where((r) => r.isPending)
+                              .length +
+                          ChatUnreadStore.unreadBySender.value.values.fold(
+                            0,
+                            (a, b) => a + b,
+                          ),
                       onTap: () => onTap(3),
                     ),
                   ),

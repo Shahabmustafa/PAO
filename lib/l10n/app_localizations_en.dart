@@ -210,6 +210,61 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navWishlist => 'Wishlist';
 
   @override
+  String requestWantsItem(String name) {
+    return '$name wants this item';
+  }
+
+  @override
+  String get requestYouAsked => 'You asked for this item';
+
+  @override
+  String get navChats => 'Chats';
+
+  @override
+  String get noChatsYet => 'No chats yet';
+
+  @override
+  String get emptyChatsMessage =>
+      'Tap \"Give Me\" on a product to start a chat with its owner';
+
+  @override
+  String get rejectRequest => 'Reject';
+
+  @override
+  String get rejectRequestTitle => 'Reject this request?';
+
+  @override
+  String rejectRequestConfirm(String name) {
+    return '\"$name\" will not be given to this person.';
+  }
+
+  @override
+  String get requestRejected => 'Request rejected';
+
+  @override
+  String get navDonors => 'Donors';
+
+  @override
+  String get donorsTitle => 'Top Donors';
+
+  @override
+  String get donorsEmpty => 'No donations yet';
+
+  @override
+  String get donorsEmptyHint => 'People who give items away will show up here.';
+
+  @override
+  String donationCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count donations',
+      one: '1 donation',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get navRequests => 'Requests';
 
   @override

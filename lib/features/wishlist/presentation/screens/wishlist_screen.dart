@@ -21,7 +21,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
   @override
   void initState() {
     super.initState();
-    WishlistStore.syncFromSupabase().catchError((_) {});
+    WishlistStore.syncFromSupabase(force: false).catchError((_) {});
   }
 
   @override
@@ -55,15 +55,21 @@ class _WishlistScreenState extends State<WishlistScreen> {
                   return const _EmptyWishlist();
                 }
 
-                return MasonryGridView.count(
-                  padding: const EdgeInsets.all(20),
-                  crossAxisCount: 2,
-                  mainAxisSpacing: 14,
-                  crossAxisSpacing: 12,
-                  itemCount: products.length,
-                  itemBuilder: (context, index) {
-                    return ProductCard(product: products[index]);
-                  },
+                return RefreshIndicator(
+                  color: AppColors.primary,
+                  onRefresh: () =>
+                      WishlistStore.syncFromSupabase().catchError((_) {}),
+                  child: MasonryGridView.count(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.all(20),
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 14,
+                    crossAxisSpacing: 12,
+                    itemCount: products.length,
+                    itemBuilder: (context, index) {
+                      return ProductCard(product: products[index]);
+                    },
+                  ),
                 );
               },
             );

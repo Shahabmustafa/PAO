@@ -275,20 +275,21 @@ void main() {
       expect(source.deletedPosts, ['p1']);
     });
 
-    test('fetchAvailablePosts maps rows to models', () async {
+    test('fetchPostsByIds maps rows to models', () async {
       source.rows = [postJson(id: 'a'), postJson(id: 'b')];
 
-      final posts = await repo.fetchAvailablePosts();
+      final posts = await repo.fetchPostsByIds(['a', 'b']);
 
       expect(posts.map((p) => p.id), ['a', 'b']);
+      expect(source.calls, ['byIds:a,b']);
     });
 
     test('fetchAvailablePostsPage passes the query through', () async {
       source.rows = [postJson(id: 'a'), postJson(id: 'b')];
 
       final posts = await repo.fetchAvailablePostsPage(
-        offset: 8,
-        limit: 8,
+        afterId: 'last',
+        limit: 20,
         excludeUserId: 'me',
         category: 'Books',
         condition: 'Old',
@@ -296,7 +297,7 @@ void main() {
       );
 
       expect(posts.map((p) => p.id), ['a', 'b']);
-      expect(source.calls, ['page:8:8:me:Books:Old:novel']);
+      expect(source.calls, ['page:last:20:me:Books:Old:novel']);
     });
 
     test('watchPosts maps row events to models and passes the rest on', () async {
@@ -547,9 +548,10 @@ void main() {
         ];
       final repo = ChatRepository(dataSource: source);
 
-      final messages = await repo.fetchMessages(
+      final messages = await repo.fetchMessagesPage(
         currentUserId: 'b',
         otherUserId: 's',
+        limit: 30,
       );
       final sent = await repo.sendMessage(
         requestId: 'r1',
@@ -568,7 +570,7 @@ void main() {
       final source = FakeChatDataSource();
       final repo = ChatRepository(dataSource: source);
       final events = <RealtimeEvent<MessageModel>>[];
-      final sub = repo.watchMessages('b').listen(events.add);
+      final sub = repo.watchConversation(currentUserId: 'b', otherUserId: 's').listen(events.add);
       addTearDown(sub.cancel);
 
       source.events

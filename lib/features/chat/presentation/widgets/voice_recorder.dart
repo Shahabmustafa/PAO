@@ -30,6 +30,15 @@ class VoiceRecorderController extends ChangeNotifier {
   }
 
   Future<bool> _start() async {
+    try {
+      return await _startRecording();
+    } catch (_) {
+      // No microphone, or the recorder couldn't open it.
+      return false;
+    }
+  }
+
+  Future<bool> _startRecording() async {
     if (!await _recorder.hasPermission()) return false;
     final dir = await getTemporaryDirectory();
     final path =

@@ -113,36 +113,16 @@ void main() {
       await tester.pump();
     }
 
-    testWidgets('has Sent and Received tabs, starting on Sent', (tester) async {
+    testWidgets('shows a single chat list with an empty state', (tester) async {
       await pumpRequests(tester);
 
-      expect(find.text('Requests'), findsOneWidget);
-      expect(find.text('Sent'), findsOneWidget);
-      expect(find.text('Received'), findsOneWidget);
-      expect(find.text('No requests yet'), findsOneWidget);
-      expect(
-        find.text('Tap "Give Me" on a product to request it'),
-        findsOneWidget,
-      );
+      expect(find.text('Chats'), findsOneWidget);
+      expect(find.text('Sent'), findsNothing);
+      expect(find.text('Received'), findsNothing);
+      expect(find.text('No chats yet'), findsOneWidget);
     });
 
-    testWidgets('the Received tab has its own empty message', (tester) async {
-      await pumpRequests(tester);
-
-      await tester.tap(find.text('Received'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('No requests yet'), findsOneWidget);
-      expect(
-        find.text('Requests for the items you post will show up here'),
-        findsOneWidget,
-      );
-    });
-
-    // Regression: each tile's provider is created once with its request, so
-    // after "Accept & Give" the tile kept showing the old status and button
-    // until the screen was rebuilt from scratch.
-    testWidgets('a received request stops offering Accept once accepted', (
+    testWidgets('lists one row per person with only their name', (
       tester,
     ) async {
       ProductStore.items.value = [
@@ -151,40 +131,11 @@ void main() {
       await pumpRequests(tester);
       // Signed out, the screen clears the store on start, so fill it after.
       RequestStore.received.value = [makeRequest()];
-      await tester.tap(find.text('Received'));
-      await tester.pump(); // starts the tab animation
       await tester.pump(const Duration(milliseconds: 500));
 
-      expect(find.text('Accept & Give'), findsOneWidget);
-      expect(find.text('Pending'), findsOneWidget);
-
-      RequestStore.received.value = [makeRequest(status: 'accepted')];
-      await tester.pump();
-
+      expect(find.text('No chats yet'), findsNothing);
       expect(find.text('Accept & Give'), findsNothing);
       expect(find.text('Pending'), findsNothing);
-      expect(find.text('Given to you'), findsOneWidget);
-    });
-
-    testWidgets('a sent request shows Leave Feedback once it is accepted', (
-      tester,
-    ) async {
-      ProductStore.items.value = [
-        ProductStore.productFromPost(makePost(id: 'post-1')),
-      ];
-      await pumpRequests(tester);
-      RequestStore.sent.value = [makeRequest()];
-      await tester.pump(const Duration(milliseconds: 500));
-
-      expect(find.text('Pending'), findsOneWidget);
-      expect(find.text('Leave Feedback'), findsNothing);
-
-      RequestStore.sent.value = [makeRequest(status: 'accepted')];
-      await tester.pump(const Duration(milliseconds: 500));
-
-      expect(find.text('Pending'), findsNothing);
-      expect(find.text('Given to you'), findsOneWidget);
-      expect(find.text('Leave Feedback'), findsOneWidget);
     });
   });
 
@@ -201,7 +152,7 @@ void main() {
       await pumpDashboard(tester);
 
       expect(find.text('Welcome back 👋'), findsOneWidget);
-      for (final label in ['Home', 'Wishlist', 'Requests', 'Settings']) {
+      for (final label in ['Home', 'Donors', 'Chats', 'Settings']) {
         expect(find.text(label), findsWidgets, reason: label);
       }
       expect(
@@ -282,13 +233,13 @@ void main() {
     testWidgets('each tab shows its screen', (tester) async {
       await pumpDashboard(tester);
 
-      await tester.tap(find.text('Wishlist').last);
+      await tester.tap(find.text('Donors').last);
       await tester.pumpAndSettle();
-      expect(find.text('Your wishlist is empty'), findsOneWidget);
+      expect(find.text('Top Donors'), findsOneWidget);
 
-      await tester.tap(find.text('Requests').last);
+      await tester.tap(find.text('Chats').last);
       await tester.pumpAndSettle();
-      expect(find.text('Sent'), findsOneWidget);
+      expect(find.text('No chats yet'), findsOneWidget);
 
       await tester.tap(find.text('Settings').last);
       await tester.pumpAndSettle();

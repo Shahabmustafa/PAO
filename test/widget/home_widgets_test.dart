@@ -389,6 +389,15 @@ void main() {
           widget is Scrollable && widget.axisDirection == AxisDirection.down,
     );
 
+    /// The grid lays out lazily, so one long drag can stop short of the
+    /// footer; drag until the bottom is really reached.
+    Future<void> scrollToEnd(WidgetTester tester) async {
+      for (var i = 0; i < 4; i++) {
+        await tester.drag(scrollArea().first, const Offset(0, -20000));
+        await tester.pump();
+      }
+    }
+
     testWidgets('shows the greeting, search and the product grid', (
       tester,
     ) async {
@@ -474,29 +483,28 @@ void main() {
       expect(find.byType(ProductCard), findsNWidgets(3));
     });
 
-    testWidgets('loads only 8 products at first', (tester) async {
-      repo.available = items(20);
+    testWidgets('loads only one page of products at first', (tester) async {
+      repo.available = items(100);
 
       await pumpHome(tester, size: shortScreen);
 
       expect(repo.pageCalls, hasLength(1));
-      expect(repo.pageCalls.single.limit, 8);
+      expect(repo.pageCalls.single.limit, 20);
       expect(find.text('Item 1'), findsOneWidget);
-      expect(find.text('Item 9'), findsNothing);
+      expect(find.text('Item 41'), findsNothing);
     });
 
     testWidgets('scrolling to the end shows a loader, then more products', (
       tester,
     ) async {
-      repo.available = items(20);
+      repo.available = items(100);
       await pumpHome(tester, size: shortScreen);
       repo.pageGate = Completer<void>();
 
-      await tester.drag(scrollArea(), const Offset(0, -3000));
-      await tester.pump();
+      await scrollToEnd(tester);
 
       expect(repo.pageCalls, hasLength(2));
-      expect(repo.pageCalls.last.offset, 8);
+      expect(repo.pageCalls.last.afterId, 'p20');
       expect(find.byKey(const Key('home-load-more-skeleton')), findsOneWidget);
 
       repo.pageGate!.complete();
@@ -505,30 +513,30 @@ void main() {
 
       expect(find.byKey(const Key('home-load-more-skeleton')), findsNothing);
       await tester.scrollUntilVisible(
-        find.text('Item 9'),
+        find.text('Item 25'),
         300,
         scrollable: scrollArea(),
       );
-      expect(find.text('Item 9'), findsOneWidget);
+      expect(find.text('Item 25'), findsOneWidget);
     });
 
     testWidgets('keeps loading pages until the last one, then stops', (
       tester,
     ) async {
-      repo.available = items(10);
+      repo.available = items(25);
       await pumpHome(tester, size: shortScreen);
 
-      await tester.drag(scrollArea(), const Offset(0, -3000));
+      await tester.drag(scrollArea().first, const Offset(0, -20000));
       await tester.pump();
       await tester.pump();
       expect(repo.pageCalls, hasLength(2));
 
-      await tester.drag(scrollArea(), const Offset(0, -3000));
+      await tester.drag(scrollArea().first, const Offset(0, -20000));
       await tester.pump();
       await tester.pump();
 
-      expect(repo.pageCalls, hasLength(2), reason: 'page of 2 was the last');
-      expect(find.text('Item 10'), findsOneWidget);
+      expect(repo.pageCalls, hasLength(2), reason: 'page of 5 was the last');
+      expect(find.text('Item 25'), findsOneWidget);
       expect(find.byKey(const Key('home-load-more-skeleton')), findsNothing);
     });
 
@@ -545,12 +553,11 @@ void main() {
     });
 
     testWidgets('a failed page can be retried', (tester) async {
-      repo.available = items(20);
+      repo.available = items(100);
       await pumpHome(tester, size: shortScreen);
       repo.pageError = Exception('offline');
 
-      await tester.drag(scrollArea(), const Offset(0, -3000));
-      await tester.pump();
+      await scrollToEnd(tester);
       await tester.pump();
 
       final retry = find.text('Something went wrong. Please try again.');
@@ -568,11 +575,11 @@ void main() {
 
       expect(retry, findsNothing);
       await tester.scrollUntilVisible(
-        find.text('Item 9'),
+        find.text('Item 25'),
         300,
         scrollable: scrollArea(),
       );
-      expect(find.text('Item 9'), findsOneWidget);
+      expect(find.text('Item 25'), findsOneWidget);
     });
 
     testWidgets('renders in dark mode without layout errors', (tester) async {

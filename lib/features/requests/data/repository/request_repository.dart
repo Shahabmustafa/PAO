@@ -75,6 +75,9 @@ class RequestRepository {
     return _dataSource.cancelRequest(requestId);
   }
 
+  Future<void> declineRequest(String requestId) =>
+      _dataSource.declineRequest(requestId);
+
   /// Accepts one request and closes every other pending request on the
   /// same post — the item can only go to one person.
   Future<void> acceptRequest({

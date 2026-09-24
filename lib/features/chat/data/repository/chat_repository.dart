@@ -10,25 +10,36 @@ class ChatRepository {
 
   final ChatRemoteDataSource _dataSource;
 
-  /// Every message the two users have exchanged, oldest first.
-  Future<List<MessageModel>> fetchMessages({
+  /// One page of the conversation, newest first (see the data source).
+  Future<List<MessageModel>> fetchMessagesPage({
     required String currentUserId,
     required String otherUserId,
+    DateTime? before,
+    required int limit,
   }) async {
-    final rows = await _dataSource.fetchMessages(
+    final rows = await _dataSource.fetchMessagesPage(
       currentUserId: currentUserId,
       otherUserId: otherUserId,
+      before: before,
+      limit: limit,
     );
     return rows.map(MessageModel.fromJson).toList();
   }
 
-  Stream<RealtimeEvent<MessageModel>> watchMessages(String currentUserId) {
+  Stream<RealtimeEvent<MessageModel>> watchConversation({
+    required String currentUserId,
+    required String otherUserId,
+  }) {
     return _dataSource
-        .watchMessages(currentUserId)
+        .watchConversation(
+          currentUserId: currentUserId,
+          otherUserId: otherUserId,
+        )
         .map((event) => event.mapRecord(MessageModel.fromJson));
   }
 
   Future<MessageModel> sendMessage({
+    String? id,
     String? requestId,
     required String senderId,
     required String recipientId,
@@ -39,6 +50,7 @@ class ChatRepository {
     int? mediaDurationMs,
   }) async {
     final row = await _dataSource.sendMessage(
+      id: id,
       replyToId: replyToId,
       requestId: requestId,
       senderId: senderId,

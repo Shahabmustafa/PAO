@@ -14,11 +14,20 @@ class PostRepository {
 
   Future<void> markAsGiven(String postId) => _dataSource.markAsGiven(postId);
 
+  /// Donation count per user id, over all given-away posts.
+  Future<Map<String, int>> fetchDonorCounts() async {
+    final counts = <String, int>{};
+    for (final id in await _dataSource.fetchGivenPostOwners()) {
+      counts[id] = (counts[id] ?? 0) + 1;
+    }
+    return counts;
+  }
+
   Future<int> fetchDonatedCount(String userId) =>
       _dataSource.fetchDonatedCount(userId);
 
   /// Looks up a single post regardless of its `is_given` status — used to
-  /// display a given-away item's name/image where [fetchAvailablePosts]
+  /// display a given-away item's name/image where the paged feed
   /// (which excludes given posts) wouldn't have it.
   Future<PostModel?> fetchPostById(String postId) async {
     final row = await _dataSource.fetchPostById(postId);
@@ -30,13 +39,14 @@ class PostRepository {
     return rows.map(PostModel.fromJson).toList();
   }
 
-  Future<List<PostModel>> fetchAvailablePosts() async {
-    final rows = await _dataSource.fetchAvailablePosts();
+  Future<List<PostModel>> fetchPostsByIds(List<String> ids) async {
+    final rows = await _dataSource.fetchPostsByIds(ids);
     return rows.map(PostModel.fromJson).toList();
   }
 
   Future<List<PostModel>> fetchAvailablePostsPage({
-    required int offset,
+    DateTime? afterCreatedAt,
+    String? afterId,
     required int limit,
     String? excludeUserId,
     String? category,
@@ -44,7 +54,8 @@ class PostRepository {
     String? search,
   }) async {
     final rows = await _dataSource.fetchAvailablePostsPage(
-      offset: offset,
+      afterCreatedAt: afterCreatedAt,
+      afterId: afterId,
       limit: limit,
       excludeUserId: excludeUserId,
       category: category,

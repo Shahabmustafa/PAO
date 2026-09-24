@@ -1,6 +1,10 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart'
+    show PostgrestException, StorageException;
+import 'package:uuid/uuid.dart';
+import '../../../../core/cache/local_cache.dart';
 import '../../../../core/realtime/realtime_event.dart';
 import '../../../../core/realtime/realtime_log.dart';
 import '../../../auth/data/repository/auth_repository.dart';
@@ -26,6 +30,9 @@ class ChatProvider extends ChangeNotifier {
        _authRepository = authRepository ?? AuthRepository(),
        _profileRepository = profileRepository ?? ProfileRepository(),
        _feedbackRepository = feedbackRepository ?? FeedbackRepository() {
+    // Cached messages are on screen from the very first frame; Supabase
+    // then syncs in the background.
+    _hydrateFromCache();
     _subscribe();
     _loadOtherProfile();
     if (isRequester && request.isAccepted) _checkFeedback();
@@ -49,9 +56,20 @@ class ChatProvider extends ChangeNotifier {
   final ProfileRepository _profileRepository;
   final FeedbackRepository _feedbackRepository;
 
+  /// Messages held per fetch, and the most kept in the local cache.
+  static const int pageSize = 30;
+  static const int _cacheLimit = 100;
+  static const _uuid = Uuid();
+
   List<MessageModel> messages = [];
+
+  /// True only while there is nothing to show yet (no cache, first sync
+  /// pending) -- with cached messages the chat never shows a spinner.
   bool isLoading = true;
-  bool isSending = false;
+
+  /// False once the server has no older messages than the ones loaded.
+  bool hasMoreOlder = true;
+  bool isLoadingOlder = false;
   bool isUploadingMedia = false;
   String? errorMessage;
   StreamSubscription<RealtimeEvent<MessageModel>>? _subscription;
@@ -83,7 +101,7 @@ class ChatProvider extends ChangeNotifier {
     final userId = currentUserId;
     if (userId == null) return;
     _subscription = _repository
-        .watchMessages(userId)
+        .watchConversation(currentUserId: userId, otherUserId: otherUserId)
         .listen(
           _onEvent,
           onError: (Object e) {
@@ -97,11 +115,11 @@ class ChatProvider extends ChangeNotifier {
     if (_disposed) return;
     switch (event.type) {
       case RealtimeEventType.subscribed:
-        // Initial load, and catch-up after a reconnect.
-        _loadHistory();
+        // Initial sync, and catch-up after a reconnect.
+        _syncLatest().then((_) => _retryFailed());
       case RealtimeEventType.error:
-        // Realtime is down; still load once so the chat isn't stuck loading.
-        if (isLoading) _loadHistory();
+        // Realtime is down; still sync once so the chat isn't stuck loading.
+        if (isLoading) _syncLatest();
       case RealtimeEventType.insert:
       case RealtimeEventType.update:
         final message = event.record;
@@ -127,41 +145,118 @@ class ChatProvider extends ChangeNotifier {
   void _removeLocally(String id) {
     if (!messages.any((m) => m.id == id)) return;
     messages = messages.where((m) => m.id != id).toList();
+    _persist();
     notifyListeners();
   }
 
-  Future<void> _loadHistory() async {
+  void _hydrateFromCache() {
+    final userId = currentUserId;
+    if (userId == null) return;
+    final cached = [
+      for (final json in LocalCache.readList(LocalCache.messages, _cacheKey))
+        MessageModel.fromJson(json),
+    ];
+    if (cached.isEmpty) return;
+    messages = _sorted([
+      for (final m in cached)
+        if (!m.isDeletedFor(userId))
+          // Nothing is in flight right after opening, so a message left
+          // "sending" (app closed mid-send) is really a failed one.
+          m.status == MessageStatus.sending
+              ? m.copyWith(status: MessageStatus.failed)
+              : m,
+    ]);
+    isLoading = false;
+  }
+
+  String get _cacheKey => 'conv:$otherUserId';
+
+  void _persist() {
+    final kept = messages.length > _cacheLimit
+        ? messages.sublist(messages.length - _cacheLimit)
+        : messages;
+    LocalCache.write(LocalCache.messages, _cacheKey, [
+      for (final m in kept) m.toJson(),
+    ]);
+  }
+
+  /// Fetches the latest page and merges it into [messages] and the cache.
+  Future<void> _syncLatest() async {
     final userId = currentUserId;
     if (userId == null) return;
     try {
-      final history = await _repository.fetchMessages(
+      final page = await _repository.fetchMessagesPage(
         currentUserId: userId,
         otherUserId: otherUserId,
+        limit: pageSize,
       );
       if (_disposed) return;
-      // The server's list is the truth (so a message deleted while we were
-      // disconnected disappears), except for messages newer than what it
-      // returned: those arrived live while the request was in flight.
-      final cutoff = history.isNotEmpty
-          ? history.last.createdAt
-          : (isLoading
-                ? DateTime.fromMillisecondsSinceEpoch(0)
-                : DateTime.now().add(const Duration(days: 1)));
-      final byId = {
-        for (final m in history)
-          if (!m.isDeletedFor(userId)) m.id: m,
+      // The server's page is the truth for the time window it covers (so a
+      // message deleted while we were away disappears). Kept as they are:
+      // older cached messages, unconfirmed local ones, and anything newer
+      // than the page that arrived live while it was in flight.
+      final complete = page.length < pageSize;
+      final windowStart = complete || page.isEmpty
+          ? DateTime.fromMillisecondsSinceEpoch(0, isUtc: true)
+          : page.last.createdAt;
+      final newest = page.isEmpty ? null : page.first.createdAt;
+      final byId = <String, MessageModel>{
+        for (final m in messages)
+          if (m.isPending ||
+              m.createdAt.isBefore(windowStart) ||
+              (newest != null && m.createdAt.isAfter(newest)))
+            m.id: m,
       };
-      for (final m in messages) {
-        if (m.createdAt.isAfter(cutoff)) byId[m.id] = m;
+      for (final m in page) {
+        if (m.isDeletedFor(userId)) {
+          byId.remove(m.id);
+        } else {
+          byId[m.id] = m;
+        }
       }
       messages = _sorted(byId.values);
+      if (complete) hasMoreOlder = false;
       errorMessage = null;
+      _persist();
       unawaited(_markIncomingAsRead());
     } catch (_) {
       if (_disposed) return;
       if (messages.isEmpty) errorMessage = l10nNow.failedToLoadMessages;
     }
     isLoading = false;
+    notifyListeners();
+  }
+
+  /// Loads the next batch of older messages (called when the user scrolls
+  /// to the top of the loaded history), using the oldest confirmed message
+  /// as a keyset cursor.
+  Future<void> loadOlder() async {
+    final userId = currentUserId;
+    if (userId == null || isLoading || isLoadingOlder || !hasMoreOlder) return;
+    final confirmed = messages.where((m) => !m.isPending);
+    if (confirmed.isEmpty) return;
+    isLoadingOlder = true;
+    notifyListeners();
+    try {
+      final page = await _repository.fetchMessagesPage(
+        currentUserId: userId,
+        otherUserId: otherUserId,
+        before: confirmed.first.createdAt,
+        limit: pageSize,
+      );
+      if (_disposed) return;
+      final known = {for (final m in messages) m.id};
+      messages = _sorted([
+        ...messages,
+        for (final m in page)
+          if (!known.contains(m.id) && !m.isDeletedFor(userId)) m,
+      ]);
+      hasMoreOlder = page.length >= pageSize;
+    } catch (_) {
+      // Leave hasMoreOlder as is: scrolling to the top again retries.
+    }
+    if (_disposed) return;
+    isLoadingOlder = false;
     notifyListeners();
   }
 
@@ -194,8 +289,9 @@ class ChatProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Adds [message], or replaces the copy with the same id — a message we
-  /// just sent is also delivered back over Realtime.
+  /// Adds [message], or replaces the copy with the same id. The optimistic
+  /// copy of a sent message shares its id with the server row, so a
+  /// Realtime / sync copy of it replaces it instead of duplicating it.
   void _upsert(MessageModel message) {
     final index = messages.indexWhere((m) => m.id == message.id);
     if (index >= 0) {
@@ -203,6 +299,7 @@ class ChatProvider extends ChangeNotifier {
     } else {
       messages = _sorted([...messages, message]);
     }
+    _persist();
     notifyListeners();
   }
 
@@ -219,6 +316,8 @@ class ChatProvider extends ChangeNotifier {
       if (r.id != request.id) continue;
       if (r.status != request.status) {
         request = request.copyWith(status: r.status);
+        // The owner just accepted while this chat is open.
+        if (isRequester && request.isAccepted) _checkFeedback();
         notifyListeners();
       }
       return;
@@ -226,6 +325,15 @@ class ChatProvider extends ChangeNotifier {
   }
 
   Future<void> _loadOtherProfile() async {
+    // Show the cached name / avatar straight away.
+    if (otherProfile == null) {
+      final cached = _profileRepository.cachedPublicProfile(otherUserId);
+      if (cached != null) {
+        otherProfile = cached;
+        isLoadingProfile = false;
+        notifyListeners();
+      }
+    }
     try {
       otherProfile = await _profileRepository.fetchPublicProfile(otherUserId);
     } catch (_) {
@@ -236,10 +344,15 @@ class ChatProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// True once it is known whether the requester already left feedback, so
+  /// the chat doesn't pop the feedback dialog for someone who already did.
+  bool feedbackChecked = false;
+
   Future<void> _checkFeedback() async {
     try {
       final feedback = await _feedbackRepository.fetchForRequest(request.id);
       feedbackGiven = feedback != null;
+      feedbackChecked = true;
       notifyListeners();
     } catch (_) {
       // Leave the banner visible; worst case they're asked again.
@@ -268,29 +381,102 @@ class ChatProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Optimistic send: the message is stored and shown at once as
+  /// `sending`, then delivered in the background and marked `sent` or
+  /// `failed` (tap it to retry).
   Future<void> sendMessage(String body, {String? replyToId}) async {
     final trimmed = body.trim();
     if (trimmed.isEmpty) return;
     final senderId = currentUserId;
     if (senderId == null) return;
 
-    isSending = true;
-    notifyListeners();
+    final local = MessageModel(
+      // Also used as the row id on the server: that is the dedupe key.
+      id: _uuid.v4(),
+      senderId: senderId,
+      recipientId: otherUserId,
+      requestId: request.id,
+      body: trimmed,
+      createdAt: DateTime.now().toUtc(),
+      replyToId: replyToId,
+      status: MessageStatus.sending,
+    );
+    _upsert(local);
+    await _deliver(local);
+  }
+
+  Future<void> _deliver(MessageModel local) async {
     try {
-      final message = await _repository.sendMessage(
+      final sent = await _repository.sendMessage(
+        id: local.id,
         requestId: request.id,
-        replyToId: replyToId,
-        senderId: senderId,
-        recipientId: otherUserId,
-        body: trimmed,
+        replyToId: local.replyToId,
+        senderId: local.senderId,
+        recipientId: local.recipientId,
+        body: local.body,
       );
-      // Show it right away; the realtime INSERT for the same id is a no-op.
-      _upsert(message);
+      if (_disposed) {
+        _persistConfirmed(sent);
+        return;
+      }
+      _upsert(sent);
+    } on PostgrestException catch (e) {
+      if (e.code == '23505') {
+        // A previous attempt did reach the server: it is delivered.
+        if (_disposed) return;
+        _upsert(local.copyWith(status: MessageStatus.sent));
+        unawaited(_syncLatest());
+        return;
+      }
+      _markFailed(local);
     } catch (_) {
-      errorMessage = l10nNow.failedToSendMessage;
-    } finally {
-      isSending = false;
-      notifyListeners();
+      _markFailed(local);
+    }
+  }
+
+  // The chat was closed while the send was in flight: still record the
+  // outcome so the cache doesn't keep it as "sending".
+  void _persistConfirmed(MessageModel sent) {
+    final cached = LocalCache.readList(LocalCache.messages, _cacheKey);
+    final updated = [
+      for (final json in cached)
+        if (json['id'] == sent.id) sent.toJson() else json,
+    ];
+    LocalCache.write(LocalCache.messages, _cacheKey, updated);
+  }
+
+  void _markFailed(MessageModel local) {
+    if (_disposed) {
+      final cached = LocalCache.readList(LocalCache.messages, _cacheKey);
+      LocalCache.write(LocalCache.messages, _cacheKey, [
+        for (final json in cached)
+          if (json['id'] == local.id)
+            local.copyWith(status: MessageStatus.failed).toJson()
+          else
+            json,
+      ]);
+      return;
+    }
+    final current = messageById(local.id);
+    if (current == null) return; // deleted meanwhile
+    _upsert(current.copyWith(status: MessageStatus.failed));
+    errorMessage = l10nNow.failedToSendMessage;
+  }
+
+  /// Re-sends a failed text message with the same id.
+  Future<void> retry(MessageModel message) async {
+    if (message.status != MessageStatus.failed) return;
+    final sending = message.copyWith(status: MessageStatus.sending);
+    _upsert(sending);
+    await _deliver(sending);
+  }
+
+  Future<void> _retryFailed() async {
+    for (final m in messages.where(
+      (m) => m.status == MessageStatus.failed && m.senderId == currentUserId,
+    )) {
+      if (_disposed) return;
+      await retry(m);
     }
   }
 
@@ -342,12 +528,21 @@ class ChatProvider extends ChangeNotifier {
       );
       _upsert(message);
       return true;
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('sendMedia failed (upload: ${uploadedPath == null}): $e\n$st');
       if (uploadedPath != null) {
         // The file went up but the message didn't -- don't leave it orphaned.
         unawaited(_repository.removeMedia(uploadedPath).catchError((_) {}));
       }
-      errorMessage = l10nNow.failedToSendMessage;
+      // Say why (bucket missing, policy denied, ...) so it can be fixed.
+      final reason = switch (e) {
+        StorageException(:final message) => message,
+        PostgrestException(:final message) => message,
+        _ => null,
+      };
+      errorMessage = reason == null
+          ? l10nNow.failedToSendMessage
+          : '${l10nNow.failedToSendMessage} ($reason)';
       return false;
     } finally {
       isUploadingMedia = false;
@@ -410,14 +605,21 @@ class ChatProvider extends ChangeNotifier {
   /// right away and is put back if the delete fails.
   Future<bool> deleteMessage(MessageModel message) async {
     if (message.senderId != currentUserId) return false;
+    if (message.isPending) {
+      // Never confirmed by the server: just drop the local copy.
+      _removeLocally(message.id);
+      return true;
+    }
     final previous = messages;
     messages = messages.where((m) => m.id != message.id).toList();
+    _persist();
     notifyListeners();
     try {
       await _repository.deleteMessage(message.id);
       return true;
     } catch (_) {
       messages = previous;
+      _persist();
       notifyListeners();
       return false;
     }
@@ -436,7 +638,7 @@ class ChatProvider extends ChangeNotifier {
   /// already chosen removes it. Applied locally first, put back on failure.
   Future<bool> react(MessageModel message, String emoji) async {
     final userId = currentUserId;
-    if (userId == null) return false;
+    if (userId == null || message.isPending) return false;
     final remove = message.reactions[userId] == emoji;
     final previous = messages;
     final updated = {...message.reactions};
@@ -464,12 +666,14 @@ class ChatProvider extends ChangeNotifier {
   Future<bool> deleteMessageForMe(MessageModel message) async {
     final previous = messages;
     messages = messages.where((m) => m.id != message.id).toList();
+    _persist();
     notifyListeners();
     try {
       await _repository.deleteMessageForMe(message.id);
       return true;
     } catch (_) {
       messages = previous;
+      _persist();
       notifyListeners();
       return false;
     }

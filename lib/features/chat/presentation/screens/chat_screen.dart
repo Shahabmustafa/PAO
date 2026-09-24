@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../../../core/media/media_compressor.dart';
 import 'package:video_player/video_player.dart';
 import 'package:intl/intl.dart' show DateFormat;
 import 'package:provider/provider.dart';
@@ -13,7 +14,14 @@ import '../../../../core/widgets/app_shimmer.dart';
 import '../../../../core/widgets/app_snackbar.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../feedback/presentation/widgets/feedback_dialog.dart';
+import '../../../auth/data/repository/auth_repository.dart';
+import '../../../add_item/data/repository/post_repository.dart';
+import '../../../home/data/product_store.dart';
+import '../../../home/domain/product.dart';
+import '../../../home/presentation/screens/product_detail_screen.dart';
+import '../../../../core/widgets/app_network_image.dart';
 import '../../../requests/data/model/request_model.dart';
+import '../../../requests/data/request_store.dart';
 import '../../data/model/message_model.dart';
 import '../provider/chat_provider.dart';
 import '../widgets/chat_composer_widgets.dart';
@@ -98,10 +106,27 @@ class _ChatViewState extends State<_ChatView> {
 
   final _voice = VoiceRecorderController();
   final _picker = ImagePicker();
+  final _scroll = ScrollController();
   static const _maxMediaBytes = 50 * 1024 * 1024;
 
   @override
+  void initState() {
+    super.initState();
+    _scroll.addListener(_maybeLoadOlder);
+  }
+
+  // The list is reversed, so its "end" is the oldest loaded message.
+  void _maybeLoadOlder() {
+    if (!_scroll.hasClients) return;
+    final position = _scroll.position;
+    if (position.pixels >= position.maxScrollExtent - 400) {
+      context.read<ChatProvider>().loadOlder();
+    }
+  }
+
+  @override
   void dispose() {
+    _scroll.dispose();
     _messageController.dispose();
     _voice.dispose();
     super.dispose();
@@ -144,7 +169,11 @@ class _ChatViewState extends State<_ChatView> {
       }
       for (final xfile in files) {
         if (!context.mounted) return;
-        final file = File(xfile.path);
+        var file = File(xfile.path);
+        file = type == MessageMediaType.video
+            ? await MediaCompressor.compressVideoFile(file)
+            : await MediaCompressor.compressImageFile(file);
+        if (!context.mounted) return;
         final durationMs = type == MessageMediaType.video
             ? await _videoDurationMs(file)
             : null;
@@ -387,11 +416,110 @@ class _ChatViewState extends State<_ChatView> {
     action?.call();
   }
 
-  Future<void> _onAcceptPressed(BuildContext context) async {
+  // Request ids whose accept is in flight (other than the chat's own one,
+  // which the provider tracks), and product names resolved for older
+  // requests in this conversation.
+  final Set<String> _accepting = {};
+  final Map<String, Product> _products = {};
+  final Set<String> _lookingUp = {};
+
+  /// The listing a request is about: from the feed store, or fetched once.
+  Product? _productFor(RequestModel request) {
+    for (final p in ProductStore.items.value) {
+      if (p.id == request.postId) return p;
+    }
+    final known = _products[request.postId];
+    if (known != null) return known;
+    if (_lookingUp.add(request.postId)) {
+      PostRepository()
+          .fetchPostById(request.postId)
+          .then((post) {
+            if (!mounted || post == null) return;
+            setState(
+              () => _products[request.postId] = ProductStore.productFromPost(
+                post,
+              ),
+            );
+          })
+          .catchError((_) {});
+    }
+    return null;
+  }
+
+  String _productNameFor(RequestModel request) {
+    if (request.postId == context.read<ChatProvider>().request.postId) {
+      return widget.productName;
+    }
+    return _productFor(request)?.name ?? context.l10n.paoItem;
+  }
+
+  Future<void> _onRejectPressed(
+    BuildContext context,
+    RequestModel request,
+  ) async {
+    final confirmed = await AppDialog.confirm(
+      context,
+      title: context.l10n.rejectRequestTitle,
+      message: context.l10n.rejectRequestConfirm(_productNameFor(request)),
+      confirmText: context.l10n.rejectRequest,
+      cancelText: context.l10n.cancel,
+      isDestructive: true,
+      icon: AppIcons.close,
+    );
+    if (!confirmed || !context.mounted) return;
+
+    setState(() => _accepting.add(request.id));
+    var success = true;
+    try {
+      // The chat's provider follows the store, so the card updates itself.
+      await RequestStore.decline(request);
+    } catch (_) {
+      success = false;
+    } finally {
+      if (mounted) setState(() => _accepting.remove(request.id));
+    }
+    if (!context.mounted) return;
+    if (success) {
+      AppSnackbar.show(context, context.l10n.requestRejected);
+    } else {
+      AppSnackbar.show(
+        context,
+        context.l10n.failedToUpdate,
+        icon: Icons.error_outline,
+        color: AppColors.error,
+      );
+    }
+  }
+
+  /// Every request between the two participants (this chat's own one
+  /// always included), oldest first, with live statuses from the stores.
+  List<RequestModel> _pairRequests(ChatProvider provider) {
+    final me = provider.currentUserId;
+    final other = provider.otherUserId;
+    final byId = <String, RequestModel>{};
+    for (final r in [
+      ...RequestStore.sent.value,
+      ...RequestStore.received.value,
+    ]) {
+      final between =
+          (r.ownerId == other && r.requesterId == me) ||
+          (r.requesterId == other && r.ownerId == me);
+      if (between) byId[r.id] = r;
+    }
+    byId[provider.request.id] = provider.request;
+    return byId.values.toList()
+      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+  }
+
+  Future<void> _onAcceptPressed(
+    BuildContext context,
+    RequestModel request,
+  ) async {
+    final name = _productNameFor(request);
     final confirmed = await AppDialog.confirm(
       context,
       title: context.l10n.giveThisItem,
-      message: context.l10n.giveThisItemConfirm(widget.productName),
+      message: context.l10n.giveThisItemConfirm(name),
       confirmText: context.l10n.yesGive,
       cancelText: context.l10n.cancel,
       icon: AppIcons.checkCircle,
@@ -400,7 +528,22 @@ class _ChatViewState extends State<_ChatView> {
     if (!context.mounted) return;
 
     final provider = context.read<ChatProvider>();
-    final success = await provider.acceptRequest();
+    var success = false;
+    String? error;
+    if (request.id == provider.request.id) {
+      success = await provider.acceptRequest();
+      error = provider.errorMessage;
+    } else {
+      setState(() => _accepting.add(request.id));
+      try {
+        await RequestStore.accept(request);
+        success = true;
+      } catch (_) {
+        success = false;
+      } finally {
+        if (mounted) setState(() => _accepting.remove(request.id));
+      }
+    }
     if (!context.mounted) return;
 
     if (success) {
@@ -408,7 +551,7 @@ class _ChatViewState extends State<_ChatView> {
     } else {
       AppSnackbar.show(
         context,
-        provider.errorMessage ?? context.l10n.failedToUpdate,
+        error ?? context.l10n.failedToUpdate,
         icon: Icons.error_outline,
         color: AppColors.error,
       );
@@ -467,6 +610,24 @@ class _ChatViewState extends State<_ChatView> {
     );
   }
 
+  // Requests whose feedback dialog was already shown during this run.
+  static final Set<String> _feedbackPrompted = {};
+
+  /// Once the owner has accepted, the requester gets the feedback dialog
+  /// right inside the chat -- on opening it, or live while it is open.
+  void _maybePromptFeedback(ChatProvider provider) {
+    if (!provider.isRequester ||
+        !provider.request.isAccepted ||
+        !provider.feedbackChecked ||
+        provider.feedbackGiven ||
+        !_feedbackPrompted.add(provider.request.id)) {
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _onLeaveFeedbackPressed(context);
+    });
+  }
+
   Future<void> _onLeaveFeedbackPressed(BuildContext context) async {
     final provider = context.read<ChatProvider>();
     final userId = provider.currentUserId;
@@ -484,14 +645,145 @@ class _ChatViewState extends State<_ChatView> {
     }
   }
 
+  Widget _requestCard(
+    BuildContext context,
+    ChatProvider provider,
+    RequestModel request,
+  ) {
+    final product = _productFor(request);
+    return _RequestCard(
+      request: request,
+      productName: _productNameFor(request),
+      imageUrl: product?.imageUrl,
+      onOpenProduct: product == null
+          ? null
+          : () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ProductDetailScreen(product: product),
+              ),
+            ),
+      time: _formatTime(request.createdAt),
+      isAccepting: request.id == provider.request.id
+          ? provider.isAccepting
+          : _accepting.contains(request.id),
+      onAccept: () => _onAcceptPressed(context, request),
+      onReject: () => _onRejectPressed(context, request),
+    );
+  }
+
+  Widget _dayChip(BuildContext context, DateTime at) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 8),
+    child: _InfoChip(text: _dayLabel(context, at)),
+  );
+
+  /// Messages and the request cards between the two people, in time order:
+  /// a request is part of the conversation, at the moment it was made.
+  Widget _buildTimeline(
+    BuildContext context,
+    ChatProvider provider,
+    _ChatColors colors,
+  ) {
+    final currentUserId = provider.currentUserId;
+    final messages = provider.messages;
+    final requests = _pairRequests(provider);
+
+    if (messages.isEmpty) {
+      return ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          for (final r in requests) ...[
+            _dayChip(context, r.createdAt),
+            _requestCard(context, provider, r),
+          ],
+          const SizedBox(height: 12),
+          _InfoChip(text: context.l10n.sayHello),
+        ],
+      );
+    }
+
+    // Oldest first; a request goes before a message sent at the same time.
+    final entries =
+        <({DateTime at, MessageModel? message, RequestModel? request})>[
+          for (final m in messages)
+            (at: m.createdAt, message: m, request: null),
+          for (final r in requests)
+            (at: r.createdAt, message: null, request: r),
+        ]..sort((a, b) {
+          final c = a.at.compareTo(b.at);
+          if (c != 0) return c;
+          return (a.request != null ? 0 : 1) - (b.request != null ? 0 : 1);
+        });
+
+    return ListView.builder(
+      controller: _scroll,
+      reverse: true,
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+      itemCount: entries.length,
+      itemBuilder: (context, index) {
+        final i = entries.length - 1 - index;
+        final entry = entries[i];
+        final previous = i > 0 ? entries[i - 1] : null;
+        final startsNewDay =
+            previous == null ||
+            !_isSameDay(previous.at.toLocal(), entry.at.toLocal());
+
+        final request = entry.request;
+        if (request != null) {
+          return Column(
+            children: [
+              if (startsNewDay) _dayChip(context, request.createdAt),
+              _requestCard(context, provider, request),
+            ],
+          );
+        }
+
+        final message = entry.message!;
+        final isMine = message.senderId == currentUserId;
+        // Like WhatsApp: only the first bubble of a run from the same
+        // sender gets a tail and extra spacing.
+        final startsGroup =
+            startsNewDay ||
+            previous.request != null ||
+            previous.message!.senderId != message.senderId;
+        return Column(
+          children: [
+            if (startsNewDay) _dayChip(context, message.createdAt),
+            _MessageBubble(
+              message: message,
+              isMine: isMine,
+              showTail: startsGroup,
+              topSpacing: startsGroup && !startsNewDay ? 8 : 2,
+              time: _formatTime(message.createdAt),
+              currentUserId: currentUserId,
+              replyTo: message.replyToId == null
+                  ? null
+                  : (provider.messageById(message.replyToId)),
+              replySenderName: message.replyToId == null
+                  ? null
+                  : (provider.messageById(message.replyToId) == null
+                        ? null
+                        : _senderLabel(
+                            context,
+                            provider.messageById(message.replyToId)!,
+                          )),
+              onLongPress: () =>
+                  _showMessageActions(context, message, isMine: isMine),
+              onRetry: () => provider.retry(message),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<ChatProvider>();
-    final currentUserId = provider.currentUserId;
+    _maybePromptFeedback(provider);
     final status = _statusLabel(context, provider.otherProfile?.lastSeenAt);
     final isOnline = status == context.l10n.online;
     final colors = _ChatColors.of(context);
-    final messages = provider.messages;
 
     return Scaffold(
       backgroundColor: colors.background,
@@ -587,17 +879,6 @@ class _ChatViewState extends State<_ChatView> {
       body: SafeArea(
         child: Column(
           children: [
-            if (provider.isOwner && provider.request.isPending)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                color: context.appBackground,
-                child: PrimaryButton(
-                  label: context.l10n.acceptAndGiveThisItem,
-                  isLoading: provider.isAccepting,
-                  onPressed: () => _onAcceptPressed(context),
-                ),
-              ),
             if (provider.isRequester &&
                 provider.request.isAccepted &&
                 !provider.feedbackGiven)
@@ -613,90 +894,14 @@ class _ChatViewState extends State<_ChatView> {
             Expanded(
               child: provider.isLoading
                   ? const _ChatShimmer()
-                  : messages.isEmpty
-                  ? ListView(
-                      padding: const EdgeInsets.all(16),
-                      children: [
-                        _InfoChip(
-                          icon: AppIcons.description,
-                          text: widget.productName,
-                        ),
-                        const SizedBox(height: 12),
-                        _InfoChip(text: context.l10n.sayHello),
-                      ],
-                    )
-                  : ListView.builder(
-                      reverse: true,
-                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-                      // One extra item at the top of the history: which
-                      // listing this conversation is about.
-                      itemCount: messages.length + 1,
-                      itemBuilder: (context, index) {
-                        if (index == messages.length) {
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: _InfoChip(
-                              icon: AppIcons.description,
-                              text: widget.productName,
-                            ),
-                          );
-                        }
-                        final i = messages.length - 1 - index;
-                        final message = messages[i];
-                        final previous = i > 0 ? messages[i - 1] : null;
-                        final isMine = message.senderId == currentUserId;
-                        final startsNewDay =
-                            previous == null ||
-                            !_isSameDay(
-                              previous.createdAt.toLocal(),
-                              message.createdAt.toLocal(),
-                            );
-                        // Like WhatsApp: only the first bubble of a run from
-                        // the same sender gets a tail and extra spacing.
-                        final startsGroup =
-                            startsNewDay ||
-                            previous.senderId != message.senderId;
-                        return Column(
-                          children: [
-                            if (startsNewDay)
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 8,
-                                ),
-                                child: _InfoChip(
-                                  text: _dayLabel(context, message.createdAt),
-                                ),
-                              ),
-                            _MessageBubble(
-                              message: message,
-                              isMine: isMine,
-                              showTail: startsGroup,
-                              topSpacing: startsGroup && !startsNewDay ? 8 : 2,
-                              time: _formatTime(message.createdAt),
-                              currentUserId: currentUserId,
-                              replyTo: message.replyToId == null
-                                  ? null
-                                  : (provider.messageById(message.replyToId)),
-                              replySenderName: message.replyToId == null
-                                  ? null
-                                  : (provider.messageById(message.replyToId) ==
-                                            null
-                                        ? null
-                                        : _senderLabel(
-                                            context,
-                                            provider.messageById(
-                                              message.replyToId,
-                                            )!,
-                                          )),
-                              onLongPress: () => _showMessageActions(
-                                context,
-                                message,
-                                isMine: isMine,
-                              ),
-                            ),
-                          ],
-                        );
-                      },
+                  : ListenableBuilder(
+                      // Request statuses live in the stores.
+                      listenable: Listenable.merge([
+                        RequestStore.sent,
+                        RequestStore.received,
+                      ]),
+                      builder: (context, _) =>
+                          _buildTimeline(context, provider, colors),
                     ),
             ),
             if (_replyingTo != null)
@@ -952,9 +1157,8 @@ class _ChatViewState extends State<_ChatView> {
 /// separators, the listing this chat is about and the empty-chat hint.
 class _InfoChip extends StatelessWidget {
   final String text;
-  final String? icon;
 
-  const _InfoChip({required this.text, this.icon});
+  const _InfoChip({required this.text});
 
   @override
   Widget build(BuildContext context) {
@@ -976,10 +1180,6 @@ class _InfoChip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (icon != null) ...[
-              AppIcon(icon!, size: 14, color: colors.chipText),
-              const SizedBox(width: 6),
-            ],
             Flexible(
               child: Text(
                 text,
@@ -1006,6 +1206,9 @@ class _MessageBubble extends StatelessWidget {
   final double topSpacing;
   final String time;
   final VoidCallback? onLongPress;
+
+  /// Tapping a failed message re-sends it.
+  final VoidCallback? onRetry;
   final String? currentUserId;
   final MessageModel? replyTo;
   final String? replySenderName;
@@ -1017,6 +1220,7 @@ class _MessageBubble extends StatelessWidget {
     required this.topSpacing,
     required this.time,
     this.onLongPress,
+    this.onRetry,
     this.currentUserId,
     this.replyTo,
     this.replySenderName,
@@ -1031,6 +1235,22 @@ class _MessageBubble extends StatelessWidget {
     final bubbleColor = isMine ? colors.outgoing : colors.incoming;
     final metaColor = isMine ? colors.outgoingMeta : colors.meta;
     final isRead = message.readAt != null;
+
+    // Clock while sending, red "!" when it failed, ticks once the server
+    // has it.
+    Widget statusIcon(Color base, Color readColor) => switch (message.status) {
+      MessageStatus.sending => Icon(Icons.schedule, size: 14, color: base),
+      MessageStatus.failed => const Icon(
+        Icons.error_outline,
+        size: 15,
+        color: AppColors.error,
+      ),
+      MessageStatus.sent => AppIcon(
+        isRead ? AppIcons.checkAll : AppIcons.check,
+        size: 15,
+        color: isRead ? readColor : base,
+      ),
+    };
     final isRtl = Directionality.of(context) == TextDirection.rtl;
     final tailOnRight = isMine != isRtl;
     final metaStyle = TextStyle(fontSize: 11, color: metaColor);
@@ -1047,11 +1267,7 @@ class _MessageBubble extends StatelessWidget {
         Text('$editedText$time', style: metaStyle),
         if (isMine) ...[
           const SizedBox(width: 3),
-          AppIcon(
-            isRead ? AppIcons.checkAll : AppIcons.check,
-            size: 15,
-            color: isRead ? _ChatColors.readTick : metaColor,
-          ),
+          statusIcon(metaColor, _ChatColors.readTick),
         ],
       ],
     );
@@ -1069,11 +1285,7 @@ class _MessageBubble extends StatelessWidget {
         ),
         if (isMine) ...[
           const SizedBox(width: 3),
-          AppIcon(
-            isRead ? AppIcons.checkAll : AppIcons.check,
-            size: 15,
-            color: isRead ? const Color(0xFF53BDEB) : Colors.white,
-          ),
+          statusIcon(Colors.white, const Color(0xFF53BDEB)),
         ],
       ],
     );
@@ -1090,6 +1302,7 @@ class _MessageBubble extends StatelessWidget {
             : AlignmentDirectional.centerStart,
         child: GestureDetector(
           onLongPress: onLongPress,
+          onTap: message.status == MessageStatus.failed ? onRetry : null,
           child: Padding(
             // Keep bubbles lined up whether or not they carry a tail.
             padding: EdgeInsetsDirectional.only(
@@ -1385,6 +1598,191 @@ class _ChatShimmer extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+/// The "Give me" request, shown at the top of the conversation like an
+/// order in a freelance chat: who asked, for what, its status, and (for
+/// the owner) the button to accept and donate the item.
+class _RequestCard extends StatelessWidget {
+  final RequestModel request;
+  final String productName;
+  final String? imageUrl;
+  final VoidCallback? onOpenProduct;
+  final String time;
+  final bool isAccepting;
+  final VoidCallback onAccept;
+  final VoidCallback onReject;
+
+  const _RequestCard({
+    required this.request,
+    required this.productName,
+    required this.imageUrl,
+    required this.onOpenProduct,
+    required this.time,
+    required this.isAccepting,
+    required this.onAccept,
+    required this.onReject,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = context.watch<ChatProvider>();
+    final l10n = context.l10n;
+    final colors = _ChatColors.of(context);
+
+    final me = AuthRepository().currentUser;
+    final isOwner = request.ownerId == me?.id;
+    final requester = isOwner ? provider.otherProfile : null;
+    final name = isOwner ? requester?.fullName : me?.fullName;
+    final avatarUrl = isOwner ? requester?.avatarUrl : me?.avatarUrl;
+    final title = isOwner
+        ? l10n.requestWantsItem(name ?? l10n.paoUser)
+        : l10n.requestYouAsked;
+
+    final (statusText, statusColor) = switch (request.status) {
+      'accepted' => (
+        isOwner ? l10n.itemMarkedAsGiven : l10n.statusGivenToYou,
+        Colors.green,
+      ),
+      'closed' => (l10n.statusNotSelected, colors.meta),
+      'declined' => (l10n.statusDeclined, colors.meta),
+      _ => (l10n.statusPending, AppColors.primary),
+    };
+
+    // Like a chat bubble: what the other person asks for sits on the left,
+    // what I asked for on the right.
+    final isMine = request.requesterId == me?.id;
+    final maxWidth = MediaQuery.sizeOf(context).width * 0.82;
+    return Align(
+      alignment: isMine
+          ? AlignmentDirectional.centerEnd
+          : AlignmentDirectional.centerStart,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxWidth),
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 8),
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: colors.chip,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: AppColors.primary.withValues(alpha: 0.25),
+            ),
+          ),
+          child: InkWell(
+            // Opens the item's detail screen.
+            onTap: onOpenProduct,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (imageUrl != null)
+                  AspectRatio(
+                    aspectRatio: 16 / 10,
+                    child: AppNetworkImage(
+                      imageUrl: imageUrl!,
+                      memCacheWidth: 700,
+                    ),
+                  ),
+                Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          AppAvatar(radius: 22, imageUrl: avatarUrl),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    const AppIcon(
+                                      AppIcons.chat,
+                                      size: 15,
+                                      color: AppColors.primary,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Expanded(
+                                      child: Text(
+                                        title,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w700,
+                                          color: colors.text,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  productName,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: colors.meta,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              statusText,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: statusColor,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            time,
+                            style: TextStyle(fontSize: 11, color: colors.meta),
+                          ),
+                        ],
+                      ),
+                      if (isOwner && request.isPending) ...[
+                        const SizedBox(height: 10),
+                        PrimaryButton(
+                          label: l10n.acceptAndGiveThisItem,
+                          isLoading: isAccepting,
+                          onPressed: onAccept,
+                        ),
+                        const SizedBox(height: 8),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton(
+                            onPressed: isAccepting ? null : onReject,
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.error,
+                              side: const BorderSide(color: AppColors.error),
+                              minimumSize: const Size.fromHeight(48),
+                            ),
+                            child: Text(l10n.rejectRequest),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

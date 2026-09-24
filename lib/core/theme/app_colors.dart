@@ -31,7 +31,8 @@ extension AppColorsContext on BuildContext {
 
   Color get appBackground =>
       isDarkMode ? AppColorsDark.background : AppColors.background;
-  Color get appSurface => isDarkMode ? AppColorsDark.surface : AppColors.surface;
+  Color get appSurface =>
+      isDarkMode ? AppColorsDark.surface : AppColors.surface;
   Color get appTextPrimary =>
       isDarkMode ? AppColorsDark.textPrimary : AppColors.textPrimary;
   Color get appTextSecondary =>

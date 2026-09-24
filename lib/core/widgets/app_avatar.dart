@@ -37,12 +37,16 @@ class AppAvatar extends StatelessWidget {
             : CachedNetworkImage(
                 imageUrl: imageUrl!,
                 fit: BoxFit.cover,
+                memCacheWidth:
+                    (innerSize * MediaQuery.devicePixelRatioOf(context))
+                        .round(),
                 placeholder: (context, url) => AppShimmer(
                   width: innerSize,
                   height: innerSize,
                   borderRadius: BorderRadius.circular(innerSize / 2),
                 ),
-                errorWidget: (context, url, error) => _Fallback(size: innerSize),
+                errorWidget: (context, url, error) =>
+                    _Fallback(size: innerSize),
               ),
       ),
     );

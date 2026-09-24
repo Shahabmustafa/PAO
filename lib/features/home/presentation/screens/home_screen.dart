@@ -11,6 +11,7 @@ import '../../../../core/widgets/app_shimmer.dart';
 import '../../../add_item/data/repository/post_repository.dart';
 import '../../../auth/data/repository/auth_repository.dart';
 import '../../../profile/presentation/screens/user_profile_screen.dart';
+import '../../../wishlist/presentation/screens/wishlist_screen.dart';
 import '../provider/home_provider.dart';
 import '../widgets/filter_bottom_sheet.dart';
 import '../widgets/product_card.dart';
@@ -172,6 +173,21 @@ class _HomeViewState extends State<_HomeView> {
                                     ),
                                   ),
                                 ],
+                              ),
+                            ),
+                            IconButton(
+                              key: TourKeys.navWishlist,
+                              tooltip: context.l10n.wishlist,
+                              onPressed: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const WishlistScreen(),
+                                ),
+                              ),
+                              icon: const AppIcon(
+                                AppIcons.favoriteOutline,
+                                size: 24,
+                                color: AppColors.primary,
                               ),
                             ),
                           ],

@@ -12,6 +12,22 @@ enum MessageMediaType {
   }
 }
 
+/// Delivery state of a message on this device. Only ever `sending` or
+/// `failed` for a message the current user wrote that the server hasn't
+/// confirmed yet; everything that came from Supabase is `sent`.
+enum MessageStatus {
+  sending,
+  sent,
+  failed;
+
+  static MessageStatus parse(String? value) {
+    for (final status in values) {
+      if (status.name == value) return status;
+    }
+    return sent;
+  }
+}
+
 class MessageModel {
   const MessageModel({
     required this.id,
@@ -28,6 +44,7 @@ class MessageModel {
     this.deletedFor = const [],
     this.replyToId,
     this.reactions = const {},
+    this.status = MessageStatus.sent,
   });
 
   final String id;
@@ -60,7 +77,15 @@ class MessageModel {
   /// userId -> emoji; each participant has at most one reaction.
   final Map<String, String> reactions;
 
-  MessageModel copyWith({Map<String, String>? reactions}) => MessageModel(
+  /// Local delivery state; see [MessageStatus].
+  final MessageStatus status;
+
+  bool get isPending => status != MessageStatus.sent;
+
+  MessageModel copyWith({
+    Map<String, String>? reactions,
+    MessageStatus? status,
+  }) => MessageModel(
     id: id,
     senderId: senderId,
     recipientId: recipientId,
@@ -75,7 +100,28 @@ class MessageModel {
     deletedFor: deletedFor,
     replyToId: replyToId,
     reactions: reactions ?? this.reactions,
+    status: status ?? this.status,
   );
+
+  /// Same shape as the `messages` row (plus the local `_status`), so the
+  /// cache is read back with [MessageModel.fromJson].
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'sender_id': senderId,
+    'recipient_id': recipientId,
+    'request_id': requestId,
+    'body': body,
+    'created_at': createdAt.toUtc().toIso8601String(),
+    'read_at': readAt?.toUtc().toIso8601String(),
+    'edited_at': editedAt?.toUtc().toIso8601String(),
+    'reply_to_id': replyToId,
+    'reactions': reactions,
+    'media_type': mediaType?.name,
+    'media_path': mediaPath,
+    'media_duration_ms': mediaDurationMs,
+    'deleted_for': deletedFor,
+    '_status': status.name,
+  };
 
   bool isDeletedFor(String userId) => deletedFor.contains(userId);
 
@@ -105,6 +151,7 @@ class MessageModel {
         for (final id in (json['deleted_for'] as List?) ?? const [])
           id as String,
       ],
+      status: MessageStatus.parse(json['_status'] as String?),
     );
   }
 }

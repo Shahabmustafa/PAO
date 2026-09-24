@@ -1,6 +1,13 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+    <!-- Voice messages are optional: don't hide the app from devices without a microphone. -->
+    <uses-feature android:name="android.hardware.microphone" android:required="false"/>
+    <!-- video_compress declares legacy storage permissions it doesn't need
+         (it works in the app cache); drop them so Play doesn't see them. -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" tools:node="remove"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" tools:node="remove"/>
     <application
         android:label="PAO"
         android:name="${applicationName}"

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import '../../../core/cache/local_cache.dart';
 import '../../../core/realtime/realtime_event.dart';
 import '../../../core/realtime/realtime_log.dart';
 import '../../add_item/data/repository/post_repository.dart';
@@ -39,6 +40,54 @@ class RequestStore {
 
   static StreamSubscription<RealtimeEvent<RequestModel>>? _subscription;
   static bool _hasSynced = false;
+  static bool _cacheWired = false;
+
+  static const int _cacheLimit = 30;
+
+  /// Loads the cached lists (so the Requests screen has content on the
+  /// first frame) and starts mirroring changes back to the cache. Call once
+  /// at startup, after [LocalCache.init]. The cache belongs to the signed-in
+  /// account only: [LocalCache] wipes it when the account changes.
+  static void hydrateFromCache() {
+    if (_cacheWired) return;
+    _cacheWired = true;
+    List<RequestModel> read(String key) {
+      final list = <RequestModel>[];
+      for (final json in LocalCache.readList(LocalCache.requests, key)) {
+        try {
+          list.add(RequestModel.fromJson(json));
+        } catch (_) {
+          // Skip an entry from another app version.
+        }
+      }
+      return list;
+    }
+
+    final cachedSent = read('sent');
+    final cachedReceived = read('received');
+    if (cachedSent.isNotEmpty) {
+      sent.value = cachedSent;
+      _sentOffset = cachedSent.length;
+    }
+    if (cachedReceived.isNotEmpty) {
+      received.value = cachedReceived;
+      _receivedOffset = cachedReceived.length;
+    }
+    sent.addListener(() => _persist('sent', sent.value));
+    received.addListener(() => _persist('received', received.value));
+  }
+
+  static void _persist(String key, List<RequestModel> list) {
+    LocalCache.write(LocalCache.requests, key, [
+      for (final r in list.take(_cacheLimit)) r.toJson(),
+    ]);
+  }
+
+  // Posts the request tiles show (name, photo) come from the product
+  // store; fetch the missing ones in one query instead of one per tile.
+  static void _loadProductsFor(List<RequestModel> list) {
+    ProductStore.ensureLoaded(list.map((r) => r.postId));
+  }
 
   /// Starts a live Supabase Realtime subscription that keeps [sent] and
   /// [received] in sync automatically — a new "Give Me" request shows up in
@@ -184,6 +233,7 @@ class RequestStore {
     sent.value = page;
     _sentOffset = page.length;
     hasMoreSent.value = page.length >= pageSize;
+    _loadProductsFor(page);
   }
 
   /// Loads the first page (the most recent [pageSize] requests) for
@@ -204,6 +254,7 @@ class RequestStore {
     received.value = page;
     _receivedOffset = page.length;
     hasMoreReceived.value = page.length >= pageSize;
+    _loadProductsFor(page);
   }
 
   /// Fetches the next page of [sent] and appends it. Safe to call while
@@ -285,6 +336,20 @@ class RequestStore {
     sent.value = _upsert(sent.value, request);
     _sentOffset++;
     return request;
+  }
+
+  /// Declines [request]; the item stays available for other requests.
+  static Future<void> decline(
+    RequestModel request, {
+    RequestRepository? repository,
+  }) async {
+    await (repository ?? RequestRepository()).declineRequest(request.id);
+    List<RequestModel> mark(List<RequestModel> list) => [
+      for (final r in list)
+        if (r.id == request.id) r.copyWith(status: 'declined') else r,
+    ];
+    received.value = mark(received.value);
+    sent.value = mark(sent.value);
   }
 
   /// Accepts [request], marks its post as given away (both in Supabase and

@@ -22,11 +22,8 @@ class LegalLinks {
     fallback: (_) => const PrivacyPolicyScreen(),
   );
 
-  static Future<void> openTerms(BuildContext context) => _open(
-    context,
-    termsUrl,
-    fallback: (_) => const TermsConditionsScreen(),
-  );
+  static Future<void> openTerms(BuildContext context) =>
+      _open(context, termsUrl, fallback: (_) => const TermsConditionsScreen());
 
   /// Opens [url] in an in-app browser tab. If it can't be opened (no browser,
   /// no connection handling by the OS, ...), shows the bundled offline copy

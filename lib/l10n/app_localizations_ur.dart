@@ -214,6 +214,62 @@ class AppLocalizationsUr extends AppLocalizations {
   String get navWishlist => 'پسندیدہ';
 
   @override
+  String requestWantsItem(String name) {
+    return '$name یہ چیز چاہتا ہے';
+  }
+
+  @override
+  String get requestYouAsked => 'آپ نے یہ چیز مانگی ہے';
+
+  @override
+  String get navChats => 'چیٹس';
+
+  @override
+  String get noChatsYet => 'ابھی کوئی چیٹ نہیں';
+
+  @override
+  String get emptyChatsMessage =>
+      'مالک سے چیٹ شروع کرنے کے لیے کسی پروڈکٹ پر \"مجھے دیں\" دبائیں';
+
+  @override
+  String get rejectRequest => 'مسترد کریں';
+
+  @override
+  String get rejectRequestTitle => 'کیا یہ درخواست مسترد کریں؟';
+
+  @override
+  String rejectRequestConfirm(String name) {
+    return '\"$name\" اس شخص کو نہیں دیا جائے گا۔';
+  }
+
+  @override
+  String get requestRejected => 'درخواست مسترد کر دی گئی';
+
+  @override
+  String get navDonors => 'عطیہ دہندگان';
+
+  @override
+  String get donorsTitle => 'سرفہرست عطیہ دہندگان';
+
+  @override
+  String get donorsEmpty => 'ابھی کوئی عطیہ نہیں';
+
+  @override
+  String get donorsEmptyHint =>
+      'جو لوگ چیزیں عطیہ کریں گے وہ یہاں نظر آئیں گے۔';
+
+  @override
+  String donationCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count عطیات',
+      one: '1 عطیہ',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get navRequests => 'درخواستیں';
 
   @override

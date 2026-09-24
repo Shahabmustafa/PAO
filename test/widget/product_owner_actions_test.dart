@@ -32,7 +32,13 @@ void main() {
 
   setUp(() {
     auth = FakeAuthRepository(user: const UserModel(id: 'owner-1'));
-    posts = FakePostRepository();
+    posts = FakePostRepository()
+      ..byId['p1'] = makePost(
+        id: 'p1',
+        userId: 'owner-1',
+        title: 'Lamp',
+        imageUrls: const [],
+      );
     ProductStore.items.value = [lamp()];
     RequestStore.reset();
   });
@@ -103,6 +109,12 @@ void main() {
 
     testWidgets('a post that was already given away is locked', (tester) async {
       ProductStore.items.value = [lamp(isGiven: true)];
+      posts.byId['p1'] = makePost(
+        id: 'p1',
+        userId: 'owner-1',
+        isGiven: true,
+        imageUrls: const [],
+      );
       await openDetail(tester, product: lamp(isGiven: true));
 
       expect(find.byIcon(Icons.more_vert), findsNothing);

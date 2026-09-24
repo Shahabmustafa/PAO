@@ -39,4 +39,13 @@ class RequestModel {
       createdAt: DateTime.parse(json['created_at'] as String),
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'post_id': postId,
+    'requester_id': requesterId,
+    'owner_id': ownerId,
+    'status': status,
+    'created_at': createdAt.toUtc().toIso8601String(),
+  };
 }

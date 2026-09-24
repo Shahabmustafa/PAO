@@ -34,7 +34,8 @@ void main() {
 
   setUp(() {
     auth = FakeAuthRepository(user: const UserModel(id: 'me'));
-    posts = FakePostRepository();
+    posts = FakePostRepository()
+      ..byId['p1'] = makePost(id: 'p1', title: 'Lamp');
     profiles = FakeProfileRepository()..publicProfile = kOtherProfile;
     ProductStore.items.value = [product()];
   });
@@ -164,26 +165,29 @@ void main() {
       expect(provider.isDeleting, isFalse);
     });
 
-    test('passes the photos along so they can be removed from storage', () async {
-      auth.user = const UserModel(id: 'owner-1');
-      final provider = ProductDetailProvider(
-        product: Product(
-          id: 'p1',
-          name: 'Lamp',
-          category: 'Books',
-          color: Colors.green,
-          userId: 'owner-1',
-          imageUrls: const ['https://cdn/a.png'],
-        ),
-        authRepository: auth,
-        postRepository: posts,
-        profileRepository: profiles,
-      );
+    test(
+      'passes the photos along so they can be removed from storage',
+      () async {
+        auth.user = const UserModel(id: 'owner-1');
+        final provider = ProductDetailProvider(
+          product: Product(
+            id: 'p1',
+            name: 'Lamp',
+            category: 'Books',
+            color: Colors.green,
+            userId: 'owner-1',
+            imageUrls: const ['https://cdn/a.png'],
+          ),
+          authRepository: auth,
+          postRepository: posts,
+          profileRepository: profiles,
+        );
 
-      await provider.deleteProduct();
+        await provider.deleteProduct();
 
-      expect(posts.deleteCalls.single['imageUrls'], ['https://cdn/a.png']);
-    });
+        expect(posts.deleteCalls.single['imageUrls'], ['https://cdn/a.png']);
+      },
+    );
 
     test('only the owner can delete', () async {
       // Signed in as "me", the post belongs to "owner-1".

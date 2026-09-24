@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import '../../../../core/cache/local_cache.dart';
 import '../datasource/profile_remote_datasource.dart';
 import '../model/profile_model.dart';
 
@@ -23,9 +24,24 @@ class ProfileRepository {
     return row == null ? null : ProfileModel.fromJson(row);
   }
 
+  /// The last public profile fetched for [userId] (name, avatar, last
+  /// seen, bio) straight from the local cache, or null.
+  ProfileModel? cachedPublicProfile(String userId) {
+    final json = LocalCache.readMap(LocalCache.profiles, userId);
+    if (json == null) return null;
+    try {
+      return ProfileModel.fromJson(json);
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<ProfileModel?> fetchPublicProfile(String userId) async {
     final row = await _dataSource.fetchPublicProfile(userId);
-    return row == null ? null : ProfileModel.fromJson(row);
+    if (row == null) return null;
+    final profile = ProfileModel.fromJson(row);
+    LocalCache.write(LocalCache.profiles, userId, profile.toCacheJson());
+    return profile;
   }
 
   /// Returns a map of user id -> profile for a batch of ids, so callers can
@@ -34,7 +50,10 @@ class ProfileRepository {
     List<String> userIds,
   ) async {
     final rows = await _dataSource.fetchPublicProfiles(userIds);
-    final profiles = rows.map(ProfileModel.fromJson);
+    final profiles = rows.map(ProfileModel.fromJson).toList();
+    for (final profile in profiles) {
+      LocalCache.write(LocalCache.profiles, profile.id, profile.toCacheJson());
+    }
     return {for (final profile in profiles) profile.id: profile};
   }
 

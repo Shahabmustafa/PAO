@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pao/features/auth/data/model/user_model.dart';
 import 'package:pao/features/wishlist/data/model/wishlist_item_model.dart';
@@ -24,7 +26,10 @@ void main() {
       WishlistStore.items.value = [item('stale')];
       auth.user = null;
 
-      await WishlistStore.syncFromSupabase(repository: repo, authRepository: auth);
+      await WishlistStore.syncFromSupabase(
+        repository: repo,
+        authRepository: auth,
+      );
 
       expect(WishlistStore.items.value, isEmpty);
     });
@@ -46,7 +51,10 @@ void main() {
         ),
       ];
 
-      await WishlistStore.syncFromSupabase(repository: repo, authRepository: auth);
+      await WishlistStore.syncFromSupabase(
+        repository: repo,
+        authRepository: auth,
+      );
 
       final items = WishlistStore.items.value;
       expect(items.map((i) => i.id), ['p1', 'p2'], reason: 'keyed by post id');
@@ -56,9 +64,31 @@ void main() {
     });
   });
 
+  group('offline', () {
+    test('a change made offline is kept, not rolled back', () async {
+      repo.addError = const SocketException('no internet');
+
+      await WishlistStore.add(item('p1'), repository: repo, authRepository: auth);
+
+      expect(WishlistStore.items.value.map((i) => i.id), ['p1']);
+    });
+
+    test('a change the server rejects is rolled back', () async {
+      repo.addError = Exception('rls');
+
+      await WishlistStore.add(item('p1'), repository: repo, authRepository: auth);
+
+      expect(WishlistStore.items.value, isEmpty);
+    });
+  });
+
   group('add', () {
     test('adds optimistically and persists remotely', () async {
-      await WishlistStore.add(item('p1'), repository: repo, authRepository: auth);
+      await WishlistStore.add(
+        item('p1'),
+        repository: repo,
+        authRepository: auth,
+      );
 
       expect(WishlistStore.items.value.map((i) => i.id), ['p1']);
       expect(repo.added.single.userId, 'u1');
@@ -68,8 +98,16 @@ void main() {
     });
 
     test('ignores a duplicate without a second remote call', () async {
-      await WishlistStore.add(item('p1'), repository: repo, authRepository: auth);
-      await WishlistStore.add(item('p1'), repository: repo, authRepository: auth);
+      await WishlistStore.add(
+        item('p1'),
+        repository: repo,
+        authRepository: auth,
+      );
+      await WishlistStore.add(
+        item('p1'),
+        repository: repo,
+        authRepository: auth,
+      );
 
       expect(WishlistStore.items.value, hasLength(1));
       expect(repo.added, hasLength(1));
@@ -78,7 +116,11 @@ void main() {
     test('rolls back when the remote call fails', () async {
       repo.addError = Exception('offline');
 
-      await WishlistStore.add(item('p1'), repository: repo, authRepository: auth);
+      await WishlistStore.add(
+        item('p1'),
+        repository: repo,
+        authRepository: auth,
+      );
 
       expect(WishlistStore.items.value, isEmpty);
     });
@@ -86,7 +128,11 @@ void main() {
     test('keeps the item locally (no remote call) when signed out', () async {
       auth.user = null;
 
-      await WishlistStore.add(item('p1'), repository: repo, authRepository: auth);
+      await WishlistStore.add(
+        item('p1'),
+        repository: repo,
+        authRepository: auth,
+      );
 
       expect(WishlistStore.items.value, hasLength(1));
       expect(repo.added, isEmpty);
@@ -126,11 +172,18 @@ void main() {
 
       await WishlistStore.remove('p1', repository: repo, authRepository: auth);
 
-      expect(WishlistStore.items.value.map((i) => i.id), containsAll(['p1', 'p2']));
+      expect(
+        WishlistStore.items.value.map((i) => i.id),
+        containsAll(['p1', 'p2']),
+      );
     });
 
     test('removing an unknown id makes no remote call', () async {
-      await WishlistStore.remove('nope', repository: repo, authRepository: auth);
+      await WishlistStore.remove(
+        'nope',
+        repository: repo,
+        authRepository: auth,
+      );
 
       expect(WishlistStore.items.value, hasLength(2));
       expect(repo.removed, isEmpty);

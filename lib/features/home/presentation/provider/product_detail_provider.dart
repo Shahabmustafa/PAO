@@ -17,7 +17,11 @@ class ProductDetailProvider extends ChangeNotifier {
   }) : _authRepository = authRepository ?? AuthRepository(),
        _postRepository = postRepository ?? PostRepository(),
        _profileRepository = profileRepository ?? ProfileRepository() {
+    // The cached product is already on screen; refresh it (and the
+    // poster) in the background. A changed post reaches the screen through
+    // ProductStore.
     _loadPosterProfile();
+    ProductStore.refreshOne(product.id, repository: postRepository);
   }
 
   final Product product;
@@ -42,6 +46,12 @@ class ProductDetailProvider extends ChangeNotifier {
       isLoadingPoster = false;
       notifyListeners();
       return;
+    }
+    final cached = _profileRepository.cachedPublicProfile(userId);
+    if (cached != null) {
+      posterProfile = cached;
+      isLoadingPoster = false;
+      notifyListeners();
     }
     try {
       posterProfile = await _profileRepository.fetchPublicProfile(userId);

@@ -119,13 +119,14 @@ MessageModel makeMessage({
   String senderId = 'owner-1',
   String recipientId = 'requester-1',
   String body = 'Hello',
+  DateTime? createdAt,
 }) => MessageModel(
   id: id,
   requestId: requestId,
   senderId: senderId,
   recipientId: recipientId,
   body: body,
-  createdAt: kCreatedAt,
+  createdAt: createdAt ?? kCreatedAt,
 );
 
 // Realtime events, as a repository delivers them.
@@ -301,6 +302,9 @@ class FakePostRepository implements PostRepository {
   Future<int> fetchDonatedCount(String userId) async => donatedCount;
 
   @override
+  Future<Map<String, int>> fetchDonorCounts() async => const {};
+
+  @override
   Future<List<PostModel>> fetchPostsByUser(String userId) async {
     if (fetchError != null) throw fetchError!;
     return postsByUser[userId] ?? const [];
@@ -313,16 +317,19 @@ class FakePostRepository implements PostRepository {
   }
 
   @override
-  Future<List<PostModel>> fetchAvailablePosts() async {
+  Future<List<PostModel>> fetchPostsByIds(List<String> ids) async {
     if (fetchError != null) throw fetchError!;
-    return available;
+    return [
+      for (final post in [...available, ...byId.values])
+        if (ids.contains(post.id)) post,
+    ];
   }
 
   /// Every call to [fetchAvailablePostsPage], for asserting on the query.
   final pageCalls =
       <
         ({
-          int offset,
+          String? afterId,
           int limit,
           String? excludeUserId,
           String? category,
@@ -341,7 +348,8 @@ class FakePostRepository implements PostRepository {
   /// query, then returns the requested slice.
   @override
   Future<List<PostModel>> fetchAvailablePostsPage({
-    required int offset,
+    DateTime? afterCreatedAt,
+    String? afterId,
     required int limit,
     String? excludeUserId,
     String? category,
@@ -349,7 +357,7 @@ class FakePostRepository implements PostRepository {
     String? search,
   }) async {
     pageCalls.add((
-      offset: offset,
+      afterId: afterId,
       limit: limit,
       excludeUserId: excludeUserId,
       category: category,
@@ -358,25 +366,26 @@ class FakePostRepository implements PostRepository {
     ));
     if (pageGate != null) await pageGate!.future;
     if (pageError != null) throw pageError!;
-    return available
-        .where((post) {
-          if (post.isGiven) return false;
-          if (excludeUserId != null && post.userId == excludeUserId) {
-            return false;
-          }
-          if (category != null && (post.category ?? 'Other') != category) {
-            return false;
-          }
-          if (condition != null && post.condition != condition) return false;
-          if (search != null &&
-              !post.title.toLowerCase().contains(search.toLowerCase())) {
-            return false;
-          }
-          return true;
-        })
-        .skip(offset)
-        .take(limit)
-        .toList();
+    final matching = available.where((post) {
+      if (post.isGiven) return false;
+      if (excludeUserId != null && post.userId == excludeUserId) {
+        return false;
+      }
+      if (category != null && (post.category ?? 'Other') != category) {
+        return false;
+      }
+      if (condition != null && post.condition != condition) return false;
+      if (search != null &&
+          !post.title.toLowerCase().contains(search.toLowerCase())) {
+        return false;
+      }
+      return true;
+    }).toList();
+    // Keyset: everything after the cursor row, like the real query.
+    final start = afterId == null
+        ? 0
+        : matching.indexWhere((post) => post.id == afterId) + 1;
+    return matching.skip(start).take(limit).toList();
   }
 
   @override
@@ -506,6 +515,9 @@ class FakeRequestRepository implements RequestRepository {
     acceptCalls.add((requestId: requestId, postId: postId));
     if (acceptError != null) throw acceptError!;
   }
+
+  @override
+  Future<void> declineRequest(String requestId) async {}
 }
 
 class FakeWishlistRepository implements WishlistRepository {
@@ -542,6 +554,9 @@ class FakeWishlistRepository implements WishlistRepository {
 }
 
 class FakeProfileRepository implements ProfileRepository {
+  @override
+  ProfileModel? cachedPublicProfile(String userId) => null;
+
   Object? fetchError;
   Object? saveError;
   Object? uploadError;
@@ -675,22 +690,36 @@ class FakeChatRepository implements ChatRepository {
         ({String? requestId, String senderId, String recipientId, String body})
       >[];
 
+  /// The `before` cursor of every page request.
+  final pageCursors = <DateTime?>[];
+
+  /// Serves [history] (oldest first) newest-first, like the real query.
   @override
-  Future<List<MessageModel>> fetchMessages({
+  Future<List<MessageModel>> fetchMessagesPage({
     required String currentUserId,
     required String otherUserId,
+    DateTime? before,
+    required int limit,
   }) async {
     fetchCalls++;
+    pageCursors.add(before);
     if (fetchError != null) throw fetchError!;
-    return history;
+    final older = history
+        .where((m) => before == null || m.createdAt.isBefore(before))
+        .toList()
+        .reversed;
+    return older.take(limit).toList();
   }
 
   @override
-  Stream<RealtimeEvent<MessageModel>> watchMessages(String currentUserId) =>
-      controller.stream;
+  Stream<RealtimeEvent<MessageModel>> watchConversation({
+    required String currentUserId,
+    required String otherUserId,
+  }) => controller.stream;
 
   @override
   Future<MessageModel> sendMessage({
+    String? id,
     String? requestId,
     required String senderId,
     required String recipientId,
@@ -708,7 +737,7 @@ class FakeChatRepository implements ChatRepository {
       body: body,
     ));
     return makeMessage(
-      id: 'sent-${sent.length}',
+      id: id ?? 'sent-${sent.length}',
       requestId: requestId,
       senderId: senderId,
       recipientId: recipientId,
@@ -932,11 +961,15 @@ class FakePostDataSource implements PostRemoteDataSource {
       calls.add('markAsGiven:$postId');
 
   @override
-  Future<List<Map<String, dynamic>>> fetchAvailablePosts() async => rows;
+  Future<List<Map<String, dynamic>>> fetchPostsByIds(List<String> ids) async {
+    calls.add('byIds:${ids.join(',')}');
+    return rows;
+  }
 
   @override
   Future<List<Map<String, dynamic>>> fetchAvailablePostsPage({
-    required int offset,
+    DateTime? afterCreatedAt,
+    String? afterId,
     required int limit,
     String? excludeUserId,
     String? category,
@@ -944,7 +977,7 @@ class FakePostDataSource implements PostRemoteDataSource {
     String? search,
   }) async {
     calls.add(
-      'page:$offset:$limit:$excludeUserId:$category:$condition:$search',
+      'page:$afterId:$limit:$excludeUserId:$category:$condition:$search',
     );
     return rows;
   }
@@ -954,6 +987,9 @@ class FakePostDataSource implements PostRemoteDataSource {
 
   @override
   Future<int> fetchDonatedCount(String userId) async => donated;
+
+  @override
+  Future<List<String>> fetchGivenPostOwners() async => const [];
 
   @override
   Future<List<Map<String, dynamic>>> fetchPostsByUser(String userId) async {
@@ -1056,6 +1092,10 @@ class FakeRequestDataSource implements RequestRemoteDataSource {
       calls.add('accept:$requestId');
 
   @override
+  Future<void> declineRequest(String requestId) async =>
+      calls.add('decline:$requestId');
+
+  @override
   Future<void> closeOtherPendingRequests({
     required String postId,
     required String acceptedRequestId,
@@ -1113,18 +1153,22 @@ class FakeChatDataSource implements ChatRemoteDataSource {
   final events = StreamController<RealtimeEvent<Map<String, dynamic>>>();
 
   @override
-  Future<List<Map<String, dynamic>>> fetchMessages({
+  Future<List<Map<String, dynamic>>> fetchMessagesPage({
     required String currentUserId,
     required String otherUserId,
+    DateTime? before,
+    required int limit,
   }) async => rows;
 
   @override
-  Stream<RealtimeEvent<Map<String, dynamic>>> watchMessages(
-    String currentUserId,
-  ) => events.stream;
+  Stream<RealtimeEvent<Map<String, dynamic>>> watchConversation({
+    required String currentUserId,
+    required String otherUserId,
+  }) => events.stream;
 
   @override
   Future<Map<String, dynamic>> sendMessage({
+    String? id,
     String? requestId,
     required String senderId,
     required String recipientId,

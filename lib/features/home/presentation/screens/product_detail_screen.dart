@@ -82,11 +82,11 @@ class _ProductDetailView extends StatelessWidget {
     if (!context.mounted) return;
 
     if (success) {
-      AppSnackbar.show(
-        context,
-        context.l10n.requestedProduct(product.name),
-        icon: Icons.volunteer_activism,
-      );
+      // Continue in the conversation with the owner, where they can accept.
+      final request = RequestStore.sent.value
+          .where((r) => r.postId == product.id)
+          .firstOrNull;
+      if (request != null) _onOpenChatPressed(context, request);
     } else {
       AppSnackbar.show(
         context,
@@ -622,6 +622,10 @@ class _ProductGalleryState extends State<_ProductGallery> {
                 ? Image.memory(product.images[index], fit: BoxFit.cover)
                 : AppNetworkImage(
                     imageUrl: product.imageUrls[index],
+                    memCacheWidth: AppNetworkImage.pixelWidth(
+                      context,
+                      MediaQuery.sizeOf(context).width,
+                    ),
                     errorBuilder: (context) =>
                         _ProductInitial(product: product),
                   );

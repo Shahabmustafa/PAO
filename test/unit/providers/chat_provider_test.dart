@@ -181,32 +181,29 @@ void main() {
       },
     );
 
-    test(
-      'a message between two other users is ignored, even with the same '
-      'request id',
-      () async {
-        final provider = build();
-        chat.controller.add(subscribedEvent());
-        await pumpEventQueue();
+    test('a message between two other users is ignored, even with the same '
+        'request id', () async {
+      final provider = build();
+      chat.controller.add(subscribedEvent());
+      await pumpEventQueue();
 
-        chat.controller.add(
-          insertEvent(
-            'x',
-            MessageModel(
-              id: 'x',
-              requestId: 'req-1',
-              senderId: 'someone-else',
-              recipientId: 'another-person',
-              body: 'wrong chat',
-              createdAt: kCreatedAt,
-            ),
+      chat.controller.add(
+        insertEvent(
+          'x',
+          MessageModel(
+            id: 'x',
+            requestId: 'req-1',
+            senderId: 'someone-else',
+            recipientId: 'another-person',
+            body: 'wrong chat',
+            createdAt: kCreatedAt,
           ),
-        );
-        await pumpEventQueue();
+        ),
+      );
+      await pumpEventQueue();
 
-        expect(provider.messages, isEmpty);
-      },
-    );
+      expect(provider.messages, isEmpty);
+    });
 
     test('re-joining after a dropped connection reloads the history', () async {
       chat.history = [msg('a')];
@@ -348,7 +345,6 @@ void main() {
       expect(sent.body, 'Assalam o Alaikum');
       expect(sent.senderId, 'requester-1');
       expect(sent.requestId, 'req-1');
-      expect(provider.isSending, isFalse);
     });
 
     test(
@@ -357,14 +353,15 @@ void main() {
         final provider = build();
 
         await provider.sendMessage('hello');
-        expect(provider.messages.map((m) => m.id), ['sent-1']);
+        final id = provider.messages.single.id;
+        expect(provider.messages.single.status, MessageStatus.sent);
 
         // Realtime then delivers the same row back to the sender.
         chat.controller.add(
           insertEvent(
-            'sent-1',
+            id,
             makeMessage(
-              id: 'sent-1',
+              id: id,
               senderId: 'requester-1',
               recipientId: 'owner-1',
               body: 'hello',
@@ -373,7 +370,7 @@ void main() {
         );
         await pumpEventQueue();
 
-        expect(provider.messages.map((m) => m.id), ['sent-1']);
+        expect(provider.messages.map((m) => m.id), [id]);
       },
     );
 
@@ -395,25 +392,70 @@ void main() {
       expect(chat.sent, isEmpty);
     });
 
-    test('a failure shows a message and re-enables sending', () async {
-      chat.sendError = Exception('offline');
+    test(
+      'a failure keeps the message, marked failed, and can be retried',
+      () async {
+        chat.sendError = Exception('offline');
+        final provider = build();
+
+        await provider.sendMessage('hello');
+
+        expect(provider.errorMessage, 'Failed to send message.');
+        expect(provider.messages.single.status, MessageStatus.failed);
+
+        chat.sendError = null;
+        await provider.retry(provider.messages.single);
+
+        expect(provider.messages, hasLength(1));
+        expect(provider.messages.single.status, MessageStatus.sent);
+        // The retry reuses the same id, so the server can't store it twice.
+        expect(chat.sent, hasLength(1));
+      },
+    );
+
+    test('the message is shown as sending while it is in flight', () async {
       final provider = build();
+      final states = <MessageStatus>[];
+      provider.addListener(() {
+        if (provider.messages.isNotEmpty) {
+          states.add(provider.messages.single.status);
+        }
+      });
 
       await provider.sendMessage('hello');
 
-      expect(provider.errorMessage, 'Failed to send message.');
-      expect(provider.isSending, isFalse);
+      expect(states.first, MessageStatus.sending);
+      expect(states.last, MessageStatus.sent);
     });
+  });
 
-    test('isSending is true while the message is in flight', () async {
+  group('pagination', () {
+    test('loads the latest page, then older ones on demand', () async {
+      chat.history = [
+        for (var i = 0; i < 45; i++)
+          makeMessage(
+            id: 'm$i',
+            senderId: 'owner-1',
+            recipientId: 'requester-1',
+            body: 'message $i',
+            createdAt: kCreatedAt.add(Duration(minutes: i)),
+          ),
+      ];
       final provider = build();
-      final states = <bool>[];
-      provider.addListener(() => states.add(provider.isSending));
+      chat.controller.add(subscribedEvent());
+      await pumpEventQueue();
 
-      await provider.sendMessage('hello');
+      expect(provider.messages, hasLength(ChatProvider.pageSize));
+      expect(provider.messages.last.id, 'm44');
+      expect(provider.hasMoreOlder, isTrue);
 
-      expect(states.first, isTrue);
-      expect(states.last, isFalse);
+      await provider.loadOlder();
+
+      expect(provider.messages, hasLength(45));
+      expect(provider.messages.first.id, 'm0');
+      expect(provider.hasMoreOlder, isFalse);
+      // The second request used the oldest loaded message as its cursor.
+      expect(chat.pageCursors.last, chat.history[15].createdAt);
     });
   });
 

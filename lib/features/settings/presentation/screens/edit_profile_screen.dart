@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../../../core/media/media_compressor.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_icons.dart';
@@ -76,7 +77,9 @@ class _EditProfileViewState extends State<_EditProfileView> {
       maxWidth: 800,
     );
     if (picked == null) return;
-    final bytes = await picked.readAsBytes();
+    final bytes = await MediaCompressor.compressImageBytes(
+      await picked.readAsBytes(),
+    );
     if (!mounted) return;
 
     final provider = context.read<EditProfileProvider>();

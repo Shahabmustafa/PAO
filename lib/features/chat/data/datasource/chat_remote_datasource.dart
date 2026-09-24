@@ -15,16 +15,25 @@ class ChatRemoteDataSource {
 
   final SupabaseClient _client;
 
-  /// Every message ever exchanged between the two users, oldest first.
-  Future<List<Map<String, dynamic>>> fetchMessages({
+  /// One page of the conversation, newest first. [before] is the keyset
+  /// cursor (the `created_at` of the oldest message already held); leave it
+  /// null for the latest page. Keyset instead of OFFSET keeps every page
+  /// equally cheap however long the chat is, and isn't thrown off by new
+  /// messages arriving meanwhile.
+  Future<List<Map<String, dynamic>>> fetchMessagesPage({
     required String currentUserId,
     required String otherUserId,
+    DateTime? before,
+    required int limit,
   }) async {
-    final rows = await _client
+    var query = _client
         .from('messages')
         .select()
-        .or(_pairFilter(currentUserId, otherUserId))
-        .order('created_at');
+        .or(_pairFilter(currentUserId, otherUserId));
+    if (before != null) {
+      query = query.lt('created_at', before.toUtc().toIso8601String());
+    }
+    final rows = await query.order('created_at', ascending: false).limit(limit);
     return List<Map<String, dynamic>>.from(rows as List);
   }
 
@@ -33,37 +42,54 @@ class ChatRemoteDataSource {
   String _pairFilter(String a, String b) =>
       'and(sender_id.eq.$a,recipient_id.eq.$b),and(sender_id.eq.$b,recipient_id.eq.$a)';
 
-  /// Live INSERT / UPDATE / DELETE events touching [currentUserId], as
-  /// either sender or recipient, across every conversation they're part of.
-  /// Realtime can't filter on "either column equals this value" server
-  /// side, so both directions are subscribed and the listener narrows the
-  /// result down to one conversation itself.
-  Stream<RealtimeEvent<Map<String, dynamic>>> watchMessages(
-    String currentUserId,
-  ) {
-    PostgresChangeFilter column(String name) => PostgresChangeFilter(
+  /// Live events for the chat between [currentUserId] and [otherUserId].
+  ///
+  /// Realtime accepts one column filter per binding, so the pair can't be
+  /// matched exactly server-side; the bindings are narrowed as far as
+  /// possible instead:
+  ///  * INSERT / UPDATE from the other user (RLS already limits these to
+  ///    rows the current user may see, i.e. ones addressed to them),
+  ///  * UPDATE of the current user's own messages (read ticks, reactions,
+  ///    edits by another device). Their own INSERTs are applied locally by
+  ///    the optimistic send, so no INSERT binding is needed.
+  /// The listener still checks each event belongs to this pair. DELETE
+  /// events can't be filtered and are matched by id.
+  Stream<RealtimeEvent<Map<String, dynamic>>> watchConversation({
+    required String currentUserId,
+    required String otherUserId,
+  }) {
+    PostgresChangeFilter sender(String id) => PostgresChangeFilter(
       type: PostgresChangeFilterType.eq,
-      column: name,
-      value: currentUserId,
+      column: 'sender_id',
+      value: id,
     );
     return watchTable(
       _client,
-      channelName: 'messages:$currentUserId',
+      channelName: 'chat:$currentUserId:$otherUserId',
       table: 'messages',
       bindings: [
-        for (final event in [
-          PostgresChangeEvent.insert,
-          PostgresChangeEvent.update,
-        ]) ...[
-          RealtimeBinding(event: event, filter: column('sender_id')),
-          RealtimeBinding(event: event, filter: column('recipient_id')),
-        ],
+        RealtimeBinding(
+          event: PostgresChangeEvent.insert,
+          filter: sender(otherUserId),
+        ),
+        RealtimeBinding(
+          event: PostgresChangeEvent.update,
+          filter: sender(otherUserId),
+        ),
+        RealtimeBinding(
+          event: PostgresChangeEvent.update,
+          filter: sender(currentUserId),
+        ),
         const RealtimeBinding(event: PostgresChangeEvent.delete),
       ],
     );
   }
 
+  /// Inserts a message. [id] is generated on the device so the optimistic
+  /// copy and the server row share one id (that is what de-duplicates the
+  /// Realtime echo).
   Future<Map<String, dynamic>> sendMessage({
+    String? id,
     String? requestId,
     required String senderId,
     required String recipientId,
@@ -76,6 +102,7 @@ class ChatRemoteDataSource {
     return _client
         .from('messages')
         .insert({
+          'id': ?id,
           'reply_to_id': replyToId,
           'request_id': requestId,
           'sender_id': senderId,

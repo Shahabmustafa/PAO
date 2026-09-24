@@ -42,9 +42,7 @@ class AppDialog {
       builder: (dialogContext) => Dialog(
         backgroundColor: dialogContext.appSurface,
         surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: const Padding(
           padding: EdgeInsets.all(32),
           child: SizedBox(

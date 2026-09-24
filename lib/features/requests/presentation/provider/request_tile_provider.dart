@@ -1,5 +1,9 @@
 import 'package:flutter/foundation.dart';
+import '../../../../core/cache/local_cache.dart';
 import '../../../add_item/data/repository/post_repository.dart';
+import '../../../chat/data/chat_unread_store.dart';
+import '../../../chat/data/model/message_model.dart';
+import '../../../chat/data/repository/chat_repository.dart';
 import '../../../auth/data/repository/auth_repository.dart';
 import '../../../feedback/data/repository/feedback_repository.dart';
 import '../../../settings/data/model/profile_model.dart';
@@ -19,11 +23,16 @@ class RequestTileProvider extends ChangeNotifier {
     FeedbackRepository? feedbackRepository,
     PostRepository? postRepository,
     AuthRepository? authRepository,
-  }) : _profileRepository = profileRepository ?? ProfileRepository(),
+    ChatRepository? chatRepository,
+  }) : _chatRepositoryOverride = chatRepository,
+       _profileRepository = profileRepository ?? ProfileRepository(),
        _feedbackRepository = feedbackRepository ?? FeedbackRepository(),
        _postRepository = postRepository ?? PostRepository(),
        _authRepository = authRepository ?? AuthRepository() {
     _loadProfile();
+    loadLastMessage();
+    // A new incoming message changes the unread counts; refresh the preview.
+    ChatUnreadStore.unreadBySender.addListener(_onUnreadChanged);
     if (productName == null) _loadProduct();
     if (isSentTab && request.isAccepted) _checkFeedback();
   }
@@ -36,6 +45,15 @@ class RequestTileProvider extends ChangeNotifier {
   final FeedbackRepository _feedbackRepository;
   final PostRepository _postRepository;
   final AuthRepository _authRepository;
+  final ChatRepository? _chatRepositoryOverride;
+
+  // Lazy: only built once a conversation preview is actually loaded.
+  late final ChatRepository _chatRepository =
+      _chatRepositoryOverride ?? ChatRepository();
+
+  /// The newest message in the conversation with [otherUserId] that the
+  /// current user hasn't deleted, for the chat list preview.
+  MessageModel? lastMessage;
 
   ProfileModel? profile;
   bool isLoadingProfile = true;
@@ -50,7 +68,67 @@ class RequestTileProvider extends ChangeNotifier {
 
   String? get currentUserId => _authRepository.currentUser?.id;
 
+  int _lastUnread = 0;
+
+  void _onUnreadChanged() {
+    final unread = ChatUnreadStore.unreadBySender.value[otherUserId] ?? 0;
+    if (unread > _lastUnread) loadLastMessage(refresh: true);
+    _lastUnread = unread;
+  }
+
+  /// The newest message the current user can see, from the chat's Hive copy
+  /// (ChatProvider keeps it up to date), or null when nothing is cached.
+  MessageModel? _cachedLastMessage(String me) {
+    MessageModel? newest;
+    for (final json in LocalCache.readList(
+      LocalCache.messages,
+      'conv:$otherUserId',
+    )) {
+      try {
+        final m = MessageModel.fromJson(json);
+        if (m.isDeletedFor(me)) continue;
+        if (newest == null || m.createdAt.isAfter(newest.createdAt)) {
+          newest = m;
+        }
+      } catch (_) {}
+    }
+    return newest;
+  }
+
+  /// Loads the preview. Uses the cached chat when there is one; only asks
+  /// Supabase when nothing is cached or [refresh] says a new message
+  /// arrived.
+  Future<void> loadLastMessage({bool refresh = false}) async {
+    final me = currentUserId;
+    if (me == null) return;
+    final cached = _cachedLastMessage(me);
+    if (cached != null) {
+      lastMessage = cached;
+      notifyListeners();
+      if (!refresh) return;
+    }
+    try {
+      final page = await _chatRepository.fetchMessagesPage(
+        currentUserId: me,
+        otherUserId: otherUserId,
+        limit: 5,
+      );
+      lastMessage = page.where((m) => !m.isDeletedFor(me)).firstOrNull;
+      notifyListeners();
+    } catch (_) {
+      // No preview; the row still works.
+    }
+  }
+
   Future<void> _loadProfile() async {
+    final cached = _profileRepository.cachedPublicProfile(otherUserId);
+    if (cached != null) {
+      // Name and photo rarely change; the cached copy is enough here.
+      profile = cached;
+      isLoadingProfile = false;
+      notifyListeners();
+      return;
+    }
     try {
       profile = await _profileRepository.fetchPublicProfile(otherUserId);
     } catch (_) {
@@ -62,6 +140,13 @@ class RequestTileProvider extends ChangeNotifier {
   }
 
   Future<void> _loadProduct() async {
+    final key = 'post:${request.postId}';
+    final cached = LocalCache.readMap(LocalCache.products, key);
+    if (cached != null && cached['title'] is String) {
+      productName = cached['title'] as String;
+      productImageUrl = cached['image'] as String?;
+      return;
+    }
     isLoadingProduct = true;
     notifyListeners();
     try {
@@ -70,6 +155,12 @@ class RequestTileProvider extends ChangeNotifier {
       productImageUrl = post != null && post.imageUrls.isNotEmpty
           ? post.imageUrls.first
           : null;
+      if (post != null) {
+        LocalCache.write(LocalCache.products, key, {
+          'title': post.title,
+          'image': productImageUrl,
+        });
+      }
     } catch (_) {
       productName = l10nNow.paoItem;
     } finally {
@@ -122,6 +213,7 @@ class RequestTileProvider extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    ChatUnreadStore.unreadBySender.removeListener(_onUnreadChanged);
     super.dispose();
   }
 }

@@ -11,9 +11,13 @@ import '../../domain/category.dart';
 import '../../domain/filter_options.dart';
 import '../../domain/product.dart';
 
-/// Drives the home grid with server-side pagination: products are fetched
-/// [pageSize] at a time, and search / category / condition are applied by the
-/// server so every page is full of matching products.
+/// Drives the home grid with server-side keyset pagination: products are
+/// fetched [pageSize] at a time, and search / category / condition are
+/// applied by the server so every page is full of matching products.
+///
+/// Local-first: when the query is the plain feed, the newest cached
+/// products are shown immediately and the first page is refreshed from
+/// Supabase in the background (no spinner, no flash of an empty grid).
 class HomeProvider extends ChangeNotifier {
   HomeProvider({
     AuthRepository? authRepository,
@@ -33,7 +37,7 @@ class HomeProvider extends ChangeNotifier {
     refresh();
   }
 
-  static const int pageSize = 8;
+  static const int pageSize = 20;
 
   final AuthRepository _authRepository;
   final PostRepository _postRepository;
@@ -58,8 +62,6 @@ class HomeProvider extends ChangeNotifier {
   /// The last attempt to load a following page failed; [loadMore] retries.
   bool loadMoreFailed = false;
 
-  // Rows already fetched for the current query; the next page starts here.
-  int _nextOffset = 0;
   // Bumped whenever the query changes, so a slow response for an old query
   // can't overwrite the results of the new one.
   int _generation = 0;
@@ -92,18 +94,18 @@ class HomeProvider extends ChangeNotifier {
   Future<void> refresh() => _loadFirstPage(clear: false);
 
   Future<void> loadMore() async {
-    if (isLoading || isLoadingMore || !hasMore) return;
+    if (isLoading || isLoadingMore || !hasMore || _products.isEmpty) return;
     final generation = _generation;
     isLoadingMore = true;
     loadMoreFailed = false;
     _notify();
 
     try {
-      final posts = await _fetch(offset: _nextOffset);
+      final last = _products.last;
+      final posts = await _fetch(after: last);
       if (generation != _generation) return;
-      _nextOffset += posts.length;
-      // New posts pushed onto the top shift later pages, so a page can
-      // repeat a product that was already loaded.
+      // Cursor pages don't shift when posts are added above, but a post
+      // may have been inserted live and then also come back here.
       final known = {for (final product in _products) product.id};
       _products.addAll(
         posts
@@ -125,20 +127,19 @@ class HomeProvider extends ChangeNotifier {
     _loadingFirstPage = true;
     _changesDuringLoad.clear();
     if (clear) _products.clear();
-    _nextOffset = 0;
-    isLoading = true;
+    // Show cached products right away instead of a loading skeleton.
+    final cached = _products.isEmpty ? _cachedFirstPage() : const <Product>[];
+    if (cached.isNotEmpty) _products.addAll(cached);
+    isLoading = _products.isEmpty;
     isLoadingMore = false;
     loadMoreFailed = false;
     hasMore = true;
     _notify();
 
     try {
-      final posts = await _fetch(offset: 0);
+      final posts = await _fetch();
       if (generation != _generation) return;
-      _products
-        ..clear()
-        ..addAll(posts.map(ProductStore.productFromPost));
-      _nextOffset = posts.length;
+      _mergeFirstPage(posts.map(ProductStore.productFromPost).toList());
       hasMore = posts.length >= pageSize;
       _loadingFirstPage = false;
       _changesDuringLoad
@@ -147,7 +148,9 @@ class HomeProvider extends ChangeNotifier {
     } catch (_) {
       if (generation != _generation) return;
       _loadingFirstPage = false;
-      hasMore = false;
+      // Offline / server error: cached products (if any) stay on screen and
+      // more can be requested by scrolling.
+      hasMore = _products.isNotEmpty;
       // Let the same query be retried by the next search / filter change.
       _activeKey = null;
     }
@@ -174,11 +177,9 @@ class HomeProvider extends ChangeNotifier {
         post == null ||
         !_matchesQuery(post)) {
       // Deleted, given away, or edited so it no longer fits the search or
-      // filters: drop it. Every row after it moves up one place, so the
-      // next page starts one row earlier.
+      // filters: drop it.
       if (index < 0) return;
       _products.removeAt(index);
-      if (_nextOffset > 0) _nextOffset--;
       realtimeLog('home feed: removed ${event.id}');
       _notify();
       return;
@@ -190,11 +191,9 @@ class HomeProvider extends ChangeNotifier {
       realtimeLog('home feed: updated ${event.id}');
       _notify();
     } else if (event.type == RealtimeEventType.insert) {
-      // Newest first, so a new post goes on top; the next page starts one
-      // row later. (An UPDATE for a post that isn't loaded is left alone: it
+      // Newest first, so a new post goes on top. (An UPDATE for a post that isn't loaded is left alone: it
       // is an older one from a page that hasn't been fetched yet.)
       _products.insert(0, product);
-      _nextOffset++;
       realtimeLog('home feed: added ${event.id}');
       _notify();
     }
@@ -220,10 +219,35 @@ class HomeProvider extends ChangeNotifier {
     return true;
   }
 
-  Future<List<PostModel>> _fetch({required int offset}) {
+  /// The plain feed (no search / category / condition) from the cache.
+  List<Product> _cachedFirstPage() {
+    if (hasActiveSearch) return const [];
+    final me = _authRepository.currentUser?.id;
+    final cached =
+        ProductStore.items.value
+            .where((p) => !p.isGiven && p.userId != me && p.createdAt != null)
+            .toList()
+          ..sort((a, b) {
+            final byDate = b.createdAt!.compareTo(a.createdAt!);
+            return byDate != 0 ? byDate : b.id.compareTo(a.id);
+          });
+    return cached.take(pageSize).toList();
+  }
+
+  /// Replaces the shown first page with the fresh one and records it in
+  /// the product store (which mirrors itself to the local cache).
+  void _mergeFirstPage(List<Product> fresh) {
+    _products
+      ..clear()
+      ..addAll(fresh);
+    ProductStore.upsertAll(fresh);
+  }
+
+  Future<List<PostModel>> _fetch({Product? after}) {
     final search = searchQuery.trim();
     return _postRepository.fetchAvailablePostsPage(
-      offset: offset,
+      afterCreatedAt: after?.createdAt,
+      afterId: after?.id,
       limit: pageSize,
       excludeUserId: _authRepository.currentUser?.id,
       category: selectedCategory == kHomeCategories.first

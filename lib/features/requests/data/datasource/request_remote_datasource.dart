@@ -144,6 +144,13 @@ class RequestRemoteDataSource {
         .eq('id', requestId);
   }
 
+  Future<void> declineRequest(String requestId) {
+    return _client
+        .from('requests')
+        .update({'status': 'declined'})
+        .eq('id', requestId);
+  }
+
   Future<void> closeOtherPendingRequests({
     required String postId,
     required String acceptedRequestId,
