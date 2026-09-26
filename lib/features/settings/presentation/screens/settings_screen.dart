@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/routes/app_routes.dart';
+import '../../../../core/update/update_checker.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_icons.dart';
 import '../../../../core/tour/app_tour.dart';
@@ -288,6 +289,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: _SettingsCard(
                 children: [
+                  _SettingsTile(
+                    icon: AppIcons.info,
+                    label: context.l10n.updateYourApp,
+                    onTap: UpdateChecker.openUpdate,
+                  ),
                   _SettingsTile(
                     icon: AppIcons.info,
                     label: context.l10n.appTour,

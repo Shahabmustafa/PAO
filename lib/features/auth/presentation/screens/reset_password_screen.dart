@@ -68,6 +68,13 @@ class _ResetPasswordViewState extends State<_ResetPasswordView> {
         icon: Icons.error_outline,
         color: AppColors.error,
       );
+      if (provider.accountBanned) {
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          AppRoutes.login,
+          (route) => false,
+        );
+      }
     }
   }
 

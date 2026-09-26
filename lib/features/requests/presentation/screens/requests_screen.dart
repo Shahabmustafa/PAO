@@ -6,6 +6,7 @@ import '../../../../core/theme/app_icons.dart';
 import '../../../../core/widgets/app_avatar.dart';
 import '../../../../core/widgets/app_icon.dart';
 import '../../../../core/widgets/app_shimmer.dart';
+import '../../../chat/data/chat_activity_store.dart';
 import '../../../chat/data/chat_unread_store.dart';
 import '../../../chat/presentation/widgets/chat_media_widgets.dart'
     show messagePreview;
@@ -92,6 +93,7 @@ class _ChatsListState extends State<_ChatsList> {
     RequestStore.sent,
     RequestStore.received,
     ProductStore.items,
+    ChatActivityStore.lastActivity,
     RequestStore.hasMoreSent,
     RequestStore.hasMoreReceived,
     RequestStore.isLoadingMoreSent,
@@ -130,7 +132,24 @@ class _ChatsListState extends State<_ChatsList> {
           for (final r in RequestStore.sent.value) (request: r, isSent: true),
           for (final r in RequestStore.received.value)
             (request: r, isSent: false),
-        ]..sort((a, b) => b.request.createdAt.compareTo(a.request.createdAt));
+        ];
+        // Most recent conversation first: the latest message with that
+        // person, or the request itself when nobody has written yet.
+        final activity = ChatActivityStore.lastActivity.value;
+        DateTime sortKey(({RequestModel request, bool isSent}) e) {
+          final other = e.isSent ? e.request.ownerId : e.request.requesterId;
+          final last = activity[other];
+          return last != null && last.isAfter(e.request.createdAt)
+              ? last
+              : e.request.createdAt;
+        }
+
+        entries.sort((a, b) {
+          final byActivity = sortKey(b).compareTo(sortKey(a));
+          return byActivity != 0
+              ? byActivity
+              : b.request.createdAt.compareTo(a.request.createdAt);
+        });
         // One chat per person: their most recent request.
         final seen = <String>{};
         entries.retainWhere((e) {

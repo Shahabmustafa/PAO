@@ -5,6 +5,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../features/settings/data/notification_settings_store.dart';
+import 'message_notifications.dart';
 import 'notification_router.dart';
 
 /// Wires Firebase Cloud Messaging to the app: requests notification
@@ -28,12 +29,8 @@ class PushNotificationService {
   static final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
 
-  static const AndroidNotificationChannel _channel = AndroidNotificationChannel(
-    'push_default',
-    'General',
-    description: 'New messages and requests',
-    importance: Importance.high,
-  );
+  static const AndroidNotificationChannel _channel =
+      MessageNotifications.channel;
 
   static bool _initialized = false;
 
@@ -42,17 +39,14 @@ class PushNotificationService {
     _initialized = true;
 
     await _localNotifications.initialize(
-      // ic_notification: a plain white "PAO" silhouette (see
-      // android/app/src/main/res/drawable-*dpi/ic_notification.png), not
+      // Android small icon ic_notification is a plain white "PAO" silhouette
+      // (android/app/src/main/res/drawable-*dpi/ic_notification.png), not
       // the full-color launcher icon -- Android can only render a status
-      // bar icon from its alpha channel, so a solid, non-transparent icon
-      // like the launcher one just shows as a filled block.
-      settings: const InitializationSettings(
-        android: AndroidInitializationSettings('ic_notification'),
-        iOS: DarwinInitializationSettings(),
-      ),
-      onDidReceiveNotificationResponse: (response) =>
-          _handleTap(response.payload),
+      // bar icon from its alpha channel.
+      settings: MessageNotifications.initSettings,
+      onDidReceiveNotificationResponse: _handleResponse,
+      onDidReceiveBackgroundNotificationResponse:
+          notificationBackgroundResponseHandler,
     );
     await _localNotifications
         .resolvePlatformSpecificImplementation<
@@ -160,6 +154,18 @@ class PushNotificationService {
     } else {
       await _clearToken(user.id);
     }
+  }
+
+  static void _handleResponse(NotificationResponse response) {
+    if (response.actionId == MessageNotifications.replyActionId) {
+      MessageNotifications.reply(
+        _localNotifications,
+        response.payload,
+        response.input,
+      );
+      return;
+    }
+    _handleTap(response.payload);
   }
 
   static void _handleTap(String? payload) {

@@ -1,5 +1,6 @@
 import '../../../../core/tour/app_tour.dart';
 import 'package:flutter/material.dart';
+import '../../../../core/update/update_checker.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -51,6 +52,11 @@ class _HomeViewState extends State<_HomeView> {
   final _authRepository = AuthRepository();
   final _scrollController = ScrollController();
 
+  static const double _greetingHeight = 92;
+  static const double _searchBarHeight = 68;
+  bool _collapsed = false;
+  final Set<String> _animatedIds = {};
+
   // Start fetching the next page once the user is this close to the end.
   static const double _loadMoreThreshold = 300;
 
@@ -58,6 +64,7 @@ class _HomeViewState extends State<_HomeView> {
   void initState() {
     super.initState();
     _scrollController.addListener(_loadMoreIfNearEnd);
+    UpdateChecker.check();
     if (widget.autofocusSearch) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _searchFocusNode.requestFocus();
@@ -75,12 +82,33 @@ class _HomeViewState extends State<_HomeView> {
 
   void _loadMoreIfNearEnd() {
     if (!mounted || !_scrollController.hasClients) return;
+    final collapsed = _scrollController.offset > _greetingHeight - 8;
+    if (collapsed != _collapsed) setState(() => _collapsed = collapsed);
     final position = _scrollController.position;
     if (!position.hasContentDimensions) return;
     final provider = context.read<HomeProvider>();
     // After a failure the footer's retry button decides, not the scroll.
     if (provider.loadMoreFailed) return;
     if (position.extentAfter < _loadMoreThreshold) provider.loadMore();
+  }
+
+  Widget _buildProfileAvatar() {
+    final currentUser = _authRepository.currentUser;
+    return GestureDetector(
+      onTap: currentUser == null
+          ? null
+          : () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => UserProfileScreen(userId: currentUser.id),
+              ),
+            ),
+      child: AppAvatar(
+        radius: 20,
+        imageUrl: currentUser?.avatarUrl,
+        ring: true,
+      ),
+    );
   }
 
   Future<void> _onFilterTapped() async {
@@ -118,181 +146,235 @@ class _HomeViewState extends State<_HomeView> {
             controller: _scrollController,
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
-              SliverPadding(
-                padding: const EdgeInsets.only(top: 20),
-                sliver: SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: StreamBuilder<AuthState>(
-                      stream: _authRepository.authStateChanges,
-                      builder: (context, _) {
-                        final currentUser = _authRepository.currentUser;
-                        return Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            GestureDetector(
-                              onTap: currentUser == null
-                                  ? null
-                                  : () => Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => UserProfileScreen(
-                                          userId: currentUser.id,
+              // Greeting collapses away on scroll; the search row stays
+              // pinned, gaining the profile avatar while collapsed.
+              SliverAppBar(
+                pinned: true,
+                toolbarHeight: 0,
+                expandedHeight: _greetingHeight + _searchBarHeight,
+                backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+                surfaceTintColor: Colors.transparent,
+                scrolledUnderElevation: 0,
+                automaticallyImplyLeading: false,
+                flexibleSpace: FlexibleSpaceBar(
+                  collapseMode: CollapseMode.pin,
+                  background: Align(
+                    alignment: Alignment.topCenter,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                      child: StreamBuilder<AuthState>(
+                        stream: _authRepository.authStateChanges,
+                        builder: (context, _) {
+                          final currentUser = _authRepository.currentUser;
+                          return Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              GestureDetector(
+                                onTap: currentUser == null
+                                    ? null
+                                    : () => Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => UserProfileScreen(
+                                            userId: currentUser.id,
+                                          ),
                                         ),
                                       ),
-                                    ),
-                              child: AppAvatar(
-                                radius: 24,
-                                imageUrl: currentUser?.avatarUrl,
-                                ring: true,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    context.l10n.welcomeBackGreeting,
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w500,
-                                      color: context.appTextSecondary,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    currentUser?.fullName ??
-                                        context.l10n.yourName,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
-                                      color: context.appTextPrimary,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            IconButton(
-                              key: TourKeys.navWishlist,
-                              tooltip: context.l10n.wishlist,
-                              onPressed: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const WishlistScreen(),
+                                child: AppAvatar(
+                                  radius: 24,
+                                  imageUrl: currentUser?.avatarUrl,
+                                  ring: true,
                                 ),
                               ),
-                              icon: const AppIcon(
-                                AppIcons.favoriteOutline,
-                                size: 24,
-                                color: AppColors.primary,
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  // Shrink-wrap: the header now has a bounded
+                                  // height, so a max-sized Column would stretch
+                                  // the whole Row and push the avatar down.
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      context.l10n.welcomeBackGreeting,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w500,
+                                        color: context.appTextSecondary,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      currentUser?.fullName ??
+                                          context.l10n.yourName,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                        color: context.appTextPrimary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                          ],
-                        );
-                      },
+                              IconButton(
+                                key: TourKeys.navWishlist,
+                                tooltip: context.l10n.wishlist,
+                                onPressed: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const WishlistScreen(),
+                                  ),
+                                ),
+                                icon: const AppIcon(
+                                  AppIcons.favoriteOutline,
+                                  size: 24,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
                     ),
                   ),
                 ),
-              ),
-              const SliverToBoxAdapter(child: SizedBox(height: 20)),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Container(
-                          key: TourKeys.homeSearch,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(28),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.textPrimary.withValues(
-                                  alpha: 0.06,
+                bottom: PreferredSize(
+                  preferredSize: const Size.fromHeight(_searchBarHeight),
+                  child: Container(
+                    height: _searchBarHeight,
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    child: Row(
+                      children: [
+                        AnimatedSize(
+                          duration: const Duration(milliseconds: 200),
+                          curve: Curves.easeOut,
+                          child: _collapsed
+                              ? Padding(
+                                  padding: const EdgeInsetsDirectional.only(
+                                    start: 4,
+                                    end: 10,
+                                  ),
+                                  child: _buildProfileAvatar(),
+                                )
+                              : const SizedBox.shrink(),
+                        ),
+                        Expanded(
+                          child: Container(
+                            key: TourKeys.homeSearch,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(28),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.textPrimary.withValues(
+                                    alpha: 0.06,
+                                  ),
+                                  blurRadius: 16,
+                                  offset: const Offset(0, 6),
                                 ),
-                                blurRadius: 16,
-                                offset: const Offset(0, 6),
-                              ),
-                            ],
-                          ),
-                          child: TextField(
-                            controller: _searchController,
-                            focusNode: _searchFocusNode,
-                            onChanged: homeProvider.onSearchChanged,
-                            style: TextStyle(
-                              fontSize: 15,
-                              color: context.appTextPrimary,
+                              ],
                             ),
-                            decoration: InputDecoration(
-                              isDense: true,
-                              hintText: context.l10n.searchHint,
-                              hintStyle: TextStyle(
+                            child: TextField(
+                              controller: _searchController,
+                              focusNode: _searchFocusNode,
+                              onChanged: homeProvider.onSearchChanged,
+                              style: TextStyle(
                                 fontSize: 15,
-                                color: context.appTextSecondary,
+                                color: context.appTextPrimary,
                               ),
-                              filled: true,
-                              fillColor: context.appSurface,
-                              contentPadding: const EdgeInsets.symmetric(
-                                vertical: 14,
-                              ),
-                              prefixIcon: const Padding(
-                                padding: EdgeInsets.all(12),
-                                child: AppIcon(
-                                  AppIcons.search,
-                                  size: 20,
-                                  color: AppColors.primary,
+                              decoration: InputDecoration(
+                                isDense: true,
+                                hintText: context.l10n.searchHint,
+                                hintStyle: TextStyle(
+                                  fontSize: 15,
+                                  color: context.appTextSecondary,
                                 ),
-                              ),
-                              suffixIcon: homeProvider.hasActiveSearch
-                                  ? IconButton(
-                                      icon: Icon(
-                                        Icons.close_rounded,
-                                        size: 18,
-                                        color: context.appTextSecondary,
-                                      ),
-                                      onPressed: () {
-                                        _searchController.clear();
-                                        homeProvider.clearSearch();
-                                      },
-                                    )
-                                  : null,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(28),
-                                borderSide: BorderSide(
-                                  color: context.appBorder,
+                                filled: true,
+                                fillColor: context.appSurface,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  vertical: 14,
                                 ),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(28),
-                                borderSide: BorderSide(
-                                  color: context.appBorder,
+                                prefixIcon: const Padding(
+                                  padding: EdgeInsets.all(12),
+                                  child: AppIcon(
+                                    AppIcons.search,
+                                    size: 20,
+                                    color: AppColors.primary,
+                                  ),
                                 ),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(28),
-                                borderSide: const BorderSide(
-                                  color: AppColors.primary,
-                                  width: 1.5,
+                                suffixIcon: homeProvider.hasActiveSearch
+                                    ? IconButton(
+                                        icon: Icon(
+                                          Icons.close_rounded,
+                                          size: 18,
+                                          color: context.appTextSecondary,
+                                        ),
+                                        onPressed: () {
+                                          _searchController.clear();
+                                          homeProvider.clearSearch();
+                                        },
+                                      )
+                                    : null,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(28),
+                                  borderSide: BorderSide(
+                                    color: context.appBorder,
+                                  ),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(28),
+                                  borderSide: BorderSide(
+                                    color: context.appBorder,
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(28),
+                                  borderSide: const BorderSide(
+                                    color: AppColors.primary,
+                                    width: 1.5,
+                                  ),
                                 ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 10),
-                      _FilterButton(
-                        key: TourKeys.homeFilter,
-                        activeCount: activeFilterCount,
-                        onTap: _onFilterTapped,
-                      ),
-                    ],
+                        const SizedBox(width: 10),
+                        _FilterButton(
+                          key: TourKeys.homeFilter,
+                          activeCount: activeFilterCount,
+                          onTap: _onFilterTapped,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-              const SliverToBoxAdapter(child: SizedBox(height: 16)),
+              SliverToBoxAdapter(
+                child: ValueListenableBuilder<bool>(
+                  valueListenable: UpdateChecker.updateAvailable,
+                  builder: (context, available, _) => AnimatedSize(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeOut,
+                    alignment: Alignment.topCenter,
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      child: available
+                          ? const Padding(
+                              key: ValueKey('update'),
+                              padding: EdgeInsets.fromLTRB(20, 4, 20, 8),
+                              child: _UpdateBanner(),
+                            )
+                          : const SizedBox.shrink(key: ValueKey('none')),
+                    ),
+                  ),
+                ),
+              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 14)),
               if (isLoading && products.isEmpty)
                 SliverPadding(
                   padding: EdgeInsets.only(bottom: 20 + bottomInset),
@@ -370,9 +452,13 @@ class _HomeViewState extends State<_HomeView> {
                     childCount: products.length,
                     itemBuilder: (context, index) {
                       final product = products[index];
-                      return ProductCard(
+                      return _FadeSlideIn(
                         key: ValueKey(product.id),
-                        product: product,
+                        // Only the first appearance animates; cards that
+                        // scroll back into view just show.
+                        animate: _animatedIds.add(product.id),
+                        delay: Duration(milliseconds: 60 * (index % 8)),
+                        child: ProductCard(product: product),
                       );
                     },
                   ),
@@ -558,6 +644,116 @@ class _FilterButton extends StatelessWidget {
                 ),
               ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Tappable "Update your App" pill shown while a newer Play Store version
+/// exists.
+class _UpdateBanner extends StatelessWidget {
+  const _UpdateBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: AlignmentDirectional.centerStart,
+      child: Material(
+        color: AppColors.primary,
+        borderRadius: BorderRadius.circular(24),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(24),
+          onTap: UpdateChecker.startUpdate,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.system_update_rounded,
+                  size: 18,
+                  color: Colors.white,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  context.l10n.updateYourApp,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Fades and slides its child up a little when it first appears, after an
+/// optional [delay] so a row of cards ripples in.
+class _FadeSlideIn extends StatefulWidget {
+  const _FadeSlideIn({
+    super.key,
+    required this.child,
+    required this.animate,
+    this.delay = Duration.zero,
+  });
+
+  final Widget child;
+  final bool animate;
+  final Duration delay;
+
+  @override
+  State<_FadeSlideIn> createState() => _FadeSlideInState();
+}
+
+class _FadeSlideInState extends State<_FadeSlideIn>
+    with SingleTickerProviderStateMixin {
+  static const _fadeMs = 420;
+
+  // The delay is part of the timeline (an Interval), not a Timer, so nothing
+  // is left pending if the card is disposed early.
+  late final int _totalMs = _fadeMs + widget.delay.inMilliseconds;
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: Duration(milliseconds: _totalMs),
+    value: widget.animate ? 0 : 1,
+  );
+  late final Animation<double> _curve = CurvedAnimation(
+    parent: _controller,
+    curve: Interval(
+      widget.delay.inMilliseconds / _totalMs,
+      1,
+      curve: Curves.easeOutCubic,
+    ),
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.animate) _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _curve,
+      child: widget.child,
+      builder: (context, child) => Opacity(
+        opacity: _curve.value,
+        child: Transform.translate(
+          offset: Offset(0, 24 * (1 - _curve.value)),
+          child: child,
         ),
       ),
     );

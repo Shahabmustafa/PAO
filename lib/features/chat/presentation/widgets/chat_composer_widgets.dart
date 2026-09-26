@@ -66,6 +66,7 @@ Future<AttachmentChoice?> showAttachmentSheet(BuildContext context) {
 }
 
 /// Shown in place of the text field while a voice message is recording.
+/// The bin button on the left discards the recording.
 class RecordingBar extends StatelessWidget {
   const RecordingBar({
     super.key,
@@ -85,20 +86,25 @@ class RecordingBar extends StatelessWidget {
     return ListenableBuilder(
       listenable: controller,
       builder: (context, _) {
-        final cancelling = controller.willCancel;
         return Container(
           height: 48,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsetsDirectional.only(start: 4, end: 16),
           decoration: BoxDecoration(
             color: background,
             borderRadius: BorderRadius.circular(24),
           ),
           child: Row(
             children: [
-              Icon(
-                cancelling ? Icons.delete_outline : Icons.mic,
+              IconButton(
+                tooltip: context.l10n.cancel,
+                icon: const Icon(Icons.delete_outline, color: AppColors.error),
+                onPressed: controller.cancel,
+              ),
+              const SizedBox(width: 4),
+              const Icon(
+                Icons.fiber_manual_record,
                 color: AppColors.error,
-                size: 22,
+                size: 12,
               ),
               const SizedBox(width: 8),
               Text(
@@ -109,17 +115,16 @@ class RecordingBar extends StatelessWidget {
                   fontFeatures: const [FontFeature.tabularFigures()],
                 ),
               ),
-              const Spacer(),
-              Text(
-                cancelling
-                    ? context.l10n.releaseToCancel
-                    : '‹  ${context.l10n.slideToCancel}',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: cancelling ? AppColors.error : hintColor,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  context.l10n.slideToCancel,
+                  textAlign: TextAlign.end,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 13, color: hintColor),
                 ),
               ),
-              const SizedBox(width: 4),
             ],
           ),
         );
@@ -128,8 +133,8 @@ class RecordingBar extends StatelessWidget {
   }
 }
 
-/// The mic button: hold to record, release to send, slide towards the
-/// start edge to cancel.
+/// The mic button: tap to start recording; while recording it turns into a
+/// send button (tap to stop and send). Cancel with the bin in [RecordingBar].
 class VoiceMicButton extends StatelessWidget {
   const VoiceMicButton({
     super.key,
@@ -144,14 +149,9 @@ class VoiceMicButton extends StatelessWidget {
   final VoidCallback onPermissionDenied;
   final VoidCallback onTooShort;
 
-  static const _cancelDistance = 90.0;
   static const _minDuration = Duration(seconds: 1);
 
-  Future<void> _end({required bool cancel}) async {
-    if (cancel) {
-      await controller.cancel();
-      return;
-    }
+  Future<void> _send() async {
     final recording = await controller.finish();
     if (recording == null) return;
     if (recording.duration < _minDuration) {
@@ -164,38 +164,31 @@ class VoiceMicButton extends StatelessWidget {
     onRecorded(recording);
   }
 
+  Future<void> _start() async {
+    final started = await controller.start();
+    if (!started) onPermissionDenied();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final isRtl = Directionality.of(context) == TextDirection.rtl;
     return ListenableBuilder(
       listenable: controller,
       builder: (context, _) {
         final recording = controller.isRecording;
-        return GestureDetector(
-          onTap: onTooShort,
-          onLongPressStart: (_) async {
-            final started = await controller.start();
-            if (!started) onPermissionDenied();
-          },
-          onLongPressMoveUpdate: (details) {
-            final towardsStart = details.offsetFromOrigin.dx * (isRtl ? -1 : 1);
-            controller.setWillCancel(towardsStart < -_cancelDistance);
-          },
-          onLongPressEnd: (_) => _end(cancel: controller.willCancel),
-          onLongPressCancel: () => _end(cancel: true),
-          child: AnimatedScale(
-            scale: recording ? 1.35 : 1,
-            duration: const Duration(milliseconds: 150),
-            child: Container(
+        return Material(
+          color: AppColors.primary,
+          shape: const CircleBorder(),
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: recording ? _send : _start,
+            child: SizedBox(
               width: 48,
               height: 48,
-              decoration: BoxDecoration(
-                color: controller.willCancel
-                    ? AppColors.error
-                    : AppColors.primary,
-                shape: BoxShape.circle,
+              child: Icon(
+                recording ? Icons.send_rounded : Icons.mic,
+                size: 24,
+                color: AppColors.onPrimary,
               ),
-              child: Icon(Icons.mic, size: 24, color: AppColors.onPrimary),
             ),
           ),
         );

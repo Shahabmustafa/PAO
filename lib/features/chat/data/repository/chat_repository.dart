@@ -88,6 +88,34 @@ class ChatRepository {
   Future<void> deleteMessageForMe(String messageId) =>
       _dataSource.deleteMessageForMe(messageId);
 
+  Future<void> clearConversation(String otherUserId) =>
+      _dataSource.clearConversation(otherUserId);
+
+  Future<bool> isBlockedByMe({
+    required String myId,
+    required String otherUserId,
+  }) => _dataSource.isBlockedByMe(myId: myId, otherUserId: otherUserId);
+
+  Future<void> blockUser({required String myId, required String otherUserId}) =>
+      _dataSource.blockUser(myId: myId, otherUserId: otherUserId);
+
+  Future<void> unblockUser({
+    required String myId,
+    required String otherUserId,
+  }) => _dataSource.unblockUser(myId: myId, otherUserId: otherUserId);
+
+  Future<void> reportUser({
+    required String reporterId,
+    required String reportedId,
+    required String reason,
+    String? details,
+  }) => _dataSource.reportUser(
+    reporterId: reporterId,
+    reportedId: reportedId,
+    reason: reason,
+    details: details,
+  );
+
   Future<void> markMessagesRead({
     required String readerId,
     required String otherUserId,

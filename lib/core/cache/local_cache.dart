@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../features/chat/data/chat_media_cache.dart';
 
 /// The local (Hive) cache. Supabase stays the source of truth; these boxes
 /// only let screens paint instantly and keep working offline.
@@ -123,6 +124,7 @@ class LocalCache {
   /// Wipes every box. Used on logout and when the account changes.
   static Future<void> clearAll() async {
     if (!_ready) return;
+    await ChatMediaCache.clear();
     await Future.wait([
       for (final box in [
         products,

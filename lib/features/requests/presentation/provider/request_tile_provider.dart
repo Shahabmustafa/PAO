@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../../../../core/cache/local_cache.dart';
 import '../../../add_item/data/repository/post_repository.dart';
+import '../../../chat/data/chat_activity_store.dart';
 import '../../../chat/data/chat_unread_store.dart';
 import '../../../chat/data/model/message_model.dart';
 import '../../../chat/data/repository/chat_repository.dart';
@@ -104,6 +105,7 @@ class RequestTileProvider extends ChangeNotifier {
     final cached = _cachedLastMessage(me);
     if (cached != null) {
       lastMessage = cached;
+      ChatActivityStore.bump(otherUserId, cached.createdAt);
       notifyListeners();
       if (!refresh) return;
     }
@@ -114,6 +116,9 @@ class RequestTileProvider extends ChangeNotifier {
         limit: 5,
       );
       lastMessage = page.where((m) => !m.isDeletedFor(me)).firstOrNull;
+      if (lastMessage != null) {
+        ChatActivityStore.bump(otherUserId, lastMessage!.createdAt);
+      }
       notifyListeners();
     } catch (_) {
       // No preview; the row still works.

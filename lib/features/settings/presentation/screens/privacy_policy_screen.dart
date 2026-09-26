@@ -10,7 +10,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
     final l10n = context.l10n;
     return LegalDocumentScreen(
       title: l10n.privacyPolicy,
-      lastUpdated: l10n.legalDate,
+      lastUpdated: l10n.privacyDate,
       sections: [
         LegalSection(l10n.privacy1Title, l10n.privacy1Body),
         LegalSection(l10n.privacy2Title, l10n.privacy2Body),

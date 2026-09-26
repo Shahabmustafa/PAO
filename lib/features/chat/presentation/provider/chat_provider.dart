@@ -13,6 +13,7 @@ import '../../../requests/data/model/request_model.dart';
 import '../../../requests/data/request_store.dart';
 import '../../../settings/data/model/profile_model.dart';
 import '../../../settings/data/repository/profile_repository.dart';
+import '../../data/chat_media_cache.dart';
 import '../../data/chat_unread_store.dart';
 import '../../data/model/message_model.dart';
 import '../../data/repository/chat_repository.dart';
@@ -35,6 +36,7 @@ class ChatProvider extends ChangeNotifier {
     _hydrateFromCache();
     _subscribe();
     _loadOtherProfile();
+    _loadBlockState();
     if (isRequester && request.isAccepted) _checkFeedback();
     // Keep the accepted / closed state live too: the owner may answer while
     // the requester has the chat open.
@@ -494,6 +496,92 @@ class ChatProvider extends ChangeNotifier {
     });
   }
 
+  /// The local file of a message's media: read from the disk cache, or
+  /// downloaded once and kept there.
+  Future<File> mediaFile(String path) =>
+      ChatMediaCache.load(path, () => mediaUrl(path));
+
+  // ---- Safety: clear chat, block, report ----------------------------------
+
+  /// True once the current user has blocked the other participant.
+  bool isBlockedByMe = false;
+
+  /// True while the block state is being looked up, so the composer doesn't
+  /// flash before it is known.
+  bool blockChecked = false;
+
+  Future<void> _loadBlockState() async {
+    final userId = currentUserId;
+    if (userId == null) return;
+    try {
+      isBlockedByMe = await _repository.isBlockedByMe(
+        myId: userId,
+        otherUserId: otherUserId,
+      );
+    } catch (_) {
+      // Offline: assume not blocked; a send would still be refused server-side.
+    }
+    blockChecked = true;
+    if (!_disposed) notifyListeners();
+  }
+
+  Future<bool> setBlocked(bool blocked) async {
+    final userId = currentUserId;
+    if (userId == null) return false;
+    try {
+      if (blocked) {
+        await _repository.blockUser(myId: userId, otherUserId: otherUserId);
+      } else {
+        await _repository.unblockUser(myId: userId, otherUserId: otherUserId);
+      }
+      isBlockedByMe = blocked;
+      notifyListeners();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Hides the whole conversation from this user only. Their copy of the
+  /// chat, and the other person's, are untouched.
+  Future<bool> clearChat() async {
+    try {
+      await _repository.clearConversation(otherUserId);
+    } catch (_) {
+      return false;
+    }
+    for (final m in messages) {
+      final path = m.mediaPath;
+      if (path != null) unawaited(ChatMediaCache.remove(path));
+    }
+    messages = [];
+    hasMoreOlder = false;
+    _persist();
+    notifyListeners();
+    return true;
+  }
+
+  /// Reports the other participant. Returns null on success (a repeat
+  /// report by the same person counts as success), else an error message.
+  Future<String?> reportUser(String reason, String? details) async {
+    final userId = currentUserId;
+    if (userId == null) return l10nNow.somethingWentWrong;
+    try {
+      await _repository.reportUser(
+        reporterId: userId,
+        reportedId: otherUserId,
+        reason: reason,
+        details: details,
+      );
+      return null;
+    } on PostgrestException catch (e) {
+      if (e.code == '23505') return null;
+      return l10nNow.somethingWentWrong;
+    } catch (_) {
+      return l10nNow.somethingWentWrong;
+    }
+  }
+
   /// Uploads [file] and sends it as a photo / video / voice message.
   Future<bool> sendMedia(
     File file,
@@ -526,6 +614,7 @@ class ChatProvider extends ChangeNotifier {
         mediaPath: uploadedPath,
         mediaDurationMs: durationMs,
       );
+      await ChatMediaCache.put(uploadedPath, file);
       _upsert(message);
       return true;
     } catch (e, st) {
