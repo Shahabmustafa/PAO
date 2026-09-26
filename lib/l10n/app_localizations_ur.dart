@@ -119,6 +119,12 @@ class AppLocalizationsUr extends AppLocalizations {
   String get noAccountPrompt => 'اکاؤنٹ نہیں ہے؟ ';
 
   @override
+  String get continueWithGoogle => 'گوگل کے ساتھ جاری رکھیں';
+
+  @override
+  String get orDivider => 'یا';
+
+  @override
   String get signUp => 'سائن اپ';
 
   @override
@@ -1529,4 +1535,40 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get c153c =>
       'ایپ بند ہونے پر بھی اب اینڈرائیڈ 7، 8 اور 9 پر میسج نوٹیفکیشن پہنچتے ہیں';
+
+  @override
+  String get copy => 'کاپی کریں';
+
+  @override
+  String get messageCopied => 'پیغام کاپی ہو گیا';
+
+  @override
+  String get selectMessages => 'منتخب کریں';
+
+  @override
+  String selectedCount(int count) {
+    return '$count منتخب';
+  }
+
+  @override
+  String deleteMessagesForMeConfirm(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'یہ $count پیغامات',
+      one: 'یہ پیغام',
+    );
+    return 'کیا $_temp0 صرف آپ کے لیے حذف کرنے ہیں؟ دوسرا شخص انہیں پھر بھی دیکھے گا۔';
+  }
+
+  @override
+  String deleteMessagesConfirm(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'یہ $count پیغامات',
+      one: 'یہ پیغام',
+    );
+    return 'کیا $_temp0 سب کے لیے حذف کرنے ہیں؟ اس عمل کو واپس نہیں کیا جا سکتا۔';
+  }
 }

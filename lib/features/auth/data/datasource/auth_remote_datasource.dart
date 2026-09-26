@@ -1,3 +1,4 @@
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/config/supabase_config.dart';
 
@@ -32,7 +33,46 @@ class AuthRemoteDataSource {
     );
   }
 
-  Future<void> signOut() => _client.auth.signOut();
+  static bool _googleInitialized = false;
+
+  /// Native Google sign-in, exchanged for a Supabase session. Google
+  /// accounts that don't exist yet are created on first use, so this one
+  /// call serves both "sign in" and "sign up". Returns `null` if the user
+  /// dismissed the account picker.
+  Future<AuthResponse?> signInWithGoogle() async {
+    final google = GoogleSignIn.instance;
+    if (!_googleInitialized) {
+      await google.initialize(
+        clientId: SupabaseConfig.googleIosClientId,
+        serverClientId: SupabaseConfig.googleWebClientId,
+      );
+      _googleInitialized = true;
+    }
+
+    final GoogleSignInAccount account;
+    try {
+      account = await google.authenticate();
+    } on GoogleSignInException catch (e) {
+      if (e.code == GoogleSignInExceptionCode.canceled) return null;
+      rethrow;
+    }
+
+    final idToken = account.authentication.idToken;
+    if (idToken == null) {
+      throw const AuthException('No ID token from Google.');
+    }
+    return _client.auth.signInWithIdToken(
+      provider: OAuthProvider.google,
+      idToken: idToken,
+    );
+  }
+
+  Future<void> signOut() async {
+    await _client.auth.signOut();
+    try {
+      await GoogleSignIn.instance.signOut();
+    } catch (_) {}
+  }
 
   /// Whether an admin has flagged this account banned (see
   /// `supabase/users_add_role.sql`). RLS only lets an account read its own
@@ -52,7 +92,7 @@ class AuthRemoteDataSource {
   Future<void> deleteAccount() async {
     await _removeChatMedia();
     await _client.rpc('delete_user');
-    await _client.auth.signOut();
+    await signOut();
   }
 
   /// Deletes the photos / videos / voice notes this user sent. The cascade

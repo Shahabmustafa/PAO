@@ -36,6 +36,22 @@ class AuthRepository {
     return UserModel.fromSupabaseUser(user);
   }
 
+  /// Signs in with Google, creating the account on first use. Returns `null`
+  /// if the user cancelled.
+  Future<UserModel?> loginWithGoogle() async {
+    final response = await _dataSource.signInWithGoogle();
+    final user = response?.user;
+    if (user == null) return null;
+    if (await _dataSource.isBanned(user.id)) {
+      await _dataSource.signOut();
+      throw AuthException(
+        'Your account has been suspended.',
+        code: 'account_banned',
+      );
+    }
+    return UserModel.fromSupabaseUser(user);
+  }
+
   /// Returns the created [UserModel], or `null` when email confirmation is
   /// required before a session is issued.
   Future<UserModel?> register({

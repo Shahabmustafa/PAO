@@ -117,6 +117,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noAccountPrompt => 'Don\'t have an account? ';
 
   @override
+  String get continueWithGoogle => 'Continue with Google';
+
+  @override
+  String get orDivider => 'OR';
+
+  @override
   String get signUp => 'Sign Up';
 
   @override
@@ -1519,4 +1525,40 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get c153c =>
       'Message notifications now reach Android 7, 8 and 9 devices even when the app is closed';
+
+  @override
+  String get copy => 'Copy';
+
+  @override
+  String get messageCopied => 'Message copied';
+
+  @override
+  String get selectMessages => 'Select';
+
+  @override
+  String selectedCount(int count) {
+    return '$count selected';
+  }
+
+  @override
+  String deleteMessagesForMeConfirm(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'these $count messages',
+      one: 'this message',
+    );
+    return 'Delete $_temp0 for you only? The other person will still see them.';
+  }
+
+  @override
+  String deleteMessagesConfirm(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'these $count messages',
+      one: 'this message',
+    );
+    return 'Delete $_temp0 for everyone? This cannot be undone.';
+  }
 }

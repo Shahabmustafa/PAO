@@ -175,6 +175,7 @@ class FakeAuthRepository implements AuthRepository {
   Object? updatePasswordError;
   bool registerNeedsConfirmation = false;
 
+  int googleLoginCalls = 0;
   final loginCalls = <({String email, String password})>[];
   final registerCalls = <({String fullName, String email, String password})>[];
   final resetCalls = <String>[];
@@ -197,6 +198,13 @@ class FakeAuthRepository implements AuthRepository {
     loginCalls.add((email: email, password: password));
     if (loginError != null) throw loginError!;
     return user ?? UserModel(id: 'u-login', email: email);
+  }
+
+  @override
+  Future<UserModel?> loginWithGoogle() async {
+    googleLoginCalls++;
+    if (loginError != null) throw loginError!;
+    return user ?? const UserModel(id: 'u-google', email: 'g@example.com');
   }
 
   @override
@@ -905,6 +913,12 @@ class FakeAuthDataSource implements AuthRemoteDataSource {
   }) async {
     calls.add('signUp:$fullName:$email');
     return signUpResponse ?? AuthResponse();
+  }
+
+  @override
+  Future<AuthResponse?> signInWithGoogle() async {
+    calls.add('signInWithGoogle');
+    return signInResponse ?? AuthResponse();
   }
 
   @override

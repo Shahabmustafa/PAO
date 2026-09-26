@@ -11,6 +11,11 @@ class AppRelease {
 /// Newest first.
 final List<AppRelease> appReleases = [
   AppRelease(
+    '1.5.3',
+    DateTime(2026, 9, 26),
+    (l) => [l.c153a, l.c153b, l.c153c],
+  ),
+  AppRelease(
     '1.5.2',
     DateTime(2026, 9, 26),
     (l) => [l.c152a, l.c152b, l.c152c, l.c152d],

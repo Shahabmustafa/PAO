@@ -124,6 +124,9 @@ class ChatRepository {
     otherUserId: otherUserId,
   );
 
+  Future<void> markMessagesDelivered(List<String> messageIds) =>
+      _dataSource.markMessagesDelivered(messageIds);
+
   Future<MessageModel> editMessage({
     required String messageId,
     required String body,

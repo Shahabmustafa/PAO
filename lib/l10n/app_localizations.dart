@@ -302,6 +302,18 @@ abstract class AppLocalizations {
   /// **'Don\'t have an account? '**
   String get noAccountPrompt;
 
+  /// No description provided for @continueWithGoogle.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue with Google'**
+  String get continueWithGoogle;
+
+  /// No description provided for @orDivider.
+  ///
+  /// In en, this message translates to:
+  /// **'OR'**
+  String get orDivider;
+
   /// No description provided for @signUp.
   ///
   /// In en, this message translates to:
@@ -2827,6 +2839,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Message notifications now reach Android 7, 8 and 9 devices even when the app is closed'**
   String get c153c;
+
+  /// No description provided for @copy.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy'**
+  String get copy;
+
+  /// No description provided for @messageCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Message copied'**
+  String get messageCopied;
+
+  /// No description provided for @selectMessages.
+  ///
+  /// In en, this message translates to:
+  /// **'Select'**
+  String get selectMessages;
+
+  /// No description provided for @selectedCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} selected'**
+  String selectedCount(int count);
+
+  /// No description provided for @deleteMessagesForMeConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete {count, plural, =1{this message} other{these {count} messages}} for you only? The other person will still see them.'**
+  String deleteMessagesForMeConfirm(int count);
+
+  /// No description provided for @deleteMessagesConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete {count, plural, =1{this message} other{these {count} messages}} for everyone? This cannot be undone.'**
+  String deleteMessagesConfirm(int count);
 }
 
 class _AppLocalizationsDelegate

@@ -6,6 +6,7 @@ import '../../../../core/theme/app_icons.dart';
 import '../../../../core/widgets/app_icon.dart';
 import '../../../../core/widgets/app_snackbar.dart';
 import '../../../../core/widgets/custom_text_field.dart';
+import '../../../../core/widgets/google_sign_in_button.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/terms_acceptance_checkbox.dart';
 import '../provider/signup_provider.dart';
@@ -94,6 +95,37 @@ class _SignupViewState extends State<_SignupView> {
             color: AppColors.error,
           );
         }
+    }
+  }
+
+  Future<void> _onGooglePressed() async {
+    if (!_acceptedTerms) {
+      AppSnackbar.show(
+        context,
+        context.l10n.acceptTermsToContinue,
+        icon: Icons.info_outline,
+        color: AppColors.error,
+      );
+      return;
+    }
+
+    final provider = context.read<SignupProvider>();
+    final success = await provider.signUpWithGoogle();
+    if (!mounted) return;
+
+    if (success) {
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        AppRoutes.dashboard,
+        (route) => false,
+      );
+    } else if (provider.errorMessage != null) {
+      AppSnackbar.show(
+        context,
+        provider.errorMessage!,
+        icon: Icons.error_outline,
+        color: AppColors.error,
+      );
     }
   }
 
@@ -222,6 +254,11 @@ class _SignupViewState extends State<_SignupView> {
                   label: context.l10n.signUp,
                   isLoading: isLoading,
                   onPressed: _onSignupPressed,
+                ),
+                const SizedBox(height: 20),
+                GoogleSignInSection(
+                  enabled: !isLoading,
+                  onPressed: _onGooglePressed,
                 ),
                 const SizedBox(height: 24),
                 Row(

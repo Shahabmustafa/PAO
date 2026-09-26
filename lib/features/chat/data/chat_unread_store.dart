@@ -67,6 +67,9 @@ class ChatUnreadStore {
         final message = event.record;
         if (message == null) return;
         ChatActivityStore.bump(message.senderId, message.createdAt);
+        if (message.deliveredAt == null && message.readAt == null) {
+          _markDelivered([message.id], repo);
+        }
         if (message.readAt == null) {
           _unreadSenders[message.id] = message.senderId;
           _recompute();
@@ -85,6 +88,10 @@ class ChatUnreadStore {
   static Future<void> _sync(String userId, ChatRepository repo) async {
     try {
       final unread = await repo.fetchUnread(userId);
+      _markDelivered([
+        for (final m in unread)
+          if (m.deliveredAt == null) m.id,
+      ], repo);
       _unreadSenders
         ..clear()
         ..addEntries(
@@ -96,6 +103,13 @@ class ChatUnreadStore {
     } catch (_) {
       // Best-effort -- the next realtime event or reconnect catches up.
     }
+  }
+
+  /// Delivery receipt: this device now has these messages, so the senders'
+  /// ticks turn to two grey ones. Best-effort.
+  static void _markDelivered(List<String> ids, ChatRepository repo) {
+    if (ids.isEmpty) return;
+    repo.markMessagesDelivered(ids).catchError((_) {});
   }
 
   static void _recompute() {

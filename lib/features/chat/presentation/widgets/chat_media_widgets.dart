@@ -5,6 +5,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
+import 'package:shimmer/shimmer.dart';
 import '../../data/model/message_model.dart';
 import '../../../../core/l10n/l10n.dart';
 import '../provider/chat_provider.dart';
@@ -77,11 +78,17 @@ class ChatMediaContent extends StatelessWidget {
 /// once otherwise), with a spinner while loading and tap-to-retry on failure.
 class _MediaFile extends StatefulWidget {
   const _MediaFile({
+    super.key,
     required this.path,
     required this.builder,
     required this.placeholderSize,
+    this.skeleton,
+    this.errorColor,
   });
 
+  /// Shown instead of the grey box while loading (theme-aware shimmer).
+  final Widget? skeleton;
+  final Color? errorColor;
   final String path;
   final Widget Function(BuildContext context, File file) builder;
   final Size placeholderSize;
@@ -102,6 +109,21 @@ class _MediaFileState extends State<_MediaFile> {
       builder: (context, snapshot) {
         final file = snapshot.data;
         if (file != null) return widget.builder(context, file);
+        final skeleton = widget.skeleton;
+        if (skeleton != null) {
+          return GestureDetector(
+            onTap: snapshot.hasError
+                ? () => setState(() => _file = _load())
+                : null,
+            child: snapshot.hasError
+                ? SizedBox(
+                    width: widget.placeholderSize.width,
+                    height: widget.placeholderSize.height,
+                    child: Icon(Icons.refresh, color: widget.errorColor),
+                  )
+                : skeleton,
+          );
+        }
         return GestureDetector(
           onTap: snapshot.hasError
               ? () => setState(() => _file = _load())
@@ -270,9 +292,14 @@ class _AudioContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _MediaFile(
+      key: ValueKey(message.mediaPath),
       path: message.mediaPath!,
       placeholderSize: const Size(_audioWidth, 52),
+      errorColor: foreground,
+      skeleton: _AudioSkeleton(foreground: foreground, meta: meta),
       builder: (context, file) => _AudioPlayer(
+        key: ValueKey(message.mediaPath),
+        messageId: message.id,
         file: file,
         seed: message.mediaPath!,
         knownDuration: Duration(milliseconds: message.mediaDurationMs ?? 0),
@@ -286,8 +313,74 @@ class _AudioContent extends StatelessWidget {
 
 const _audioWidth = 240.0;
 
+/// Shimmering stand-in for a voice message while its file loads. Colours
+/// come from the bubble's text colour, so it reads in light and dark.
+class _AudioSkeleton extends StatelessWidget {
+  const _AudioSkeleton({required this.foreground, required this.meta});
+
+  final Color foreground;
+  final Widget meta;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: _audioWidth,
+      height: 52,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Shimmer.fromColors(
+            baseColor: foreground.withValues(alpha: 0.15),
+            highlightColor: foreground.withValues(alpha: 0.35),
+            child: Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  margin: const EdgeInsets.only(top: 2),
+                  decoration: BoxDecoration(
+                    color: foreground,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 8),
+                    for (final w in const [150.0])
+                      Container(
+                        width: w,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: foreground,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                      ),
+                    const SizedBox(height: 8),
+                    Container(
+                      width: 40,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: foreground,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _AudioPlayer extends StatefulWidget {
   const _AudioPlayer({
+    super.key,
+    required this.messageId,
     required this.file,
     required this.seed,
     required this.knownDuration,
@@ -296,6 +389,7 @@ class _AudioPlayer extends StatefulWidget {
     required this.meta,
   });
 
+  final String messageId;
   final File file;
   final String seed;
   final Duration knownDuration;
@@ -316,6 +410,49 @@ class _AudioPlayerState extends State<_AudioPlayer>
 
   /// Only one voice message plays at a time.
   static _AudioPlayerState? _active;
+
+  /// Built voice players by message id, so a finished one can start the
+  /// next; and the id of a next voice whose file is still loading.
+  static final _byId = <String, _AudioPlayerState>{};
+  static String? _pendingAutoplayId;
+
+  /// Playback speed, shared by every voice message (like WhatsApp).
+  static const _speeds = [1.0, 1.5, 2.0];
+  static double _speed = 1.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _byId[widget.messageId] = this;
+    if (_pendingAutoplayId == widget.messageId) {
+      _pendingAutoplayId = null;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !_playing) _toggle();
+      });
+    }
+  }
+
+  /// When this one ends, plays the voice message right after it -- but only
+  /// if nothing else (text, photo, ...) sits in between.
+  void _playNext() {
+    final next = context.read<ChatProvider>().nextMessageAfter(
+      widget.messageId,
+    );
+    if (next == null || next.mediaType != MessageMediaType.audio) return;
+    final state = _byId[next.id];
+    if (state != null) {
+      state._toggle();
+    } else {
+      _pendingAutoplayId = next.id;
+    }
+  }
+
+  Future<void> _cycleSpeed() async {
+    final i = _speeds.indexOf(_speed);
+    _speed = _speeds[(i + 1) % _speeds.length];
+    setState(() {});
+    await _player?.setPlaybackRate(_speed);
+  }
 
   AudioPlayer? _player;
   final _subscriptions = <StreamSubscription<Object?>>[];
@@ -359,6 +496,7 @@ class _AudioPlayerState extends State<_AudioPlayer>
             _position = Duration.zero;
           });
           updateKeepAlive();
+          _playNext();
         }
       }),
     ]);
@@ -367,6 +505,7 @@ class _AudioPlayerState extends State<_AudioPlayer>
 
   Future<void> _toggle() async {
     final player = _ensurePlayer();
+    _pendingAutoplayId = null;
     if (_playing) {
       await player.pause();
       return;
@@ -375,12 +514,14 @@ class _AudioPlayerState extends State<_AudioPlayer>
     _active = this;
     if (player.state == PlayerState.paused) {
       await player.resume();
+      await player.setPlaybackRate(_speed);
       return;
     }
     setState(() => _loading = true);
     updateKeepAlive();
     try {
       await player.play(DeviceFileSource(widget.file.path));
+      await player.setPlaybackRate(_speed);
     } finally {
       if (mounted) {
         setState(() => _loading = false);
@@ -399,6 +540,7 @@ class _AudioPlayerState extends State<_AudioPlayer>
   @override
   void dispose() {
     if (_active == this) _active = null;
+    if (_byId[widget.messageId] == this) _byId.remove(widget.messageId);
     for (final s in _subscriptions) {
       s.cancel();
     }
@@ -481,6 +623,31 @@ class _AudioPlayerState extends State<_AudioPlayer>
               ],
             ),
           ),
+          if (started) ...[
+            const SizedBox(width: 6),
+            InkWell(
+              onTap: _cycleSpeed,
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                margin: const EdgeInsets.only(top: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                decoration: BoxDecoration(
+                  color: widget.foreground.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  _speed == _speed.truncate()
+                      ? '${_speed.truncate()}x'
+                      : '${_speed}x',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: widget.foreground,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

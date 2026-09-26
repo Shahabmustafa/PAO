@@ -1,8 +1,10 @@
 import 'dart:convert';
+import 'dart:ui' show DartPluginRegistrant;
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart' show WidgetsFlutterBinding;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -96,6 +98,26 @@ class MessageNotifications {
     );
   }
 
+  /// Delivery receipt for a message that reached this device while the app
+  /// was closed (see supabase/messages_add_delivered.sql). Best-effort.
+  static Future<void> markDelivered(String? messageId) async {
+    if (messageId == null || messageId.isEmpty) return;
+    try {
+      final client = await _client();
+      if (client.auth.currentUser == null) return;
+      await client
+          .rpc(
+            'mark_messages_delivered',
+            params: {
+              'p_ids': [messageId],
+            },
+          )
+          .timeout(const Duration(seconds: 15));
+    } catch (e) {
+      debugPrint('Delivery receipt failed: $e');
+    }
+  }
+
   /// Sends [text] as a reply to whoever is named in [payload], then updates
   /// the notification to say so. Works with no UI (app closed).
   static Future<void> reply(
@@ -119,22 +141,22 @@ class MessageNotifications {
 
     String? failure;
     try {
-      final client = await _client();
-      final me = client.auth.currentUser;
-      if (me == null) throw StateError('not signed in');
-      // Bounded, so Android's "sending" spinner on the notification can't
-      // spin forever if the network or the isolate's Supabase stalls.
-      await client
-          .from('messages')
-          .insert({
-            'request_id': (requestId == null || requestId.isEmpty)
-                ? null
-                : requestId,
-            'sender_id': me.id,
-            'recipient_id': recipientId,
-            'body': body,
-          })
-          .timeout(const Duration(seconds: 20));
+      // One bound around everything (Supabase start-up, session refresh and
+      // the insert), so Android's "sending" spinner on the notification can't
+      // spin forever if any step stalls.
+      await () async {
+        final client = await _client();
+        final me = client.auth.currentUser;
+        if (me == null) throw StateError('not signed in');
+        await client.from('messages').insert({
+          'request_id': (requestId == null || requestId.isEmpty)
+              ? null
+              : requestId,
+          'sender_id': me.id,
+          'recipient_id': recipientId,
+          'body': body,
+        });
+      }().timeout(const Duration(seconds: 25));
     } catch (e) {
       debugPrint('Notification reply failed: $e');
       failure = 'Couldn\'t send your reply. Tap to open the chat.';
@@ -187,6 +209,11 @@ Future<void> pushBackgroundMessageHandler(RemoteMessage message) async {
   final plugin = FlutterLocalNotificationsPlugin();
   await plugin.initialize(settings: MessageNotifications.initSettings);
   await MessageNotifications.show(plugin, message.data);
+  WidgetsFlutterBinding.ensureInitialized();
+  DartPluginRegistrant.ensureInitialized();
+  await MessageNotifications.markDelivered(
+    message.data['message_id'] as String?,
+  );
 }
 
 /// Reply typed into a notification with the app not in the foreground.
@@ -196,6 +223,10 @@ Future<void> notificationBackgroundResponseHandler(
   NotificationResponse response,
 ) async {
   if (response.actionId != MessageNotifications.replyActionId) return;
+  // This isolate has no app start-up: set up the bindings and plugins
+  // (shared_preferences for the Supabase session, etc.) that Supabase needs.
+  WidgetsFlutterBinding.ensureInitialized();
+  DartPluginRegistrant.ensureInitialized();
   final plugin = FlutterLocalNotificationsPlugin();
   await plugin.initialize(settings: MessageNotifications.initSettings);
   await MessageNotifications.reply(plugin, response.payload, response.input);

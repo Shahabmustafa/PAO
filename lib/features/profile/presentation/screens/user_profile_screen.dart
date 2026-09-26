@@ -119,15 +119,65 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     return total / _feedback.length;
   }
 
+  // Avatar (88) + name + stats row, below the toolbar.
+  static const double _headerContentHeight = 256;
+
+  Widget _buildHeaderContent(BuildContext context, String name) {
+    return Column(
+      children: [
+        const SizedBox(height: 8),
+        AppAvatar(radius: 44, imageUrl: _profile?.avatarUrl, ring: true),
+        const SizedBox(height: 12),
+        Text(
+          name,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: context.appTextPrimary,
+          ),
+        ),
+        const SizedBox(height: 20),
+        Row(
+          children: [
+            Expanded(
+              child: _StatCard(
+                value: '$_donatedCount',
+                label: context.l10n.donated,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _StatCard(
+                value: _feedback.isEmpty
+                    ? '—'
+                    : _averageRating.toStringAsFixed(1),
+                label: _feedback.isEmpty
+                    ? context.l10n.noRatings
+                    : context.l10n.reviewCount(_feedback.length),
+                icon: _feedback.isEmpty ? null : Icons.star_rounded,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          context.l10n.profile,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-      ),
+      // While loading there is no header to collapse, so a plain bar stands
+      // in for the SliverAppBar below.
+      appBar: _isLoading
+          ? AppBar(
+              title: Text(
+                context.l10n.profile,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            )
+          : null,
       body: SafeArea(
         child: _isLoading
             ? const _UserProfileShimmer()
@@ -135,54 +185,73 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 length: 3,
                 child: NestedScrollView(
                   headerSliverBuilder: (context, _) => [
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          children: [
-                            AppAvatar(
-                              radius: 44,
-                              imageUrl: _profile?.avatarUrl,
-                              ring: true,
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              _profile?.fullName ?? context.l10n.paoUser,
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: context.appTextPrimary,
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _StatCard(
-                                    value: '$_donatedCount',
-                                    label: context.l10n.donated,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: _StatCard(
-                                    value: _feedback.isEmpty
-                                        ? '—'
-                                        : _averageRating.toStringAsFixed(1),
-                                    label: _feedback.isEmpty
-                                        ? context.l10n.noRatings
-                                        : context.l10n.reviewCount(
-                                            _feedback.length,
+                    // Avatar, name and stats collapse away on scroll; the bar
+                    // stays pinned with a small avatar and the name, like the
+                    // Home screen's header.
+                    SliverAppBar(
+                      pinned: true,
+                      expandedHeight: kToolbarHeight + _headerContentHeight,
+                      backgroundColor: context.appBackground,
+                      surfaceTintColor: Colors.transparent,
+                      scrolledUnderElevation: 0,
+                      title: const SizedBox.shrink(),
+                      flexibleSpace: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final top = MediaQuery.paddingOf(context).top;
+                          final min = kToolbarHeight + top;
+                          final max = min + _headerContentHeight;
+                          final t =
+                              ((constraints.maxHeight - min) / (max - min))
+                                  .clamp(0.0, 1.0);
+                          final name =
+                              _profile?.fullName ?? context.l10n.paoUser;
+                          return Stack(
+                            clipBehavior: Clip.hardEdge,
+                            children: [
+                              PositionedDirectional(
+                                top: 0,
+                                start: 56,
+                                end: 20,
+                                height: kToolbarHeight,
+                                child: Opacity(
+                                  opacity: (1 - t * 2).clamp(0.0, 1.0),
+                                  child: Row(
+                                    children: [
+                                      AppAvatar(
+                                        radius: 16,
+                                        imageUrl: _profile?.avatarUrl,
+                                        ring: true,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Text(
+                                          name,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            fontSize: 17,
+                                            fontWeight: FontWeight.bold,
+                                            color: context.appTextPrimary,
                                           ),
-                                    icon: _feedback.isEmpty
-                                        ? null
-                                        : Icons.star_rounded,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                              ],
-                            ),
-                          ],
-                        ),
+                              ),
+                              PositionedDirectional(
+                                top: kToolbarHeight,
+                                start: 20,
+                                end: 20,
+                                height: _headerContentHeight,
+                                child: Opacity(
+                                  opacity: ((t - 0.4) / 0.6).clamp(0.0, 1.0),
+                                  child: _buildHeaderContent(context, name),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
                       ),
                     ),
                     SliverPersistentHeader(

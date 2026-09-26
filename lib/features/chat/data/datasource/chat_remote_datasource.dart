@@ -239,6 +239,15 @@ class ChatRemoteDataSource {
         .isFilter('read_at', null);
   }
 
+  /// Tells the sender's device this device has received [messageIds]
+  /// (see supabase/messages_add_delivered.sql).
+  Future<void> markMessagesDelivered(List<String> messageIds) {
+    return _client.rpc(
+      'mark_messages_delivered',
+      params: {'p_ids': messageIds},
+    );
+  }
+
   /// Edits one of the current user's own messages. `edited_at` is stamped
   /// server-side by `guard_message_update` (see
   /// supabase/messages_add_read_edited.sql), not sent from here.

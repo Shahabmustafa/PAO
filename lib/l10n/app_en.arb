@@ -34,6 +34,8 @@
   "forgotPasswordQuestion": "Forgot Password?",
   "login": "Login",
   "noAccountPrompt": "Don't have an account? ",
+  "continueWithGoogle": "Continue with Google",
+  "orDivider": "OR",
   "signUp": "Sign Up",
   "acceptTermsToContinue": "Please accept the Terms & Conditions and Privacy Policy to continue.",
   "createAccount": "Create Account",
@@ -583,5 +585,14 @@
   "@aboutVersionLabel": {"placeholders": {"version": {"type": "String"}}},
   "c153a": "New About screen with the app's purpose and full version history",
   "c153b": "Fixed replying from a notification getting stuck on loading",
-  "c153c": "Message notifications now reach Android 7, 8 and 9 devices even when the app is closed"
+  "c153c": "Message notifications now reach Android 7, 8 and 9 devices even when the app is closed",
+  "copy": "Copy",
+  "messageCopied": "Message copied",
+  "selectMessages": "Select",
+  "selectedCount": "{count} selected",
+  "@selectedCount": {"placeholders": {"count": {"type": "int"}}},
+  "deleteMessagesForMeConfirm": "Delete {count, plural, =1{this message} other{these {count} messages}} for you only? The other person will still see them.",
+  "@deleteMessagesForMeConfirm": {"placeholders": {"count": {"type": "int"}}},
+  "deleteMessagesConfirm": "Delete {count, plural, =1{this message} other{these {count} messages}} for everyone? This cannot be undone.",
+  "@deleteMessagesConfirm": {"placeholders": {"count": {"type": "int"}}}
 }

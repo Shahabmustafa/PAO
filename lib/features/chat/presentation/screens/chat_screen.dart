@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show HapticFeedback;
+import 'package:flutter/services.dart'
+    show Clipboard, ClipboardData, HapticFeedback;
 import 'package:image_picker/image_picker.dart';
 import '../../../../core/media/media_compressor.dart';
 import 'package:video_player/video_player.dart';
@@ -21,6 +22,7 @@ import '../../../home/data/product_store.dart';
 import '../../../home/domain/product.dart';
 import '../../../home/presentation/screens/product_detail_screen.dart';
 import '../../../../core/widgets/app_network_image.dart';
+import '../../../profile/presentation/screens/user_profile_screen.dart';
 import '../../../requests/data/model/request_model.dart';
 import '../../../requests/data/request_store.dart';
 import '../../data/model/message_model.dart';
@@ -104,6 +106,10 @@ class _ChatViewState extends State<_ChatView> {
   final _inputFocus = FocusNode();
   MessageModel? _editingMessage;
   MessageModel? _replyingTo;
+
+  /// Ids of the messages picked in multi-select mode (empty = not selecting).
+  final Set<String> _selected = {};
+  bool get _selecting => _selected.isNotEmpty;
 
   static const _reactionEmojis = ['👍', '👎', '❤️', '😂', '😮', '😢'];
 
@@ -345,6 +351,101 @@ class _ChatViewState extends State<_ChatView> {
     }
   }
 
+  void _toggleSelected(MessageModel message) {
+    HapticFeedback.selectionClick();
+    setState(() {
+      if (!_selected.remove(message.id)) _selected.add(message.id);
+    });
+  }
+
+  List<MessageModel> _selectedMessages(ChatProvider provider) => [
+    for (final m in provider.messages)
+      if (_selected.contains(m.id)) m,
+  ];
+
+  /// Puts the text of [messages] (oldest first) on the clipboard.
+  Future<void> _copyMessages(
+    BuildContext context,
+    List<MessageModel> messages,
+  ) async {
+    final text = messages
+        .where((m) => m.body.isNotEmpty)
+        .map((m) => m.body)
+        .join('\n');
+    if (text.isEmpty) return;
+    await Clipboard.setData(ClipboardData(text: text));
+    if (!context.mounted) return;
+    setState(_selected.clear);
+    AppSnackbar.show(context, context.l10n.messageCopied, icon: Icons.copy);
+  }
+
+  Future<void> _onDeleteSelectedPressed(
+    BuildContext context,
+    ChatProvider provider,
+  ) async {
+    final messages = _selectedMessages(provider);
+    if (messages.isEmpty) return;
+    final canDeleteForEveryone = messages.every(
+      (m) => m.senderId == provider.currentUserId,
+    );
+    final count = messages.length;
+    final forEveryone = await showModalBottomSheet<bool>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const AppIcon(AppIcons.delete, color: AppColors.error),
+              title: Text(
+                sheetContext.l10n.deleteForMe,
+                style: const TextStyle(color: AppColors.error),
+              ),
+              onTap: () => Navigator.pop(sheetContext, false),
+            ),
+            if (canDeleteForEveryone)
+              ListTile(
+                leading: const AppIcon(AppIcons.delete, color: AppColors.error),
+                title: Text(
+                  sheetContext.l10n.deleteForEveryone,
+                  style: const TextStyle(color: AppColors.error),
+                ),
+                onTap: () => Navigator.pop(sheetContext, true),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (forEveryone == null || !context.mounted) return;
+    final confirmed = await AppDialog.confirm(
+      context,
+      title: forEveryone
+          ? context.l10n.deleteForEveryone
+          : context.l10n.deleteForMe,
+      message: forEveryone
+          ? context.l10n.deleteMessagesConfirm(count)
+          : context.l10n.deleteMessagesForMeConfirm(count),
+      confirmText: context.l10n.delete,
+      cancelText: context.l10n.cancel,
+      isDestructive: true,
+      icon: AppIcons.delete,
+    );
+    if (!confirmed || !context.mounted) return;
+
+    setState(_selected.clear);
+    final failed = await provider.deleteMessages(
+      messages,
+      forEveryone: forEveryone,
+    );
+    if (failed == 0 || !context.mounted) return;
+    AppSnackbar.show(
+      context,
+      context.l10n.failedToDeleteMessage,
+      icon: Icons.error_outline,
+      color: AppColors.error,
+    );
+  }
+
   Future<void> _showMessageActions(
     BuildContext context,
     MessageModel message, {
@@ -384,6 +485,24 @@ class _ChatViewState extends State<_ChatView> {
               title: Text(sheetContext.l10n.reply),
               onTap: () =>
                   Navigator.pop(sheetContext, () => _startReplying(message)),
+            ),
+            if (message.body.isNotEmpty)
+              ListTile(
+                leading: Icon(Icons.copy, color: AppColors.primary),
+                title: Text(sheetContext.l10n.copy),
+                onTap: () => Navigator.pop(
+                  sheetContext,
+                  () => _copyMessages(context, [message]),
+                ),
+              ),
+            ListTile(
+              leading: Icon(
+                Icons.check_circle_outline,
+                color: AppColors.primary,
+              ),
+              title: Text(sheetContext.l10n.selectMessages),
+              onTap: () =>
+                  Navigator.pop(sheetContext, () => _toggleSelected(message)),
             ),
             if (isMine && !message.hasMedia)
               ListTile(
@@ -810,6 +929,15 @@ class _ChatViewState extends State<_ChatView> {
       reverse: true,
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
       itemCount: entries.length,
+      // Stable identity per row: without it a new message shifts every
+      // row's State (e.g. a voice player) onto the wrong message.
+      findChildIndexCallback: (key) {
+        if (key is! ValueKey<String>) return null;
+        final i = entries.indexWhere(
+          (e) => (e.message?.id ?? e.request!.id) == key.value,
+        );
+        return i < 0 ? null : entries.length - 1 - i;
+      },
       itemBuilder: (context, index) {
         final i = entries.length - 1 - index;
         final entry = entries[i];
@@ -821,6 +949,7 @@ class _ChatViewState extends State<_ChatView> {
         final request = entry.request;
         if (request != null) {
           return Column(
+            key: ValueKey(request.id),
             children: [
               if (startsNewDay) _dayChip(context, request.createdAt),
               _requestCard(context, provider, request),
@@ -836,13 +965,16 @@ class _ChatViewState extends State<_ChatView> {
             startsNewDay ||
             previous.request != null ||
             previous.message!.senderId != message.senderId;
+        final selected = _selected.contains(message.id);
         return Column(
+          key: ValueKey(message.id),
           children: [
             if (startsNewDay) _dayChip(context, message.createdAt),
             _SwipeToReply(
               enabled:
                   message.status == MessageStatus.sent &&
-                  !provider.isBlockedByMe,
+                  !provider.isBlockedByMe &&
+                  !_selecting,
               onReply: () => _startReplying(message),
               child: _MessageBubble(
                 message: message,
@@ -862,14 +994,44 @@ class _ChatViewState extends State<_ChatView> {
                               context,
                               provider.messageById(message.replyToId)!,
                             )),
-                onLongPress: () =>
-                    _showMessageActions(context, message, isMine: isMine),
+                selected: selected,
+                onLongPress: () => _selecting
+                    ? _toggleSelected(message)
+                    : _showMessageActions(context, message, isMine: isMine),
+                onTap: _selecting ? () => _toggleSelected(message) : null,
                 onRetry: () => provider.retry(message),
               ),
             ),
           ],
         );
       },
+    );
+  }
+
+  PreferredSizeWidget _selectionBar(
+    BuildContext context,
+    ChatProvider provider,
+  ) {
+    final selected = _selectedMessages(provider);
+    return AppBar(
+      leading: IconButton(
+        icon: const Icon(Icons.close),
+        onPressed: () => setState(_selected.clear),
+      ),
+      title: Text(context.l10n.selectedCount(_selected.length)),
+      actions: [
+        if (selected.any((m) => m.body.isNotEmpty))
+          IconButton(
+            tooltip: context.l10n.copy,
+            icon: const Icon(Icons.copy),
+            onPressed: () => _copyMessages(context, selected),
+          ),
+        IconButton(
+          tooltip: context.l10n.delete,
+          icon: const AppIcon(AppIcons.delete),
+          onPressed: () => _onDeleteSelectedPressed(context, provider),
+        ),
+      ],
     );
   }
 
@@ -881,394 +1043,419 @@ class _ChatViewState extends State<_ChatView> {
     final isOnline = status == context.l10n.online;
     final colors = _ChatColors.of(context);
 
-    return Scaffold(
-      backgroundColor: colors.background,
-      appBar: AppBar(
-        titleSpacing: 0,
-        title: Row(
-          children: [
-            provider.isLoadingProfile
-                ? const AppShimmer(
-                    width: 38,
-                    height: 38,
-                    borderRadius: BorderRadius.all(Radius.circular(19)),
-                  )
-                : Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      AppAvatar(
-                        radius: 19,
-                        imageUrl: provider.otherProfile?.avatarUrl,
-                      ),
-                      if (isOnline)
-                        PositionedDirectional(
-                          end: 0,
-                          bottom: 0,
-                          child: Container(
-                            width: 11,
-                            height: 11,
-                            decoration: BoxDecoration(
-                              color: Colors.green,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: context.appBackground,
-                                width: 2,
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: provider.isLoadingProfile
-                  ? const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        AppShimmer(
-                          width: 110,
-                          height: 13,
-                          borderRadius: BorderRadius.all(Radius.circular(4)),
-                        ),
-                        SizedBox(height: 6),
-                        AppShimmer(
-                          width: 150,
-                          height: 10,
-                          borderRadius: BorderRadius.all(Radius.circular(4)),
-                        ),
-                      ],
-                    )
-                  : Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          provider.otherProfile?.fullName ??
-                              context.l10n.paoUser,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          status ?? widget.productName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w400,
-                            color: isOnline
-                                ? Colors.green
-                                : context.appTextSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-            ),
-          ],
-        ),
-        actions: [
-          PopupMenuButton<_ChatMenu>(
-            onSelected: (choice) => _onMenuSelected(context, choice),
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                value: _ChatMenu.clear,
-                child: Text(context.l10n.clearChat),
-              ),
-              PopupMenuItem(
-                value: _ChatMenu.report,
-                child: Text(context.l10n.reportUser),
-              ),
-              PopupMenuItem(
-                value: _ChatMenu.block,
-                child: Text(
-                  provider.isBlockedByMe
-                      ? context.l10n.unblockUser
-                      : context.l10n.blockUser,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            if (provider.isRequester &&
-                provider.request.isAccepted &&
-                !provider.feedbackGiven)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                color: context.appBackground,
-                child: PrimaryButton(
-                  label: context.l10n.receivedLeaveFeedback,
-                  onPressed: () => _onLeaveFeedbackPressed(context),
-                ),
-              ),
-            Expanded(
-              child: provider.isLoading
-                  ? const _ChatShimmer()
-                  : ListenableBuilder(
-                      // Request statuses live in the stores.
-                      listenable: Listenable.merge([
-                        RequestStore.sent,
-                        RequestStore.received,
-                      ]),
-                      builder: (context, _) =>
-                          _buildTimeline(context, provider, colors),
-                    ),
-            ),
-            if (provider.isBlockedByMe)
-              _BlockedBar(
-                colors: colors,
-                onUnblock: () => _toggleBlock(context, provider),
-              )
-            else ...[
-              if (_replyingTo != null)
-                Container(
-                  width: double.infinity,
-                  margin: const EdgeInsets.fromLTRB(8, 0, 8, 0),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: colors.composer,
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(12),
-                    ),
-                    border: BorderDirectional(
-                      start: BorderSide(color: AppColors.primary, width: 4),
+    return PopScope(
+      canPop: !_selecting,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) setState(_selected.clear);
+      },
+      child: Scaffold(
+        backgroundColor: colors.background,
+        appBar: _selecting
+            ? _selectionBar(context, provider)
+            : AppBar(
+                titleSpacing: 0,
+                title: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          UserProfileScreen(userId: provider.otherUserId),
                     ),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.reply, size: 18, color: colors.meta),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              _senderLabel(context, _replyingTo!),
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: colors.text,
+                      provider.isLoadingProfile
+                          ? const AppShimmer(
+                              width: 38,
+                              height: 38,
+                              borderRadius: BorderRadius.all(
+                                Radius.circular(19),
                               ),
-                            ),
-                            Text(
-                              messagePreview(context, _replyingTo!),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: colors.meta,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      InkWell(
-                        onTap: () => setState(() => _replyingTo = null),
-                        child: AppIcon(
-                          AppIcons.close,
-                          size: 18,
-                          color: colors.meta,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              if (_editingMessage != null)
-                Container(
-                  width: double.infinity,
-                  margin: const EdgeInsets.fromLTRB(8, 0, 8, 0),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: colors.composer,
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(12),
-                    ),
-                    border: BorderDirectional(
-                      start: BorderSide(color: AppColors.primary, width: 4),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      AppIcon(AppIcons.edit, size: 16, color: colors.meta),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              context.l10n.editMessage,
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: colors.text,
-                              ),
-                            ),
-                            Text(
-                              _editingMessage!.body,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: colors.meta,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      InkWell(
-                        onTap: _cancelEditing,
-                        child: AppIcon(
-                          AppIcons.close,
-                          size: 18,
-                          color: colors.meta,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              if (provider.isUploadingMedia)
-                const LinearProgressIndicator(minHeight: 2),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Expanded(
-                      child: ListenableBuilder(
-                        listenable: _voice,
-                        builder: (context, _) => _voice.isRecording
-                            ? RecordingBar(
-                                controller: _voice,
-                                background: colors.composer,
-                                textColor: colors.text,
-                                hintColor: colors.meta,
-                              )
-                            : Container(
-                                decoration: BoxDecoration(
-                                  color: colors.composer,
-                                  borderRadius:
-                                      (_editingMessage != null ||
-                                          _replyingTo != null)
-                                      ? const BorderRadius.vertical(
-                                          bottom: Radius.circular(24),
-                                        )
-                                      : BorderRadius.circular(24),
+                            )
+                          : Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                AppAvatar(
+                                  radius: 19,
+                                  imageUrl: provider.otherProfile?.avatarUrl,
                                 ),
-                                child: TextField(
-                                  controller: _messageController,
-                                  focusNode: _inputFocus,
-                                  textCapitalization:
-                                      TextCapitalization.sentences,
-                                  minLines: 1,
-                                  maxLines: 5,
-                                  // Enter adds a new line (like WhatsApp); the send
-                                  // button submits.
-                                  keyboardType: TextInputType.multiline,
-                                  textInputAction: TextInputAction.newline,
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    color: colors.text,
+                                if (isOnline)
+                                  PositionedDirectional(
+                                    end: 0,
+                                    bottom: 0,
+                                    child: Container(
+                                      width: 11,
+                                      height: 11,
+                                      decoration: BoxDecoration(
+                                        color: Colors.green,
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: context.appBackground,
+                                          width: 2,
+                                        ),
+                                      ),
+                                    ),
                                   ),
-                                  decoration: InputDecoration(
-                                    suffixIcon: _editingMessage == null
-                                        ? IconButton(
-                                            tooltip: context.l10n.attach,
-                                            icon: Icon(
-                                              Icons.attach_file,
-                                              color: colors.meta,
-                                            ),
-                                            onPressed: () => _attach(context),
+                              ],
+                            ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: provider.isLoadingProfile
+                            ? const Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  AppShimmer(
+                                    width: 110,
+                                    height: 13,
+                                    borderRadius: BorderRadius.all(
+                                      Radius.circular(4),
+                                    ),
+                                  ),
+                                  SizedBox(height: 6),
+                                  AppShimmer(
+                                    width: 150,
+                                    height: 10,
+                                    borderRadius: BorderRadius.all(
+                                      Radius.circular(4),
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    provider.otherProfile?.fullName ??
+                                        context.l10n.paoUser,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    status ?? widget.productName,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w400,
+                                      color: isOnline
+                                          ? Colors.green
+                                          : context.appTextSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                      ),
+                    ],
+                  ),
+                ),
+                actions: [
+                  PopupMenuButton<_ChatMenu>(
+                    onSelected: (choice) => _onMenuSelected(context, choice),
+                    itemBuilder: (context) => [
+                      PopupMenuItem(
+                        value: _ChatMenu.clear,
+                        child: Text(context.l10n.clearChat),
+                      ),
+                      PopupMenuItem(
+                        value: _ChatMenu.report,
+                        child: Text(context.l10n.reportUser),
+                      ),
+                      PopupMenuItem(
+                        value: _ChatMenu.block,
+                        child: Text(
+                          provider.isBlockedByMe
+                              ? context.l10n.unblockUser
+                              : context.l10n.blockUser,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+        body: SafeArea(
+          child: Column(
+            children: [
+              if (provider.isRequester &&
+                  provider.request.isAccepted &&
+                  !provider.feedbackGiven)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  color: context.appBackground,
+                  child: PrimaryButton(
+                    label: context.l10n.receivedLeaveFeedback,
+                    onPressed: () => _onLeaveFeedbackPressed(context),
+                  ),
+                ),
+              Expanded(
+                child: provider.isLoading
+                    ? const _ChatShimmer()
+                    : ListenableBuilder(
+                        // Request statuses live in the stores.
+                        listenable: Listenable.merge([
+                          RequestStore.sent,
+                          RequestStore.received,
+                        ]),
+                        builder: (context, _) =>
+                            _buildTimeline(context, provider, colors),
+                      ),
+              ),
+              if (provider.isBlockedByMe)
+                _BlockedBar(
+                  colors: colors,
+                  onUnblock: () => _toggleBlock(context, provider),
+                )
+              else ...[
+                if (_replyingTo != null)
+                  Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.fromLTRB(8, 0, 8, 0),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: colors.composer,
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(12),
+                      ),
+                      border: BorderDirectional(
+                        start: BorderSide(color: AppColors.primary, width: 4),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.reply, size: 18, color: colors.meta),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                _senderLabel(context, _replyingTo!),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: colors.text,
+                                ),
+                              ),
+                              Text(
+                                messagePreview(context, _replyingTo!),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: colors.meta,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        InkWell(
+                          onTap: () => setState(() => _replyingTo = null),
+                          child: AppIcon(
+                            AppIcons.close,
+                            size: 18,
+                            color: colors.meta,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                if (_editingMessage != null)
+                  Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.fromLTRB(8, 0, 8, 0),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: colors.composer,
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(12),
+                      ),
+                      border: BorderDirectional(
+                        start: BorderSide(color: AppColors.primary, width: 4),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        AppIcon(AppIcons.edit, size: 16, color: colors.meta),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                context.l10n.editMessage,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: colors.text,
+                                ),
+                              ),
+                              Text(
+                                _editingMessage!.body,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: colors.meta,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        InkWell(
+                          onTap: _cancelEditing,
+                          child: AppIcon(
+                            AppIcons.close,
+                            size: 18,
+                            color: colors.meta,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                if (provider.isUploadingMedia)
+                  const LinearProgressIndicator(minHeight: 2),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Expanded(
+                        child: ListenableBuilder(
+                          listenable: _voice,
+                          builder: (context, _) => _voice.isRecording
+                              ? RecordingBar(
+                                  controller: _voice,
+                                  background: colors.composer,
+                                  textColor: colors.text,
+                                  hintColor: colors.meta,
+                                )
+                              : Container(
+                                  decoration: BoxDecoration(
+                                    color: colors.composer,
+                                    borderRadius:
+                                        (_editingMessage != null ||
+                                            _replyingTo != null)
+                                        ? const BorderRadius.vertical(
+                                            bottom: Radius.circular(24),
                                           )
-                                        : null,
-                                    hintText: context.l10n.typeMessageHint,
-                                    hintStyle: TextStyle(color: colors.meta),
-                                    filled: false,
-                                    border: InputBorder.none,
-                                    enabledBorder: InputBorder.none,
-                                    focusedBorder: InputBorder.none,
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 18,
-                                      vertical: 12,
+                                        : BorderRadius.circular(24),
+                                  ),
+                                  child: TextField(
+                                    controller: _messageController,
+                                    focusNode: _inputFocus,
+                                    textCapitalization:
+                                        TextCapitalization.sentences,
+                                    minLines: 1,
+                                    maxLines: 5,
+                                    // Enter adds a new line (like WhatsApp); the send
+                                    // button submits.
+                                    keyboardType: TextInputType.multiline,
+                                    textInputAction: TextInputAction.newline,
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      color: colors.text,
+                                    ),
+                                    decoration: InputDecoration(
+                                      suffixIcon: _editingMessage == null
+                                          ? IconButton(
+                                              tooltip: context.l10n.attach,
+                                              icon: Icon(
+                                                Icons.attach_file,
+                                                color: colors.meta,
+                                              ),
+                                              onPressed: () => _attach(context),
+                                            )
+                                          : null,
+                                      hintText: context.l10n.typeMessageHint,
+                                      hintStyle: TextStyle(color: colors.meta),
+                                      filled: false,
+                                      border: InputBorder.none,
+                                      enabledBorder: InputBorder.none,
+                                      focusedBorder: InputBorder.none,
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                            horizontal: 18,
+                                            vertical: 12,
+                                          ),
                                     ),
                                   ),
                                 ),
-                              ),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 6),
-                    ValueListenableBuilder<TextEditingValue>(
-                      valueListenable: _messageController,
-                      builder: (context, value, _) {
-                        if (value.text.trim().isEmpty &&
-                            _editingMessage == null) {
-                          return VoiceMicButton(
-                            controller: _voice,
-                            onRecorded: (recording) => _sendMedia(
-                              context,
-                              context.read<ChatProvider>(),
-                              recording.file,
-                              MessageMediaType.audio,
-                              durationMs: recording.duration.inMilliseconds,
-                            ),
-                            onPermissionDenied: () => AppSnackbar.show(
-                              context,
-                              context.l10n.microphonePermissionDenied,
-                              icon: Icons.mic_off,
-                              color: AppColors.error,
-                            ),
-                            onTooShort: () => AppSnackbar.show(
-                              context,
-                              context.l10n.holdToRecordVoice,
-                              icon: Icons.mic,
-                            ),
-                          );
-                        }
-                        return Material(
-                          color: AppColors.primary,
-                          shape: const CircleBorder(),
-                          child: InkWell(
-                            customBorder: const CircleBorder(),
-                            onTap: () => _submit(context),
-                            child: SizedBox(
-                              width: 48,
-                              height: 48,
-                              child: Center(
-                                child: AppIcon(
-                                  _editingMessage != null
-                                      ? AppIcons.check
-                                      : AppIcons.send,
-                                  size: 22,
-                                  mirrorInRtl: _editingMessage == null,
-                                  color: AppColors.onPrimary,
+                      const SizedBox(width: 6),
+                      ValueListenableBuilder<TextEditingValue>(
+                        valueListenable: _messageController,
+                        builder: (context, value, _) {
+                          if (value.text.trim().isEmpty &&
+                              _editingMessage == null) {
+                            return VoiceMicButton(
+                              controller: _voice,
+                              onRecorded: (recording) => _sendMedia(
+                                context,
+                                context.read<ChatProvider>(),
+                                recording.file,
+                                MessageMediaType.audio,
+                                durationMs: recording.duration.inMilliseconds,
+                              ),
+                              onPermissionDenied: () => AppSnackbar.show(
+                                context,
+                                context.l10n.microphonePermissionDenied,
+                                icon: Icons.mic_off,
+                                color: AppColors.error,
+                              ),
+                              onTooShort: () => AppSnackbar.show(
+                                context,
+                                context.l10n.holdToRecordVoice,
+                                icon: Icons.mic,
+                              ),
+                            );
+                          }
+                          return Material(
+                            color: AppColors.primary,
+                            shape: const CircleBorder(),
+                            child: InkWell(
+                              customBorder: const CircleBorder(),
+                              onTap: () => _submit(context),
+                              child: SizedBox(
+                                width: 48,
+                                height: 48,
+                                child: Center(
+                                  child: AppIcon(
+                                    _editingMessage != null
+                                        ? AppIcons.check
+                                        : AppIcons.send,
+                                    size: 22,
+                                    mirrorInRtl: _editingMessage == null,
+                                    color: AppColors.onPrimary,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        );
-                      },
-                    ),
-                  ],
+                          );
+                        },
+                      ),
+                    ],
+                  ),
                 ),
-              ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -1340,6 +1527,13 @@ class _MessageBubble extends StatelessWidget {
   final String time;
   final VoidCallback? onLongPress;
 
+  /// Overrides the default tap (retry of a failed message), e.g. to toggle
+  /// selection.
+  final VoidCallback? onTap;
+
+  /// Highlighted while picked in multi-select mode.
+  final bool selected;
+
   /// Tapping a failed message re-sends it.
   final VoidCallback? onRetry;
   final String? currentUserId;
@@ -1353,6 +1547,8 @@ class _MessageBubble extends StatelessWidget {
     required this.topSpacing,
     required this.time,
     this.onLongPress,
+    this.onTap,
+    this.selected = false,
     this.onRetry,
     this.currentUserId,
     this.replyTo,
@@ -1368,10 +1564,11 @@ class _MessageBubble extends StatelessWidget {
     final bubbleColor = isMine ? colors.outgoing : colors.incoming;
     final metaColor = isMine ? colors.outgoingMeta : colors.meta;
     final isRead = message.readAt != null;
+    final isDelivered = message.deliveredAt != null;
 
     // WhatsApp style: a clock while it is still on this device (sending or
-    // waiting for internet), two grey ticks once the server has it, two
-    // blue ticks once the other person has seen it. Red "!" when it failed.
+    // waiting for internet), one tick once the server has it, two grey
+    // ticks once the other person's device has it, two blue once seen. Red "!" when it failed.
     Widget statusIcon(Color base, Color readColor) => switch (message.status) {
       MessageStatus.sending => Icon(Icons.schedule, size: 14, color: base),
       MessageStatus.failed => const Icon(
@@ -1380,7 +1577,7 @@ class _MessageBubble extends StatelessWidget {
         color: AppColors.error,
       ),
       MessageStatus.sent => AppIcon(
-        AppIcons.checkAll,
+        isRead || isDelivered ? AppIcons.checkAll : AppIcons.check,
         size: 15,
         color: isRead ? readColor : base,
       ),
@@ -1424,7 +1621,10 @@ class _MessageBubble extends StatelessWidget {
       ],
     );
 
-    return Padding(
+    return Container(
+      color: selected
+          ? AppColors.primary.withValues(alpha: 0.18)
+          : Colors.transparent,
       padding: EdgeInsetsDirectional.only(
         top: topSpacing,
         start: isMine ? 48 : 0,
@@ -1436,7 +1636,9 @@ class _MessageBubble extends StatelessWidget {
             : AlignmentDirectional.centerStart,
         child: GestureDetector(
           onLongPress: onLongPress,
-          onTap: message.status == MessageStatus.failed ? onRetry : null,
+          onTap:
+              onTap ??
+              (message.status == MessageStatus.failed ? onRetry : null),
           child: Padding(
             // Keep bubbles lined up whether or not they carry a tail.
             padding: EdgeInsetsDirectional.only(

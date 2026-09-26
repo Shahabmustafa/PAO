@@ -44,4 +44,25 @@ class SignupProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  /// Google sign-in creates the account on first use. False on failure or
+  /// cancel ([errorMessage] stays null when cancelled).
+  Future<bool> signUpWithGoogle() async {
+    isLoading = true;
+    errorMessage = null;
+    notifyListeners();
+
+    try {
+      return await _repository.loginWithGoogle() != null;
+    } on AuthException catch (e) {
+      errorMessage = authErrorMessage(e);
+      return false;
+    } catch (_) {
+      errorMessage = l10nNow.somethingWentWrong;
+      return false;
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
 }

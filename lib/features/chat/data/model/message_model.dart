@@ -37,6 +37,7 @@ class MessageModel {
     required this.createdAt,
     this.requestId,
     this.readAt,
+    this.deliveredAt,
     this.editedAt,
     this.mediaType,
     this.mediaPath,
@@ -58,6 +59,9 @@ class MessageModel {
   final String body;
   final DateTime createdAt;
   final DateTime? readAt;
+
+  /// When the recipient's device received it (the second grey tick).
+  final DateTime? deliveredAt;
   final DateTime? editedAt;
 
   /// Set for photo / video / voice messages; [mediaPath] is the file's path
@@ -93,6 +97,7 @@ class MessageModel {
     createdAt: createdAt,
     requestId: requestId,
     readAt: readAt,
+    deliveredAt: deliveredAt,
     editedAt: editedAt,
     mediaType: mediaType,
     mediaPath: mediaPath,
@@ -113,6 +118,7 @@ class MessageModel {
     'body': body,
     'created_at': createdAt.toUtc().toIso8601String(),
     'read_at': readAt?.toUtc().toIso8601String(),
+    'delivered_at': deliveredAt?.toUtc().toIso8601String(),
     'edited_at': editedAt?.toUtc().toIso8601String(),
     'reply_to_id': replyToId,
     'reactions': reactions,
@@ -135,6 +141,9 @@ class MessageModel {
       createdAt: DateTime.parse(json['created_at'] as String),
       readAt: json['read_at'] != null
           ? DateTime.parse(json['read_at'] as String)
+          : null,
+      deliveredAt: json['delivered_at'] != null
+          ? DateTime.parse(json['delivered_at'] as String)
           : null,
       editedAt: json['edited_at'] != null
           ? DateTime.parse(json['edited_at'] as String)

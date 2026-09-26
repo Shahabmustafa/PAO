@@ -723,6 +723,13 @@ class ChatProvider extends ChangeNotifier {
     return null;
   }
 
+  /// The message right after [id] in the conversation, or null if [id] is
+  /// the last one (or isn't loaded). Used to chain voice messages.
+  MessageModel? nextMessageAfter(String id) {
+    final i = messages.indexWhere((m) => m.id == id);
+    return i >= 0 && i + 1 < messages.length ? messages[i + 1] : null;
+  }
+
   /// Sets the current user's reaction on [message]; reacting with the emoji
   /// already chosen removes it. Applied locally first, put back on failure.
   Future<bool> react(MessageModel message, String emoji) async {
@@ -766,6 +773,23 @@ class ChatProvider extends ChangeNotifier {
       notifyListeners();
       return false;
     }
+  }
+
+  /// Deletes several messages at once; returns how many could not be
+  /// deleted. [forEveryone] only applies to the current user's own messages.
+  Future<int> deleteMessages(
+    Iterable<MessageModel> selected, {
+    required bool forEveryone,
+  }) async {
+    // One after another: each delete snapshots the list to restore on failure.
+    var failed = 0;
+    for (final m in selected.toList()) {
+      final ok = forEveryone || m.isPending
+          ? await deleteMessage(m)
+          : await deleteMessageForMe(m);
+      if (!ok) failed++;
+    }
+    return failed;
   }
 
   @override
