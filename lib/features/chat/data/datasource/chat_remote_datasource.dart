@@ -29,7 +29,10 @@ class ChatRemoteDataSource {
     var query = _client
         .from('messages')
         .select()
-        .or(_pairFilter(currentUserId, otherUserId));
+        .or(_pairFilter(currentUserId, otherUserId))
+        // Messages the user deleted / cleared for themselves never come
+        // back, so paging isn't spent on hidden rows.
+        .not('deleted_for', 'cs', '{$currentUserId}');
     if (before != null) {
       query = query.lt('created_at', before.toUtc().toIso8601String());
     }
@@ -162,6 +165,63 @@ class ChatRemoteDataSource {
       'delete_message_for_me',
       params: {'p_message_id': messageId},
     );
+  }
+
+  /// Hides the whole conversation with [otherUserId] from the current user
+  /// only (see supabase/chat_safety.sql).
+  Future<void> clearConversation(String otherUserId) {
+    return _client.rpc(
+      'clear_conversation_for_me',
+      params: {'p_other': otherUserId},
+    );
+  }
+
+  /// Whether the current user has blocked [otherUserId].
+  Future<bool> isBlockedByMe({
+    required String myId,
+    required String otherUserId,
+  }) async {
+    final row = await _client
+        .from('user_blocks')
+        .select('blocked_id')
+        .eq('blocker_id', myId)
+        .eq('blocked_id', otherUserId)
+        .maybeSingle();
+    return row != null;
+  }
+
+  Future<void> blockUser({required String myId, required String otherUserId}) {
+    return _client.from('user_blocks').upsert({
+      'blocker_id': myId,
+      'blocked_id': otherUserId,
+    });
+  }
+
+  Future<void> unblockUser({
+    required String myId,
+    required String otherUserId,
+  }) {
+    return _client
+        .from('user_blocks')
+        .delete()
+        .eq('blocker_id', myId)
+        .eq('blocked_id', otherUserId);
+  }
+
+  /// Files a report against [reportedId]. A second report by the same
+  /// person is rejected by the table's unique key (code 23505).
+  Future<void> reportUser({
+    required String reporterId,
+    required String reportedId,
+    required String reason,
+    String? details,
+  }) {
+    return _client.from('user_reports').insert({
+      'reporter_id': reporterId,
+      'reported_id': reportedId,
+      'reason': reason,
+      'details': details,
+    });
   }
 
   /// Marks every unread message [readerId] received from [otherUserId] as

@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:image_picker/image_picker.dart';
 import '../../../../core/media/media_compressor.dart';
 import 'package:video_player/video_player.dart';
@@ -26,6 +27,7 @@ import '../../data/model/message_model.dart';
 import '../provider/chat_provider.dart';
 import '../widgets/chat_composer_widgets.dart';
 import '../widgets/chat_media_widgets.dart';
+import '../widgets/report_user_sheet.dart';
 import '../widgets/voice_recorder.dart';
 import '../../../../core/l10n/l10n.dart';
 
@@ -99,6 +101,7 @@ class _ChatView extends StatefulWidget {
 
 class _ChatViewState extends State<_ChatView> {
   final _messageController = TextEditingController();
+  final _inputFocus = FocusNode();
   MessageModel? _editingMessage;
   MessageModel? _replyingTo;
 
@@ -128,6 +131,7 @@ class _ChatViewState extends State<_ChatView> {
   void dispose() {
     _scroll.dispose();
     _messageController.dispose();
+    _inputFocus.dispose();
     _voice.dispose();
     super.dispose();
   }
@@ -283,6 +287,8 @@ class _ChatViewState extends State<_ChatView> {
       _editingMessage = null;
       _replyingTo = message;
     });
+    // Like WhatsApp: the keyboard opens ready to type the reply.
+    _inputFocus.requestFocus();
   }
 
   Future<void> _react(
@@ -558,6 +564,90 @@ class _ChatViewState extends State<_ChatView> {
     }
   }
 
+  String _otherName(ChatProvider provider) =>
+      provider.otherProfile?.fullName ?? context.l10n.paoUser;
+
+  void _onMenuSelected(BuildContext context, _ChatMenu choice) {
+    final provider = context.read<ChatProvider>();
+    switch (choice) {
+      case _ChatMenu.clear:
+        _onClearChatPressed(context, provider);
+      case _ChatMenu.report:
+        _onReportPressed(context, provider);
+      case _ChatMenu.block:
+        _toggleBlock(context, provider);
+    }
+  }
+
+  Future<void> _onClearChatPressed(
+    BuildContext context,
+    ChatProvider provider,
+  ) async {
+    final confirmed = await AppDialog.confirm(
+      context,
+      title: context.l10n.clearChat,
+      message: context.l10n.clearChatConfirm,
+      confirmText: context.l10n.clearChatAction,
+      cancelText: context.l10n.cancel,
+      isDestructive: true,
+      icon: AppIcons.delete,
+    );
+    if (!confirmed || !context.mounted) return;
+    final ok = await provider.clearChat();
+    if (!context.mounted) return;
+    ok
+        ? AppSnackbar.show(context, context.l10n.chatCleared)
+        : AppSnackbar.show(
+            context,
+            context.l10n.failedToUpdate,
+            icon: Icons.error_outline,
+            color: AppColors.error,
+          );
+  }
+
+  Future<void> _toggleBlock(BuildContext context, ChatProvider provider) async {
+    final blocking = !provider.isBlockedByMe;
+    if (blocking) {
+      final confirmed = await AppDialog.confirm(
+        context,
+        title: context.l10n.blockUserTitle(_otherName(provider)),
+        message: context.l10n.blockUserConfirm,
+        confirmText: context.l10n.blockUser,
+        cancelText: context.l10n.cancel,
+        isDestructive: true,
+        icon: AppIcons.close,
+      );
+      if (!confirmed || !context.mounted) return;
+    }
+    final ok = await provider.setBlocked(blocking);
+    if (!context.mounted) return;
+    ok
+        ? AppSnackbar.show(
+            context,
+            blocking ? context.l10n.userBlocked : context.l10n.userUnblocked,
+          )
+        : AppSnackbar.show(
+            context,
+            context.l10n.failedToUpdate,
+            icon: Icons.error_outline,
+            color: AppColors.error,
+          );
+  }
+
+  Future<void> _onReportPressed(
+    BuildContext context,
+    ChatProvider provider,
+  ) async {
+    final sent = await showReportUserSheet(
+      context,
+      userName: _otherName(provider),
+      onSubmit: provider.reportUser,
+    );
+    if (sent == true && context.mounted) {
+      AppSnackbar.show(context, context.l10n.reportSent);
+    }
+  }
+
   Future<void> _onDeleteForMePressed(
     BuildContext context,
     MessageModel message,
@@ -749,27 +839,33 @@ class _ChatViewState extends State<_ChatView> {
         return Column(
           children: [
             if (startsNewDay) _dayChip(context, message.createdAt),
-            _MessageBubble(
-              message: message,
-              isMine: isMine,
-              showTail: startsGroup,
-              topSpacing: startsGroup && !startsNewDay ? 8 : 2,
-              time: _formatTime(message.createdAt),
-              currentUserId: currentUserId,
-              replyTo: message.replyToId == null
-                  ? null
-                  : (provider.messageById(message.replyToId)),
-              replySenderName: message.replyToId == null
-                  ? null
-                  : (provider.messageById(message.replyToId) == null
-                        ? null
-                        : _senderLabel(
-                            context,
-                            provider.messageById(message.replyToId)!,
-                          )),
-              onLongPress: () =>
-                  _showMessageActions(context, message, isMine: isMine),
-              onRetry: () => provider.retry(message),
+            _SwipeToReply(
+              enabled:
+                  message.status == MessageStatus.sent &&
+                  !provider.isBlockedByMe,
+              onReply: () => _startReplying(message),
+              child: _MessageBubble(
+                message: message,
+                isMine: isMine,
+                showTail: startsGroup,
+                topSpacing: startsGroup && !startsNewDay ? 8 : 2,
+                time: _formatTime(message.createdAt),
+                currentUserId: currentUserId,
+                replyTo: message.replyToId == null
+                    ? null
+                    : (provider.messageById(message.replyToId)),
+                replySenderName: message.replyToId == null
+                    ? null
+                    : (provider.messageById(message.replyToId) == null
+                          ? null
+                          : _senderLabel(
+                              context,
+                              provider.messageById(message.replyToId)!,
+                            )),
+                onLongPress: () =>
+                    _showMessageActions(context, message, isMine: isMine),
+                onRetry: () => provider.retry(message),
+              ),
             ),
           ],
         );
@@ -875,6 +971,29 @@ class _ChatViewState extends State<_ChatView> {
             ),
           ],
         ),
+        actions: [
+          PopupMenuButton<_ChatMenu>(
+            onSelected: (choice) => _onMenuSelected(context, choice),
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: _ChatMenu.clear,
+                child: Text(context.l10n.clearChat),
+              ),
+              PopupMenuItem(
+                value: _ChatMenu.report,
+                child: Text(context.l10n.reportUser),
+              ),
+              PopupMenuItem(
+                value: _ChatMenu.block,
+                child: Text(
+                  provider.isBlockedByMe
+                      ? context.l10n.unblockUser
+                      : context.l10n.blockUser,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
       body: SafeArea(
         child: Column(
@@ -904,237 +1023,251 @@ class _ChatViewState extends State<_ChatView> {
                           _buildTimeline(context, provider, colors),
                     ),
             ),
-            if (_replyingTo != null)
-              Container(
-                width: double.infinity,
-                margin: const EdgeInsets.fromLTRB(8, 0, 8, 0),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: colors.composer,
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(12),
+            if (provider.isBlockedByMe)
+              _BlockedBar(
+                colors: colors,
+                onUnblock: () => _toggleBlock(context, provider),
+              )
+            else ...[
+              if (_replyingTo != null)
+                Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.fromLTRB(8, 0, 8, 0),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
                   ),
-                  border: BorderDirectional(
-                    start: BorderSide(color: AppColors.primary, width: 4),
+                  decoration: BoxDecoration(
+                    color: colors.composer,
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(12),
+                    ),
+                    border: BorderDirectional(
+                      start: BorderSide(color: AppColors.primary, width: 4),
+                    ),
                   ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.reply, size: 18, color: colors.meta),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            _senderLabel(context, _replyingTo!),
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: colors.text,
-                            ),
-                          ),
-                          Text(
-                            messagePreview(context, _replyingTo!),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(fontSize: 12, color: colors.meta),
-                          ),
-                        ],
-                      ),
-                    ),
-                    InkWell(
-                      onTap: () => setState(() => _replyingTo = null),
-                      child: AppIcon(
-                        AppIcons.close,
-                        size: 18,
-                        color: colors.meta,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            if (_editingMessage != null)
-              Container(
-                width: double.infinity,
-                margin: const EdgeInsets.fromLTRB(8, 0, 8, 0),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: colors.composer,
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(12),
-                  ),
-                  border: BorderDirectional(
-                    start: BorderSide(color: AppColors.primary, width: 4),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    AppIcon(AppIcons.edit, size: 16, color: colors.meta),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            context.l10n.editMessage,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: colors.text,
-                            ),
-                          ),
-                          Text(
-                            _editingMessage!.body,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(fontSize: 12, color: colors.meta),
-                          ),
-                        ],
-                      ),
-                    ),
-                    InkWell(
-                      onTap: _cancelEditing,
-                      child: AppIcon(
-                        AppIcons.close,
-                        size: 18,
-                        color: colors.meta,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            if (provider.isUploadingMedia)
-              const LinearProgressIndicator(minHeight: 2),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Expanded(
-                    child: ListenableBuilder(
-                      listenable: _voice,
-                      builder: (context, _) => _voice.isRecording
-                          ? RecordingBar(
-                              controller: _voice,
-                              background: colors.composer,
-                              textColor: colors.text,
-                              hintColor: colors.meta,
-                            )
-                          : Container(
-                              decoration: BoxDecoration(
-                                color: colors.composer,
-                                borderRadius:
-                                    (_editingMessage != null ||
-                                        _replyingTo != null)
-                                    ? const BorderRadius.vertical(
-                                        bottom: Radius.circular(24),
-                                      )
-                                    : BorderRadius.circular(24),
+                  child: Row(
+                    children: [
+                      Icon(Icons.reply, size: 18, color: colors.meta),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              _senderLabel(context, _replyingTo!),
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: colors.text,
                               ),
-                              child: TextField(
-                                controller: _messageController,
-                                textCapitalization:
-                                    TextCapitalization.sentences,
-                                minLines: 1,
-                                maxLines: 5,
-                                // Enter adds a new line (like WhatsApp); the send
-                                // button submits.
-                                keyboardType: TextInputType.multiline,
-                                textInputAction: TextInputAction.newline,
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  color: colors.text,
-                                ),
-                                decoration: InputDecoration(
-                                  suffixIcon: _editingMessage == null
-                                      ? IconButton(
-                                          tooltip: context.l10n.attach,
-                                          icon: Icon(
-                                            Icons.attach_file,
-                                            color: colors.meta,
-                                          ),
-                                          onPressed: () => _attach(context),
+                            ),
+                            Text(
+                              messagePreview(context, _replyingTo!),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: colors.meta,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      InkWell(
+                        onTap: () => setState(() => _replyingTo = null),
+                        child: AppIcon(
+                          AppIcons.close,
+                          size: 18,
+                          color: colors.meta,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              if (_editingMessage != null)
+                Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.fromLTRB(8, 0, 8, 0),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: colors.composer,
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(12),
+                    ),
+                    border: BorderDirectional(
+                      start: BorderSide(color: AppColors.primary, width: 4),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      AppIcon(AppIcons.edit, size: 16, color: colors.meta),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              context.l10n.editMessage,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: colors.text,
+                              ),
+                            ),
+                            Text(
+                              _editingMessage!.body,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: colors.meta,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      InkWell(
+                        onTap: _cancelEditing,
+                        child: AppIcon(
+                          AppIcons.close,
+                          size: 18,
+                          color: colors.meta,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              if (provider.isUploadingMedia)
+                const LinearProgressIndicator(minHeight: 2),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: ListenableBuilder(
+                        listenable: _voice,
+                        builder: (context, _) => _voice.isRecording
+                            ? RecordingBar(
+                                controller: _voice,
+                                background: colors.composer,
+                                textColor: colors.text,
+                                hintColor: colors.meta,
+                              )
+                            : Container(
+                                decoration: BoxDecoration(
+                                  color: colors.composer,
+                                  borderRadius:
+                                      (_editingMessage != null ||
+                                          _replyingTo != null)
+                                      ? const BorderRadius.vertical(
+                                          bottom: Radius.circular(24),
                                         )
-                                      : null,
-                                  hintText: context.l10n.typeMessageHint,
-                                  hintStyle: TextStyle(color: colors.meta),
-                                  filled: false,
-                                  border: InputBorder.none,
-                                  enabledBorder: InputBorder.none,
-                                  focusedBorder: InputBorder.none,
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 18,
-                                    vertical: 12,
+                                      : BorderRadius.circular(24),
+                                ),
+                                child: TextField(
+                                  controller: _messageController,
+                                  focusNode: _inputFocus,
+                                  textCapitalization:
+                                      TextCapitalization.sentences,
+                                  minLines: 1,
+                                  maxLines: 5,
+                                  // Enter adds a new line (like WhatsApp); the send
+                                  // button submits.
+                                  keyboardType: TextInputType.multiline,
+                                  textInputAction: TextInputAction.newline,
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    color: colors.text,
+                                  ),
+                                  decoration: InputDecoration(
+                                    suffixIcon: _editingMessage == null
+                                        ? IconButton(
+                                            tooltip: context.l10n.attach,
+                                            icon: Icon(
+                                              Icons.attach_file,
+                                              color: colors.meta,
+                                            ),
+                                            onPressed: () => _attach(context),
+                                          )
+                                        : null,
+                                    hintText: context.l10n.typeMessageHint,
+                                    hintStyle: TextStyle(color: colors.meta),
+                                    filled: false,
+                                    border: InputBorder.none,
+                                    enabledBorder: InputBorder.none,
+                                    focusedBorder: InputBorder.none,
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 18,
+                                      vertical: 12,
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 6),
-                  ValueListenableBuilder<TextEditingValue>(
-                    valueListenable: _messageController,
-                    builder: (context, value, _) {
-                      if (value.text.trim().isEmpty &&
-                          _editingMessage == null) {
-                        return VoiceMicButton(
-                          controller: _voice,
-                          onRecorded: (recording) => _sendMedia(
-                            context,
-                            context.read<ChatProvider>(),
-                            recording.file,
-                            MessageMediaType.audio,
-                            durationMs: recording.duration.inMilliseconds,
-                          ),
-                          onPermissionDenied: () => AppSnackbar.show(
-                            context,
-                            context.l10n.microphonePermissionDenied,
-                            icon: Icons.mic_off,
-                            color: AppColors.error,
-                          ),
-                          onTooShort: () => AppSnackbar.show(
-                            context,
-                            context.l10n.holdToRecordVoice,
-                            icon: Icons.mic,
-                          ),
-                        );
-                      }
-                      return Material(
-                        color: AppColors.primary,
-                        shape: const CircleBorder(),
-                        child: InkWell(
-                          customBorder: const CircleBorder(),
-                          onTap: () => _submit(context),
-                          child: SizedBox(
-                            width: 48,
-                            height: 48,
-                            child: Center(
-                              child: AppIcon(
-                                _editingMessage != null
-                                    ? AppIcons.check
-                                    : AppIcons.send,
-                                size: 22,
-                                mirrorInRtl: _editingMessage == null,
-                                color: AppColors.onPrimary,
+                    const SizedBox(width: 6),
+                    ValueListenableBuilder<TextEditingValue>(
+                      valueListenable: _messageController,
+                      builder: (context, value, _) {
+                        if (value.text.trim().isEmpty &&
+                            _editingMessage == null) {
+                          return VoiceMicButton(
+                            controller: _voice,
+                            onRecorded: (recording) => _sendMedia(
+                              context,
+                              context.read<ChatProvider>(),
+                              recording.file,
+                              MessageMediaType.audio,
+                              durationMs: recording.duration.inMilliseconds,
+                            ),
+                            onPermissionDenied: () => AppSnackbar.show(
+                              context,
+                              context.l10n.microphonePermissionDenied,
+                              icon: Icons.mic_off,
+                              color: AppColors.error,
+                            ),
+                            onTooShort: () => AppSnackbar.show(
+                              context,
+                              context.l10n.holdToRecordVoice,
+                              icon: Icons.mic,
+                            ),
+                          );
+                        }
+                        return Material(
+                          color: AppColors.primary,
+                          shape: const CircleBorder(),
+                          child: InkWell(
+                            customBorder: const CircleBorder(),
+                            onTap: () => _submit(context),
+                            child: SizedBox(
+                              width: 48,
+                              height: 48,
+                              child: Center(
+                                child: AppIcon(
+                                  _editingMessage != null
+                                      ? AppIcons.check
+                                      : AppIcons.send,
+                                  size: 22,
+                                  mirrorInRtl: _editingMessage == null,
+                                  color: AppColors.onPrimary,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      );
-                    },
-                  ),
-                ],
+                        );
+                      },
+                    ),
+                  ],
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),
@@ -1783,6 +1916,152 @@ class _RequestCard extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+enum _ChatMenu { clear, report, block }
+
+/// Replaces the composer while the other person is blocked.
+class _BlockedBar extends StatelessWidget {
+  const _BlockedBar({required this.colors, required this.onUnblock});
+
+  final _ChatColors colors;
+  final VoidCallback onUnblock;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      color: colors.composer,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Row(
+        children: [
+          Icon(Icons.block, size: 20, color: colors.meta),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              context.l10n.youBlockedThisUser,
+              style: TextStyle(fontSize: 14, color: colors.text),
+            ),
+          ),
+          TextButton(
+            onPressed: onUnblock,
+            child: Text(context.l10n.unblockUser),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// WhatsApp-style swipe: drag a message sideways (towards the end of the
+/// line) and let go to reply to it. A reply icon shows while dragging and
+/// the message springs back.
+class _SwipeToReply extends StatefulWidget {
+  const _SwipeToReply({
+    required this.child,
+    required this.onReply,
+    required this.enabled,
+  });
+
+  final Widget child;
+  final VoidCallback onReply;
+  final bool enabled;
+
+  @override
+  State<_SwipeToReply> createState() => _SwipeToReplyState();
+}
+
+class _SwipeToReplyState extends State<_SwipeToReply>
+    with SingleTickerProviderStateMixin {
+  static const _trigger = 56.0;
+  static const _max = 76.0;
+
+  late final AnimationController _back = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 180),
+  );
+  double _drag = 0;
+  bool _armed = false;
+
+  @override
+  void dispose() {
+    _back.dispose();
+    super.dispose();
+  }
+
+  void _update(DragUpdateDetails details, double sign) {
+    final next = (_drag + details.delta.dx * sign).clamp(0.0, _max);
+    if (next >= _trigger && !_armed) {
+      _armed = true;
+      HapticFeedback.selectionClick();
+    } else if (next < _trigger) {
+      _armed = false;
+    }
+    setState(() => _drag = next);
+  }
+
+  void _end() {
+    if (_armed) widget.onReply();
+    _armed = false;
+    final from = _drag;
+    _back
+      ..removeListener(_springListener)
+      ..reset();
+    _from = from;
+    _back
+      ..addListener(_springListener)
+      ..forward();
+  }
+
+  double _from = 0;
+
+  void _springListener() {
+    setState(() => _drag = _from * (1 - Curves.easeOut.transform(_back.value)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!widget.enabled) return widget.child;
+    final rtl = Directionality.of(context) == TextDirection.rtl;
+    final sign = rtl ? -1.0 : 1.0;
+    final progress = (_drag / _trigger).clamp(0.0, 1.0);
+    final colors = _ChatColors.of(context);
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onHorizontalDragStart: (_) => _back.stop(),
+      onHorizontalDragUpdate: (d) => _update(d, sign),
+      onHorizontalDragEnd: (_) => _end(),
+      onHorizontalDragCancel: _end,
+      child: Stack(
+        alignment: AlignmentDirectional.centerStart,
+        children: [
+          if (_drag > 0)
+            PositionedDirectional(
+              start: 8,
+              child: Opacity(
+                opacity: progress,
+                child: Transform.scale(
+                  scale: 0.6 + 0.4 * progress,
+                  child: Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: colors.chip,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.reply, size: 18, color: colors.chipText),
+                  ),
+                ),
+              ),
+            ),
+          Transform.translate(
+            offset: Offset(_drag * sign, 0),
+            child: widget.child,
+          ),
+        ],
       ),
     );
   }

@@ -7,7 +7,9 @@ import 'package:toastification/toastification.dart';
 import 'core/auth/ban_watcher.dart';
 import 'core/cache/local_cache.dart';
 import 'core/config/supabase_config.dart';
+import 'core/notifications/message_notifications.dart';
 import 'core/notifications/push_notification_service.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'core/presence/presence_heartbeat.dart';
 import 'core/routes/app_navigator.dart';
 import 'core/routes/app_router.dart';
@@ -40,6 +42,7 @@ Future<void> main() async {
     ThemeController.load(),
     LanguageStore.load(),
   ]);
+  FirebaseMessaging.onBackgroundMessage(pushBackgroundMessageHandler);
   _startLocalFirst();
   await PushNotificationService.initialize();
   PresenceHeartbeat.initialize();

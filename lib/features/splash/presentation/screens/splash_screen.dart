@@ -3,6 +3,7 @@ import '../../../../core/routes/app_navigator.dart';
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../auth/data/repository/auth_repository.dart';
+import '../../../onboarding/data/onboarding_store.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -23,14 +24,24 @@ class _SplashScreenState extends State<SplashScreen> {
     if (!mounted) return;
     final isLoggedIn = AuthRepository().isLoggedIn;
     final openedFromResetLink = AppNavigator.takePendingRecovery();
-    Navigator.pushReplacementNamed(
-      context,
-      openedFromResetLink
-          ? AppRoutes.resetPassword
-          : isLoggedIn
-          ? AppRoutes.dashboard
-          : AppRoutes.login,
-    );
+    final route = openedFromResetLink
+        ? AppRoutes.resetPassword
+        : await _nextRoute(isLoggedIn);
+    if (!mounted) return;
+    Navigator.pushReplacementNamed(context, route);
+  }
+
+  /// Launch → first install? onboarding → logged in? → new feature? what's
+  /// new → home.
+  Future<String> _nextRoute(bool isLoggedIn) async {
+    if (await OnboardingStore.needsOnboarding()) {
+      if (!isLoggedIn) return AppRoutes.onboarding;
+      // Already using the app from before onboarding existed.
+      await OnboardingStore.markOnboardingSeen();
+    }
+    if (!isLoggedIn) return AppRoutes.login;
+    if (await OnboardingStore.needsWhatsNew()) return AppRoutes.whatsNew;
+    return AppRoutes.dashboard;
   }
 
   @override

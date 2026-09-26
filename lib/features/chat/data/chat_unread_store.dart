@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../../../core/realtime/realtime_event.dart';
 import '../../../core/realtime/realtime_log.dart';
 import '../../auth/data/repository/auth_repository.dart';
+import 'chat_activity_store.dart';
 import 'model/message_model.dart';
 import 'repository/chat_repository.dart';
 
@@ -65,6 +66,7 @@ class ChatUnreadStore {
       case RealtimeEventType.insert:
         final message = event.record;
         if (message == null) return;
+        ChatActivityStore.bump(message.senderId, message.createdAt);
         if (message.readAt == null) {
           _unreadSenders[message.id] = message.senderId;
           _recompute();
@@ -121,5 +123,6 @@ class ChatUnreadStore {
     _hasSynced = false;
     _unreadSenders.clear();
     unreadBySender.value = {};
+    ChatActivityStore.reset();
   }
 }

@@ -14,6 +14,7 @@ class ResetPasswordProvider extends ChangeNotifier {
 
   bool isLoading = false;
   String? errorMessage;
+  bool accountBanned = false;
 
   Future<bool> updatePassword(String newPassword) async {
     isLoading = true;
@@ -24,6 +25,7 @@ class ResetPasswordProvider extends ChangeNotifier {
       await _repository.updatePassword(newPassword);
       return true;
     } on AuthException catch (e) {
+      accountBanned = e.code == 'account_banned';
       errorMessage = authErrorMessage(e);
       return false;
     } catch (_) {

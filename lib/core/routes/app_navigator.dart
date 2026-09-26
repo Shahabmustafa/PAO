@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../auth/ban_watcher.dart';
 import 'app_routes.dart';
 
 /// App-wide navigation that has to happen without a [BuildContext]: opening
@@ -23,8 +24,15 @@ class AppNavigator {
   static void listenForPasswordRecovery() {
     _subscription ??= Supabase.instance.client.auth.onAuthStateChange.listen((
       state,
-    ) {
+    ) async {
       if (state.event != AuthChangeEvent.passwordRecovery) return;
+      // The reset link signs the user in without going through login(), so a
+      // banned account must be rejected here or it could reset its password
+      // and get in.
+      if (await BanWatcher.enforceForCurrentUser()) {
+        _recoveryPending = false;
+        return;
+      }
       _recoveryPending = true;
       if (_ready) _openResetPassword();
     });

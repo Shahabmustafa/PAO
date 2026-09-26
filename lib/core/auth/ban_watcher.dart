@@ -92,17 +92,29 @@ class BanWatcher {
     _subscription = null;
   }
 
-  Future<void> _checkNow(String userId) async {
+  /// Signs out and returns true when the current session belongs to a banned
+  /// account. Used for sign-ins that bypass `AuthRepository.login`, such as
+  /// the session a password-reset link creates.
+  static Future<bool> enforceForCurrentUser() async {
+    final id = Supabase.instance.client.auth.currentUser?.id;
+    return id != null && await _instance._checkNow(id);
+  }
+
+  Future<bool> _checkNow(String userId) async {
     try {
       final row = await Supabase.instance.client
           .from('users')
           .select('is_banned')
           .eq('id', userId)
           .maybeSingle();
-      if (row?['is_banned'] == true) _forceLogout();
+      if (row?['is_banned'] == true) {
+        await _forceLogout();
+        return true;
+      }
     } catch (_) {
       // Best-effort; the next reconnect or sign-in tries again.
     }
+    return false;
   }
 
   Future<void> _forceLogout() async {

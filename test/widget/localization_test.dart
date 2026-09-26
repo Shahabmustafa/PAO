@@ -73,7 +73,7 @@ void main() {
         testApp(const PrivacyPolicyScreen(), locale: _urdu),
       );
       expect(find.text('رازداری کی پالیسی'), findsOneWidget);
-      expect(find.text('آخری اپ ڈیٹ: 18 ستمبر 2026'), findsOneWidget);
+      expect(find.text('آخری اپ ڈیٹ: 26 ستمبر 2026'), findsOneWidget);
 
       await tester.pumpWidget(
         testApp(const TermsConditionsScreen(), locale: _urdu),

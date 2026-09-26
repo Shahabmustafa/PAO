@@ -1,7 +1,7 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math' as math;
 import 'package:audioplayers/audioplayers.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
@@ -73,34 +73,39 @@ class ChatMediaContent extends StatelessWidget {
   }
 }
 
-/// Resolves a message's private media file to a signed URL, with a
-/// spinner while loading and tap-to-retry on failure.
-class _SignedUrl extends StatefulWidget {
-  const _SignedUrl({
+/// Resolves a message's media to a local file (disk cache first, downloaded
+/// once otherwise), with a spinner while loading and tap-to-retry on failure.
+class _MediaFile extends StatefulWidget {
+  const _MediaFile({
     required this.path,
     required this.builder,
     required this.placeholderSize,
   });
 
   final String path;
-  final Widget Function(BuildContext context, String url) builder;
+  final Widget Function(BuildContext context, File file) builder;
   final Size placeholderSize;
 
   @override
-  State<_SignedUrl> createState() => _SignedUrlState();
+  State<_MediaFile> createState() => _MediaFileState();
 }
 
-class _SignedUrlState extends State<_SignedUrl> {
+class _MediaFileState extends State<_MediaFile> {
+  late Future<File> _file = _load();
+
+  Future<File> _load() => context.read<ChatProvider>().mediaFile(widget.path);
+
   @override
   Widget build(BuildContext context) {
-    final provider = context.read<ChatProvider>();
-    return FutureBuilder<String>(
-      future: provider.mediaUrl(widget.path),
+    return FutureBuilder<File>(
+      future: _file,
       builder: (context, snapshot) {
-        final url = snapshot.data;
-        if (url != null) return widget.builder(context, url);
+        final file = snapshot.data;
+        if (file != null) return widget.builder(context, file);
         return GestureDetector(
-          onTap: snapshot.hasError ? () => setState(() {}) : null,
+          onTap: snapshot.hasError
+              ? () => setState(() => _file = _load())
+              : null,
           child: _MediaPlaceholder(
             size: widget.placeholderSize,
             child: snapshot.hasError
@@ -152,31 +157,27 @@ class _ImageContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final path = message.mediaPath!;
     const size = Size(_mediaWidth, _mediaWidth);
-    return _SignedUrl(
+    return _MediaFile(
       path: path,
       placeholderSize: size,
-      builder: (context, url) => GestureDetector(
+      builder: (context, file) => GestureDetector(
         onTap: () => Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (_) => ImageViewerPage(url: url, cacheKey: path),
-          ),
+          MaterialPageRoute<void>(builder: (_) => ImageViewerPage(file: file)),
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(6),
-          child: CachedNetworkImage(
-            imageUrl: url,
-            cacheKey: path,
-            placeholder: (_, _) => const _MediaPlaceholder(size: size),
-            errorWidget: (_, _, _) => const _MediaPlaceholder(
-              size: size,
-              child: Icon(Icons.broken_image_outlined, color: Colors.white70),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              maxWidth: _mediaWidth,
+              maxHeight: 320,
             ),
-            imageBuilder: (_, image) => ConstrainedBox(
-              constraints: const BoxConstraints(
-                maxWidth: _mediaWidth,
-                maxHeight: 320,
+            child: Image.file(
+              file,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => const _MediaPlaceholder(
+                size: size,
+                child: Icon(Icons.broken_image_outlined, color: Colors.white70),
               ),
-              child: Image(image: image, fit: BoxFit.cover),
             ),
           ),
         ),
@@ -194,12 +195,12 @@ class _VideoContent extends StatelessWidget {
   Widget build(BuildContext context) {
     const size = Size(_mediaWidth, 170);
     final durationMs = message.mediaDurationMs;
-    return _SignedUrl(
+    return _MediaFile(
       path: message.mediaPath!,
       placeholderSize: size,
-      builder: (context, url) => GestureDetector(
+      builder: (context, file) => GestureDetector(
         onTap: () => Navigator.of(context).push(
-          MaterialPageRoute<void>(builder: (_) => VideoPlayerPage(url: url)),
+          MaterialPageRoute<void>(builder: (_) => VideoPlayerPage(file: file)),
         ),
         child: _MediaPlaceholder(
           size: size,
@@ -268,11 +269,11 @@ class _AudioContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _SignedUrl(
+    return _MediaFile(
       path: message.mediaPath!,
       placeholderSize: const Size(_audioWidth, 52),
-      builder: (context, url) => _AudioPlayer(
-        url: url,
+      builder: (context, file) => _AudioPlayer(
+        file: file,
         seed: message.mediaPath!,
         knownDuration: Duration(milliseconds: message.mediaDurationMs ?? 0),
         foreground: foreground,
@@ -287,7 +288,7 @@ const _audioWidth = 240.0;
 
 class _AudioPlayer extends StatefulWidget {
   const _AudioPlayer({
-    required this.url,
+    required this.file,
     required this.seed,
     required this.knownDuration,
     required this.foreground,
@@ -295,7 +296,7 @@ class _AudioPlayer extends StatefulWidget {
     required this.meta,
   });
 
-  final String url;
+  final File file;
   final String seed;
   final Duration knownDuration;
   final Color foreground;
@@ -306,7 +307,13 @@ class _AudioPlayer extends StatefulWidget {
   State<_AudioPlayer> createState() => _AudioPlayerState();
 }
 
-class _AudioPlayerState extends State<_AudioPlayer> {
+class _AudioPlayerState extends State<_AudioPlayer>
+    with AutomaticKeepAliveClientMixin {
+  /// A playing message must survive being scrolled out of the list, or its
+  /// player would be disposed and the audio would stop.
+  @override
+  bool get wantKeepAlive => _playing || _loading;
+
   /// Only one voice message plays at a time.
   static _AudioPlayerState? _active;
 
@@ -341,7 +348,9 @@ class _AudioPlayerState extends State<_AudioPlayer> {
         if (mounted && d > Duration.zero) setState(() => _total = d);
       }),
       player.onPlayerStateChanged.listen((state) {
-        if (mounted) setState(() => _playing = state == PlayerState.playing);
+        if (!mounted) return;
+        setState(() => _playing = state == PlayerState.playing);
+        updateKeepAlive();
       }),
       player.onPlayerComplete.listen((_) {
         if (mounted) {
@@ -349,6 +358,7 @@ class _AudioPlayerState extends State<_AudioPlayer> {
             _playing = false;
             _position = Duration.zero;
           });
+          updateKeepAlive();
         }
       }),
     ]);
@@ -368,10 +378,14 @@ class _AudioPlayerState extends State<_AudioPlayer> {
       return;
     }
     setState(() => _loading = true);
+    updateKeepAlive();
     try {
-      await player.play(UrlSource(widget.url));
+      await player.play(DeviceFileSource(widget.file.path));
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) {
+        setState(() => _loading = false);
+        updateKeepAlive();
+      }
     }
   }
 
@@ -394,6 +408,7 @@ class _AudioPlayerState extends State<_AudioPlayer> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final totalMs = _total.inMilliseconds;
     final progress = totalMs > 0
         ? (_position.inMilliseconds / totalMs).clamp(0.0, 1.0)
@@ -557,10 +572,9 @@ class _WaveformPainter extends CustomPainter {
 
 /// Full-screen, pinch-to-zoom photo.
 class ImageViewerPage extends StatelessWidget {
-  const ImageViewerPage({super.key, required this.url, required this.cacheKey});
+  const ImageViewerPage({super.key, required this.file});
 
-  final String url;
-  final String cacheKey;
+  final File file;
 
   @override
   Widget build(BuildContext context) {
@@ -574,13 +588,10 @@ class ImageViewerPage extends StatelessWidget {
       body: SizedBox.expand(
         child: InteractiveViewer(
           maxScale: 5,
-          child: CachedNetworkImage(
-            imageUrl: url,
-            cacheKey: cacheKey,
+          child: Image.file(
+            file,
             fit: BoxFit.contain,
-            placeholder: (_, _) =>
-                const Center(child: CircularProgressIndicator()),
-            errorWidget: (_, _, _) => const Center(
+            errorBuilder: (_, _, _) => const Center(
               child: Icon(Icons.broken_image_outlined, color: Colors.white70),
             ),
           ),
@@ -592,9 +603,9 @@ class ImageViewerPage extends StatelessWidget {
 
 /// Full-screen video with tap-to-pause and a scrubbable progress bar.
 class VideoPlayerPage extends StatefulWidget {
-  const VideoPlayerPage({super.key, required this.url});
+  const VideoPlayerPage({super.key, required this.file});
 
-  final String url;
+  final File file;
 
   @override
   State<VideoPlayerPage> createState() => _VideoPlayerPageState();
@@ -606,7 +617,7 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
   @override
   void initState() {
     super.initState();
-    _controller = VideoPlayerController.networkUrl(Uri.parse(widget.url))
+    _controller = VideoPlayerController.file(widget.file)
       ..initialize().then((_) {
         if (!mounted) return;
         setState(() {});

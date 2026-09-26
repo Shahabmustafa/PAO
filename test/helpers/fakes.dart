@@ -690,6 +690,53 @@ class FakeChatRepository implements ChatRepository {
         ({String? requestId, String senderId, String recipientId, String body})
       >[];
 
+  // Chat safety: block / report / clear.
+  bool blocked = false;
+  Object? safetyError;
+  bool cleared = false;
+  final reports = <({String reportedId, String reason, String? details})>[];
+
+  @override
+  Future<void> clearConversation(String otherUserId) async {
+    if (safetyError != null) throw safetyError!;
+    cleared = true;
+  }
+
+  @override
+  Future<bool> isBlockedByMe({
+    required String myId,
+    required String otherUserId,
+  }) async => blocked;
+
+  @override
+  Future<void> blockUser({
+    required String myId,
+    required String otherUserId,
+  }) async {
+    if (safetyError != null) throw safetyError!;
+    blocked = true;
+  }
+
+  @override
+  Future<void> unblockUser({
+    required String myId,
+    required String otherUserId,
+  }) async {
+    if (safetyError != null) throw safetyError!;
+    blocked = false;
+  }
+
+  @override
+  Future<void> reportUser({
+    required String reporterId,
+    required String reportedId,
+    required String reason,
+    String? details,
+  }) async {
+    if (safetyError != null) throw safetyError!;
+    reports.add((reportedId: reportedId, reason: reason, details: details));
+  }
+
   /// The `before` cursor of every page request.
   final pageCursors = <DateTime?>[];
 
@@ -1151,6 +1198,36 @@ class FakeChatDataSource implements ChatRemoteDataSource {
   final calls = <String>[];
 
   final events = StreamController<RealtimeEvent<Map<String, dynamic>>>();
+
+  @override
+  Future<void> clearConversation(String otherUserId) async =>
+      calls.add('clear:$otherUserId');
+
+  @override
+  Future<bool> isBlockedByMe({
+    required String myId,
+    required String otherUserId,
+  }) async => false;
+
+  @override
+  Future<void> blockUser({
+    required String myId,
+    required String otherUserId,
+  }) async => calls.add('block:$otherUserId');
+
+  @override
+  Future<void> unblockUser({
+    required String myId,
+    required String otherUserId,
+  }) async => calls.add('unblock:$otherUserId');
+
+  @override
+  Future<void> reportUser({
+    required String reporterId,
+    required String reportedId,
+    required String reason,
+    String? details,
+  }) async => calls.add('report:$reportedId:$reason');
 
   @override
   Future<List<Map<String, dynamic>>> fetchMessagesPage({

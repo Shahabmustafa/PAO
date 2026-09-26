@@ -61,7 +61,17 @@ class AuthRepository {
     return _dataSource.resetPassword(email);
   }
 
-  Future<void> updatePassword(String newPassword) {
-    return _dataSource.updatePassword(newPassword);
+  Future<void> updatePassword(String newPassword) async {
+    // Last line of defence: a banned account must not get in through the
+    // password-reset session either.
+    final id = _dataSource.currentUser?.id;
+    if (id != null && await _dataSource.isBanned(id)) {
+      await _dataSource.signOut();
+      throw AuthException(
+        'Your account has been suspended.',
+        code: 'account_banned',
+      );
+    }
+    await _dataSource.updatePassword(newPassword);
   }
 }
