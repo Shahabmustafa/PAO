@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Whether the user wants to receive push notifications, toggled from
 /// Settings. Persisted locally so the choice survives an app restart.
 /// [PushNotificationService] watches [enabled] and mirrors it server-side by
-/// clearing/restoring `public.users.fcm_token`, so a disabled device
+/// detaching/re-registering this device's push token, so a disabled device
 /// receives nothing at all -- not just a suppressed in-app banner.
 class NotificationSettingsStore {
   NotificationSettingsStore._();

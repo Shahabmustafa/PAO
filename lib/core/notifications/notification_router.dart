@@ -61,9 +61,22 @@ class NotificationRouter {
   /// carry a request id.
   static void openRequestsTab() {
     requestedTab.value = requestsTabIndex;
-    AppNavigator.navigatorKey.currentState?.pushNamedAndRemoveUntil(
-      AppRoutes.dashboard,
-      (route) => false,
-    );
+    final navigator = AppNavigator.navigatorKey.currentState;
+    if (navigator == null) return;
+    // Reuse a DashboardScreen that's already on the stack (it listens to
+    // [requestedTab]). Pushing a second one while the old one is still
+    // being torn down mounts the tour GlobalKeys twice, which corrupts the
+    // widget tree and leaves buttons needing several taps.
+    var found = false;
+    navigator.popUntil((route) {
+      if (route.settings.name == AppRoutes.dashboard) {
+        found = true;
+        return true;
+      }
+      return route.isFirst;
+    });
+    if (!found) {
+      navigator.pushNamedAndRemoveUntil(AppRoutes.dashboard, (route) => false);
+    }
   }
 }

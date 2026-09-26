@@ -13,6 +13,9 @@ class SignupProvider extends ChangeNotifier {
   final AuthRepository _repository;
 
   bool isLoading = false;
+
+  /// Google sign-in in flight; shown on the Google button only.
+  bool isGoogleLoading = false;
   String? errorMessage;
 
   Future<SignupResult> signUp({
@@ -48,7 +51,7 @@ class SignupProvider extends ChangeNotifier {
   /// Google sign-in creates the account on first use. False on failure or
   /// cancel ([errorMessage] stays null when cancelled).
   Future<bool> signUpWithGoogle() async {
-    isLoading = true;
+    isGoogleLoading = true;
     errorMessage = null;
     notifyListeners();
 
@@ -61,7 +64,7 @@ class SignupProvider extends ChangeNotifier {
       errorMessage = l10nNow.somethingWentWrong;
       return false;
     } finally {
-      isLoading = false;
+      isGoogleLoading = false;
       notifyListeners();
     }
   }

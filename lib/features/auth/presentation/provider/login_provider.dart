@@ -11,6 +11,9 @@ class LoginProvider extends ChangeNotifier {
   final AuthRepository _repository;
 
   bool isLoading = false;
+
+  /// Google sign-in in flight; shown on the Google button only.
+  bool isGoogleLoading = false;
   String? errorMessage;
 
   Future<bool> login({required String email, required String password}) async {
@@ -36,7 +39,7 @@ class LoginProvider extends ChangeNotifier {
   /// Returns true when signed in, false on failure or if the user cancelled
   /// (in which case [errorMessage] stays null).
   Future<bool> loginWithGoogle() async {
-    isLoading = true;
+    isGoogleLoading = true;
     errorMessage = null;
     notifyListeners();
 
@@ -50,7 +53,7 @@ class LoginProvider extends ChangeNotifier {
       errorMessage = l10nNow.somethingWentWrong;
       return false;
     } finally {
-      isLoading = false;
+      isGoogleLoading = false;
       notifyListeners();
     }
   }

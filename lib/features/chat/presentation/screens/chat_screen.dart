@@ -2182,12 +2182,20 @@ class _SwipeToReplyState extends State<_SwipeToReply>
   static const _trigger = 56.0;
   static const _max = 76.0;
 
-  late final AnimationController _back = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 180),
-  );
+  // Created eagerly: a lazy initialiser would first run inside dispose()
+  // (when swiping is disabled), which is illegal on a deactivated element.
+  late final AnimationController _back;
   double _drag = 0;
   bool _armed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _back = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 180),
+    );
+  }
 
   @override
   void dispose() {

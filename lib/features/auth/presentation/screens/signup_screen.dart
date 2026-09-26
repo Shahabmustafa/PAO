@@ -131,7 +131,9 @@ class _SignupViewState extends State<_SignupView> {
 
   @override
   Widget build(BuildContext context) {
-    final isLoading = context.watch<SignupProvider>().isLoading;
+    final provider = context.watch<SignupProvider>();
+    final isLoading = provider.isLoading;
+    final isGoogleLoading = provider.isGoogleLoading;
 
     return Scaffold(
       appBar: AppBar(),
@@ -253,11 +255,13 @@ class _SignupViewState extends State<_SignupView> {
                 PrimaryButton(
                   label: context.l10n.signUp,
                   isLoading: isLoading,
-                  onPressed: _onSignupPressed,
+                  // Disabled, without a spinner, while Google sign-in runs.
+                  onPressed: isGoogleLoading ? null : _onSignupPressed,
                 ),
                 const SizedBox(height: 20),
                 GoogleSignInSection(
                   enabled: !isLoading,
+                  isLoading: isGoogleLoading,
                   onPressed: _onGooglePressed,
                 ),
                 const SizedBox(height: 24),

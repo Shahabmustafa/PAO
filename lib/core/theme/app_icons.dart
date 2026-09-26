@@ -8,6 +8,7 @@ class AppIcons {
   static const String chat = '$_base/chat.svg';
   static const String donateOutline = '$_base/donate_outline.svg';
   static const String donateFilled = '$_base/donate_filled.svg';
+  static const String google = '$_base/google.svg';
   static const String medalGold = '$_base/medal_gold.svg';
   static const String medalSilver = '$_base/medal_silver.svg';
   static const String medalBronze = '$_base/medal_bronze.svg';

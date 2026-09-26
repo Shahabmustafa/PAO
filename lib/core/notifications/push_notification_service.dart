@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -11,9 +12,9 @@ import 'message_notifications.dart';
 import 'notification_router.dart';
 
 /// Wires Firebase Cloud Messaging to the app: requests notification
-/// permission, keeps `public.users.fcm_token` in sync with whoever is
-/// signed in (that's how `supabase/functions/push/index.ts` knows which
-/// device to deliver to -- see `supabase/users_add_fcm_token.sql`), and
+/// permission, registers this device's FCM token to whoever is signed in
+/// (that's how `supabase/functions/push/index.ts` knows which devices to
+/// deliver to -- see `supabase/user_devices_table.sql`), and
 /// routes a tapped notification to the right tab.
 ///
 /// `supabase/functions/push/index.ts` sends a hybrid FCM payload (both
@@ -57,13 +58,13 @@ class PushNotificationService {
         ?.createNotificationChannel(_channel);
 
     final messaging = FirebaseMessaging.instance;
-    await messaging.requestPermission();
+    // Permission prompt, FCM token fetch and the Supabase write are all
+    // network/UI waits; main() awaits initialize() before runApp, so doing
+    // them inline held the first frame back by seconds.
+    unawaited(_registerDevice(messaging));
+    messaging.onTokenRefresh.listen(_saveToken);
 
     final auth = Supabase.instance.client.auth;
-    if (auth.currentUser != null) {
-      await _saveToken(await messaging.getToken());
-    }
-    messaging.onTokenRefresh.listen(_saveToken);
 
     auth.onAuthStateChange.listen((state) async {
       switch (state.event) {
@@ -75,7 +76,7 @@ class PushNotificationService {
         case AuthChangeEvent.signedOut:
           // Detach this device from the account that just signed out, so it
           // stops receiving that account's notifications.
-          await _clearTokenForPreviousUser();
+          await _clearToken();
           break;
         default:
           break;
@@ -83,7 +84,7 @@ class PushNotificationService {
     });
 
     // Settings > Notifications toggle: mirror it server-side by
-    // saving/clearing this device's fcm_token, so a disabled device gets no
+    // registering/detaching this device's token, so a disabled device gets no
     // push at all rather than just suppressing the in-app banner below.
     NotificationSettingsStore.enabled.addListener(_handleSettingChanged);
 
@@ -110,25 +111,38 @@ class PushNotificationService {
     }
   }
 
-  static String? _lastKnownUserId;
+  static Future<void> _registerDevice(FirebaseMessaging messaging) async {
+    try {
+      await messaging.requestPermission();
+      if (Supabase.instance.client.auth.currentUser != null) {
+        await _saveToken(await messaging.getToken());
+      }
+    } catch (e) {
+      debugPrint('Push registration failed: $e');
+    }
+  }
+
+  /// This device's token as last registered, so it can be detached again
+  /// after sign-out (when there is no session left to look it up by).
+  static String? _registeredToken;
 
   static Future<void> _saveToken(String? token) async {
     if (!NotificationSettingsStore.enabled.value) return;
     final user = Supabase.instance.client.auth.currentUser;
     if (token == null || user == null) return;
-    _lastKnownUserId = user.id;
     try {
-      await Supabase.instance.client
-          .from('users')
-          .update({'fcm_token': token, 'android_sdk': await _androidSdk()})
-          .eq('id', user.id);
+      await Supabase.instance.client.rpc(
+        'register_device',
+        params: {'p_token': token, 'p_android_sdk': await _androidSdk()},
+      );
+      _registeredToken = token;
     } catch (e) {
       debugPrint('Failed to save FCM token: $e');
     }
   }
 
   /// Lets the `push` function pick a delivery style this device can honour
-  /// (see supabase/users_add_android_sdk.sql). Null off Android.
+  /// (see supabase/user_devices_table.sql). Null off Android.
   static Future<int?> _androidSdk() async {
     if (!Platform.isAndroid) return null;
     try {
@@ -138,26 +152,25 @@ class PushNotificationService {
     }
   }
 
-  static Future<void> _clearToken(String userId) async {
+  /// Detaches this device only; the account's other phones keep getting
+  /// notifications.
+  static Future<void> _clearToken() async {
+    final token =
+        _registeredToken ?? await FirebaseMessaging.instance.getToken();
+    _registeredToken = null;
+    if (token == null) return;
     try {
-      await Supabase.instance.client
-          .from('users')
-          .update({'fcm_token': null})
-          .eq('id', userId);
+      await Supabase.instance.client.rpc(
+        'unregister_device',
+        params: {'p_token': token},
+      );
     } catch (e) {
       debugPrint('Failed to clear FCM token: $e');
     }
   }
 
-  static Future<void> _clearTokenForPreviousUser() async {
-    final userId = _lastKnownUserId;
-    _lastKnownUserId = null;
-    if (userId == null) return;
-    await _clearToken(userId);
-  }
-
-  /// Reacts to the Settings > Notifications toggle: clears this device's
-  /// token when turned off (so the backend has nothing to send to), and
+  /// Reacts to the Settings > Notifications toggle: detaches this device
+  /// when turned off (so the backend has nothing to send to it), and
   /// re-registers it when turned back on.
   static Future<void> _handleSettingChanged() async {
     final user = Supabase.instance.client.auth.currentUser;
@@ -165,7 +178,7 @@ class PushNotificationService {
     if (NotificationSettingsStore.enabled.value) {
       await _saveToken(await FirebaseMessaging.instance.getToken());
     } else {
-      await _clearToken(user.id);
+      await _clearToken();
     }
   }
 

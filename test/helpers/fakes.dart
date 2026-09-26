@@ -836,6 +836,13 @@ class FakeChatRepository implements ChatRepository {
   final markReadCalls = <({String otherUserId, String readerId})>[];
   final edited = <({String messageId, String body})>[];
 
+  final deliveredCalls = <List<String>>[];
+
+  @override
+  Future<void> markMessagesDelivered(List<String> messageIds) async {
+    deliveredCalls.add(messageIds);
+  }
+
   @override
   Future<void> markMessagesRead({
     required String readerId,
@@ -1305,6 +1312,10 @@ class FakeChatDataSource implements ChatRemoteDataSource {
   @override
   Future<void> deleteMessageForMe(String messageId) async =>
       calls.add('deleteForMe:$messageId');
+
+  @override
+  Future<void> markMessagesDelivered(List<String> messageIds) async =>
+      calls.add('delivered:${messageIds.join(',')}');
 
   @override
   Future<void> markMessagesRead({

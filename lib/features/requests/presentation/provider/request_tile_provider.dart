@@ -80,20 +80,20 @@ class RequestTileProvider extends ChangeNotifier {
   /// The newest message the current user can see, from the chat's Hive copy
   /// (ChatProvider keeps it up to date), or null when nothing is cached.
   MessageModel? _cachedLastMessage(String me) {
-    MessageModel? newest;
-    for (final json in LocalCache.readList(
+    // ChatProvider stores the conversation oldest-first, so walk it from the
+    // end and stop at the first visible message instead of parsing every
+    // cached message for every tile in the list.
+    final cached = LocalCache.readList(
       LocalCache.messages,
       'conv:$otherUserId',
-    )) {
+    );
+    for (final json in cached.reversed) {
       try {
         final m = MessageModel.fromJson(json);
-        if (m.isDeletedFor(me)) continue;
-        if (newest == null || m.createdAt.isAfter(newest.createdAt)) {
-          newest = m;
-        }
+        if (!m.isDeletedFor(me)) return m;
       } catch (_) {}
     }
-    return newest;
+    return null;
   }
 
   /// Loads the preview. Uses the cached chat when there is one; only asks
