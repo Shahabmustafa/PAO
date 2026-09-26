@@ -76,7 +76,7 @@
     <ul>
       <li><strong>Account details:</strong> your name, email address and password (the password is handled by our authentication provider and is never visible to us in readable form).</li>
       <li><strong>Profile details:</strong> optional phone number, bio and profile photo.</li>
-      <li><strong>Listings:</strong> the photos, title, description, category, condition and province you add when you post an item.</li>
+      <li><strong>Listings:</strong> the photos, title, description, category, condition, province and pickup address you add when you post an item.</li>
       <li><strong>Requests and messages:</strong> requests you send for items and the chat messages you exchange with other users.</li>
       <li><strong>Photos, videos and voice messages:</strong> pictures and videos you take or choose from your gallery, and voice messages you record, when you send them in a chat. Your camera, photo library and microphone are only accessed when you use these features, and nothing is recorded in the background.</li>
       <li><strong>Reports and blocks:</strong> if you report or block another user, the report (the reason you choose, any details you add, who it is about and when) and the block.</li>
@@ -119,7 +119,7 @@
   <section id="s4">
     <h2><span class="n">4</span>What Other Users Can See</h2>
     <ul>
-      <li><strong>Public to other users:</strong> your name, profile photo, the items you post (including photos and province), your donation count, and ratings/reviews.</li>
+      <li><strong>Public to other users:</strong> your name, profile photo, the items you post (including photos, province and pickup address), your donation count, and ratings/reviews.</li>
       <li><strong>Shared with the other party only:</strong> messages in a conversation, including any photos, videos and voice messages you send. These files are stored privately and can only be opened by you and the person you sent them to.</li>
       <li><strong>Reports and blocks:</strong> a report is seen only by us, and the person you report is not told who reported them. Blocking is private too: the person you block is not notified, but they can no longer message you.</li>
       <li><strong>Private to you:</strong> your email address, phone number and bio.</li>
@@ -132,8 +132,8 @@
     <p>
       Your account and app data are stored and processed by <a href="https://supabase.com" rel="noopener">Supabase</a>,
       our backend provider, which we use for authentication, database, file storage (including chat photos, videos and voice messages) and real-time updates.
-      Data is sent over encrypted (HTTPS) connections. Supabase acts on our behalf and we do not share your
-      data with any other third party.
+      Data is sent over encrypted (HTTPS) connections. Supabase acts on our behalf. Push notifications are delivered through Firebase Cloud Messaging (Google), which
+      receives your device token for that purpose. We do not share your data with any other third party.
     </p>
     <p>While we take reasonable steps to protect your data, no method of storage or transmission is 100% secure.</p>
   </section>
