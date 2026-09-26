@@ -64,7 +64,9 @@ class _HomeViewState extends State<_HomeView> {
   void initState() {
     super.initState();
     _scrollController.addListener(_loadMoreIfNearEnd);
-    UpdateChecker.check();
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => UpdateChecker.checkAndPrompt(),
+    );
     if (widget.autofocusSearch) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _searchFocusNode.requestFocus();
@@ -354,26 +356,6 @@ class _HomeViewState extends State<_HomeView> {
                   ),
                 ),
               ),
-              SliverToBoxAdapter(
-                child: ValueListenableBuilder<bool>(
-                  valueListenable: UpdateChecker.updateAvailable,
-                  builder: (context, available, _) => AnimatedSize(
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeOut,
-                    alignment: Alignment.topCenter,
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 300),
-                      child: available
-                          ? const Padding(
-                              key: ValueKey('update'),
-                              padding: EdgeInsets.fromLTRB(20, 4, 20, 8),
-                              child: _UpdateBanner(),
-                            )
-                          : const SizedBox.shrink(key: ValueKey('none')),
-                    ),
-                  ),
-                ),
-              ),
               const SliverToBoxAdapter(child: SizedBox(height: 14)),
               if (isLoading && products.isEmpty)
                 SliverPadding(
@@ -644,49 +626,6 @@ class _FilterButton extends StatelessWidget {
                 ),
               ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Tappable "Update your App" pill shown while a newer Play Store version
-/// exists.
-class _UpdateBanner extends StatelessWidget {
-  const _UpdateBanner();
-
-  @override
-  Widget build(BuildContext context) {
-    return Align(
-      alignment: AlignmentDirectional.centerStart,
-      child: Material(
-        color: AppColors.primary,
-        borderRadius: BorderRadius.circular(24),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(24),
-          onTap: UpdateChecker.startUpdate,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.system_update_rounded,
-                  size: 18,
-                  color: Colors.white,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  context.l10n.updateYourApp,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
         ),
       ),
     );

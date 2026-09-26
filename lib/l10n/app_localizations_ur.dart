@@ -1273,6 +1273,17 @@ class AppLocalizationsUr extends AppLocalizations {
   String get updateYourApp => 'اپنی ایپ اپڈیٹ کریں';
 
   @override
+  String updateAvailableMessage(String current, String build) {
+    return 'ایپ کا نیا ورژن دستیاب ہے۔\nموجودہ: $current\nنیا بلڈ: $build';
+  }
+
+  @override
+  String get skip => 'چھوڑ دیں';
+
+  @override
+  String get update => 'اپڈیٹ';
+
+  @override
   String get updateReadyTitle => 'اپڈیٹ تیار ہے';
 
   @override
@@ -1406,4 +1417,104 @@ class AppLocalizationsUr extends AppLocalizations {
   String reportUserTitle(String name) {
     return '$name کی رپورٹ کریں';
   }
+
+  @override
+  String get aboutTagline => 'جو ضرورت نہیں وہ دیں۔ جو ضرورت ہے وہ لیں۔';
+
+  @override
+  String get aboutPurposeTitle => 'ہمارا مقصد';
+
+  @override
+  String get aboutPurposeBody =>
+      'پاؤ ایک مفت تحفہ دینے کا بازار ہے۔ جو چیزیں آپ کے کام کی نہیں رہیں انہیں پھینکنے کے بجائے مفت پوسٹ کریں تاکہ کوئی ضرورت مند انہیں استعمال کر سکے۔ دوسروں کی دی ہوئی چیزیں دیکھیں، درخواست بھیجیں اور ایپ کی چیٹ کے ذریعے چیز حاصل کرنے کا طریقہ طے کریں۔ ہمارا مقصد ضیاع کم کرنا اور لوگوں کو ایک دوسرے کا سہارا بنانا ہے۔';
+
+  @override
+  String aboutVersionLabel(String version) {
+    return 'ورژن $version';
+  }
+
+  @override
+  String get aboutVersionHistory => 'ورژن کی تاریخ';
+
+  @override
+  String get aboutLatest => 'تازہ ترین';
+
+  @override
+  String get aboutWhatsNew => 'نیا کیا ہے';
+
+  @override
+  String get c100a =>
+      'پہلا ورژن: چیزیں مفت پوسٹ کریں اور دوسروں کی دی ہوئی چیزیں دیکھیں';
+
+  @override
+  String get c100b => 'آن لائن پرائیویسی پالیسی اور اکاؤنٹ حذف کرنے کے صفحات';
+
+  @override
+  String get c110a => 'انگریزی اور اردو زبان کی سپورٹ';
+
+  @override
+  String get c110b => 'پاس ورڈ ری سیٹ لنک اب ایپ کے اندر کھلتے ہیں';
+
+  @override
+  String get c110c => 'نئے صارفین سائن اپ کے بعد سیدھے ہوم پر جاتے ہیں';
+
+  @override
+  String get c110d => '\"استعمال شدہ\" حالت اور \"دیگر\" زمرہ شامل کیا گیا';
+
+  @override
+  String get c111a => 'چیٹ، درخواستوں اور پوسٹس کی لائیو اپ ڈیٹس';
+
+  @override
+  String get c111b => 'سرور سائیڈ پیجینیشن سے تیز لسٹنگ';
+
+  @override
+  String get c111c => 'اپنی پوسٹس میں ترمیم اور انہیں حذف کریں';
+
+  @override
+  String get c120a => 'پش نوٹیفکیشنز';
+
+  @override
+  String get c120b => 'نیا فلوٹنگ باٹم نیویگیشن بار';
+
+  @override
+  String get c120c => 'بہتر پروفائل ٹیبز';
+
+  @override
+  String get c140a => 'نئی چیٹ ڈیزائن، ان ریڈ بیجز اور آن لائن حالت کے ساتھ';
+
+  @override
+  String get c140b => 'تصاویر، ویڈیوز اور وائس میسج بھیجیں';
+
+  @override
+  String get c140c => 'نئی بگز اور فیچرز رپورٹ اسکرین';
+
+  @override
+  String get c140d => 'نوٹیفکیشنز آن/آف کرنے کا بٹن';
+
+  @override
+  String get c140e => 'برانڈڈ ڈائیلاگز اور اوتار رنگ کا انداز';
+
+  @override
+  String get c150a => 'نیا ڈونرز ٹیب';
+
+  @override
+  String get c150b => 'چیٹ ریکوئسٹ کارڈز';
+
+  @override
+  String get c150c => 'تیز اپ لوڈ کے لیے میڈیا کمپریشن';
+
+  @override
+  String get c150d => 'تیز لوڈنگ کے لیے مقامی کیشنگ';
+
+  @override
+  String get c152a => 'نئے صارفین کے لیے آن بورڈنگ ٹور';
+
+  @override
+  String get c152b => 'چیٹ کی حفاظت: صارفین کو بلاک اور رپورٹ کریں';
+
+  @override
+  String get c152c => 'چیٹ کی تصاویر اور ویڈیوز آف لائن دستیاب';
+
+  @override
+  String get c152d => 'اپ ڈیٹ شدہ پرائیویسی پالیسی';
 }

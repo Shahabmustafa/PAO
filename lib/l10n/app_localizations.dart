@@ -2360,6 +2360,24 @@ abstract class AppLocalizations {
   /// **'Update your App'**
   String get updateYourApp;
 
+  /// No description provided for @updateAvailableMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'A new version of the app is available.\nInstalled: {current}\nNew build: {build}'**
+  String updateAvailableMessage(String current, String build);
+
+  /// No description provided for @skip.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip'**
+  String get skip;
+
+  /// No description provided for @update.
+  ///
+  /// In en, this message translates to:
+  /// **'Update'**
+  String get update;
+
   /// No description provided for @updateReadyTitle.
   ///
   /// In en, this message translates to:
@@ -2599,6 +2617,198 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Report {name}'**
   String reportUserTitle(String name);
+
+  /// No description provided for @aboutTagline.
+  ///
+  /// In en, this message translates to:
+  /// **'Give what you don\'t need. Get what you do.'**
+  String get aboutTagline;
+
+  /// No description provided for @aboutPurposeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Our purpose'**
+  String get aboutPurposeTitle;
+
+  /// No description provided for @aboutPurposeBody.
+  ///
+  /// In en, this message translates to:
+  /// **'PAO is a give-away marketplace. Instead of throwing away things you no longer need, post them for free so someone who needs them can have them. Browse what others are giving away, send a request, and arrange the handoff through in-app chat. Our goal is to reduce waste and help communities support each other.'**
+  String get aboutPurposeBody;
+
+  /// No description provided for @aboutVersionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Version {version}'**
+  String aboutVersionLabel(String version);
+
+  /// No description provided for @aboutVersionHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Version history'**
+  String get aboutVersionHistory;
+
+  /// No description provided for @aboutLatest.
+  ///
+  /// In en, this message translates to:
+  /// **'Latest'**
+  String get aboutLatest;
+
+  /// No description provided for @aboutWhatsNew.
+  ///
+  /// In en, this message translates to:
+  /// **'What\'s new'**
+  String get aboutWhatsNew;
+
+  /// No description provided for @c100a.
+  ///
+  /// In en, this message translates to:
+  /// **'First release: post items for free and browse what others give away'**
+  String get c100a;
+
+  /// No description provided for @c100b.
+  ///
+  /// In en, this message translates to:
+  /// **'Hosted Privacy Policy and Delete Account pages'**
+  String get c100b;
+
+  /// No description provided for @c110a.
+  ///
+  /// In en, this message translates to:
+  /// **'English and Urdu language support'**
+  String get c110a;
+
+  /// No description provided for @c110b.
+  ///
+  /// In en, this message translates to:
+  /// **'Password reset links now open inside the app'**
+  String get c110b;
+
+  /// No description provided for @c110c.
+  ///
+  /// In en, this message translates to:
+  /// **'New users go straight to Home after sign up'**
+  String get c110c;
+
+  /// No description provided for @c110d.
+  ///
+  /// In en, this message translates to:
+  /// **'Added the \"Used\" condition and the \"Other\" category'**
+  String get c110d;
+
+  /// No description provided for @c111a.
+  ///
+  /// In en, this message translates to:
+  /// **'Live updates for chat, requests and posts'**
+  String get c111a;
+
+  /// No description provided for @c111b.
+  ///
+  /// In en, this message translates to:
+  /// **'Faster listings with server-side pagination'**
+  String get c111b;
+
+  /// No description provided for @c111c.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit and delete your own posts'**
+  String get c111c;
+
+  /// No description provided for @c120a.
+  ///
+  /// In en, this message translates to:
+  /// **'Push notifications'**
+  String get c120a;
+
+  /// No description provided for @c120b.
+  ///
+  /// In en, this message translates to:
+  /// **'New floating bottom navigation bar'**
+  String get c120b;
+
+  /// No description provided for @c120c.
+  ///
+  /// In en, this message translates to:
+  /// **'Improved profile tabs'**
+  String get c120c;
+
+  /// No description provided for @c140a.
+  ///
+  /// In en, this message translates to:
+  /// **'Redesigned chat with unread badges and online presence'**
+  String get c140a;
+
+  /// No description provided for @c140b.
+  ///
+  /// In en, this message translates to:
+  /// **'Send photos, videos and voice messages'**
+  String get c140b;
+
+  /// No description provided for @c140c.
+  ///
+  /// In en, this message translates to:
+  /// **'New Bugs & Features report screen'**
+  String get c140c;
+
+  /// No description provided for @c140d.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications on/off toggle'**
+  String get c140d;
+
+  /// No description provided for @c140e.
+  ///
+  /// In en, this message translates to:
+  /// **'Branded dialogs and avatar ring style'**
+  String get c140e;
+
+  /// No description provided for @c150a.
+  ///
+  /// In en, this message translates to:
+  /// **'New Donors tab'**
+  String get c150a;
+
+  /// No description provided for @c150b.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat request cards'**
+  String get c150b;
+
+  /// No description provided for @c150c.
+  ///
+  /// In en, this message translates to:
+  /// **'Media compression for faster uploads'**
+  String get c150c;
+
+  /// No description provided for @c150d.
+  ///
+  /// In en, this message translates to:
+  /// **'Local caching for smoother loading'**
+  String get c150d;
+
+  /// No description provided for @c152a.
+  ///
+  /// In en, this message translates to:
+  /// **'Onboarding tour for new users'**
+  String get c152a;
+
+  /// No description provided for @c152b.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat safety: block and report users'**
+  String get c152b;
+
+  /// No description provided for @c152c.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat photos and videos available offline'**
+  String get c152c;
+
+  /// No description provided for @c152d.
+  ///
+  /// In en, this message translates to:
+  /// **'Updated Privacy Policy'**
+  String get c152d;
 }
 
 class _AppLocalizationsDelegate

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/update/update_checker.dart';
@@ -20,6 +21,7 @@ import '../../../wishlist/presentation/screens/wishlist_screen.dart';
 import '../../data/language_store.dart';
 import '../../data/notification_settings_store.dart';
 import '../../domain/app_language.dart';
+import 'about_screen.dart';
 import 'edit_profile_screen.dart';
 import 'help_center_screen.dart';
 import '../../../reports/presentation/screens/report_screen.dart';
@@ -36,6 +38,15 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   final _authRepository = AuthRepository();
+  String? _version;
+
+  @override
+  void initState() {
+    super.initState();
+    PackageInfo.fromPlatform().then((info) {
+      if (mounted) setState(() => _version = info.version);
+    });
+  }
 
   Future<void> _confirmDeleteAccount(BuildContext context) async {
     final confirmed = await AppDialog.confirm(
@@ -327,8 +338,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   _SettingsTile(
                     icon: AppIcons.info,
                     label: context.l10n.about,
-                    value: 'v1.0.0',
-                    onTap: () {},
+                    value: _version == null ? null : 'v$_version',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const AboutScreen()),
+                      );
+                    },
                   ),
                 ],
               ),

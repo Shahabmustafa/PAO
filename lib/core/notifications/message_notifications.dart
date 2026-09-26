@@ -122,14 +122,19 @@ class MessageNotifications {
       final client = await _client();
       final me = client.auth.currentUser;
       if (me == null) throw StateError('not signed in');
-      await client.from('messages').insert({
-        'request_id': (requestId == null || requestId.isEmpty)
-            ? null
-            : requestId,
-        'sender_id': me.id,
-        'recipient_id': recipientId,
-        'body': body,
-      });
+      // Bounded, so Android's "sending" spinner on the notification can't
+      // spin forever if the network or the isolate's Supabase stalls.
+      await client
+          .from('messages')
+          .insert({
+            'request_id': (requestId == null || requestId.isEmpty)
+                ? null
+                : requestId,
+            'sender_id': me.id,
+            'recipient_id': recipientId,
+            'body': body,
+          })
+          .timeout(const Duration(seconds: 20));
     } catch (e) {
       debugPrint('Notification reply failed: $e');
       failure = 'Couldn\'t send your reply. Tap to open the chat.';
@@ -163,7 +168,10 @@ class MessageNotifications {
       await Supabase.initialize(
         url: SupabaseConfig.url,
         anonKey: SupabaseConfig.anonKey,
-      );
+        // No Activity / deep links in this isolate; the link lookup can
+        // stall initialize() and leave the reply spinning.
+        authOptions: const FlutterAuthClientOptions(detectSessionInUri: false),
+      ).timeout(const Duration(seconds: 15));
       return Supabase.instance.client;
     }
   }

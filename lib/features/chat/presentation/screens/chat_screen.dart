@@ -1369,8 +1369,9 @@ class _MessageBubble extends StatelessWidget {
     final metaColor = isMine ? colors.outgoingMeta : colors.meta;
     final isRead = message.readAt != null;
 
-    // Clock while sending, red "!" when it failed, ticks once the server
-    // has it.
+    // WhatsApp style: a clock while it is still on this device (sending or
+    // waiting for internet), two grey ticks once the server has it, two
+    // blue ticks once the other person has seen it. Red "!" when it failed.
     Widget statusIcon(Color base, Color readColor) => switch (message.status) {
       MessageStatus.sending => Icon(Icons.schedule, size: 14, color: base),
       MessageStatus.failed => const Icon(
@@ -1379,7 +1380,7 @@ class _MessageBubble extends StatelessWidget {
         color: AppColors.error,
       ),
       MessageStatus.sent => AppIcon(
-        isRead ? AppIcons.checkAll : AppIcons.check,
+        AppIcons.checkAll,
         size: 15,
         color: isRead ? readColor : base,
       ),

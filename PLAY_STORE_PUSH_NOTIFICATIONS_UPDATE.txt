@@ -64,3 +64,31 @@ NOT NEEDED
 - No SHA-1/SHA-256 certificate fingerprint registration needed in Firebase
   for plain FCM messaging (only required for things like Google Sign-In or
   Dynamic Links, which this app doesn't use).
+
+
+ADDENDUM - ANDROID VERSION (android_sdk) COLLECTION
+====================================================
+The app now also stores the device's Android API level (e.g. 26 for
+Android 8) in public.users.android_sdk next to the FCM token, so the `push`
+function can send Android 7/8/9 devices a notification the OS draws itself.
+
+DATA SAFETY (Play Console -> App content -> Data safety)
+   Data type        : Device or other IDs  (same entry as the FCM token --
+                      no new category needed; the token entry already
+                      covers "device-related data used for notifications")
+   Collected        : Yes
+   Purpose          : App functionality
+   Shared           : No
+   Optional         : No (needed for delivery, cleared with the token)
+   Not used for analytics or advertising, so nothing else to tick.
+
+PRIVACY POLICY
+   docs/privacy_policy.html now lists "Push notification token and Android
+   version". Commit and push so GitHub Pages redeploys:
+      git add docs/privacy_policy.html supabase/users_add_android_sdk.sql
+      git commit -m "Store Android version for push delivery; update privacy policy"
+      git push
+
+SUPABASE
+   Run supabase/users_add_android_sdk.sql, then redeploy the function:
+      supabase functions deploy push --no-verify-jwt

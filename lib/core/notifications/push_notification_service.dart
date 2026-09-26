@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/foundation.dart';
@@ -118,10 +120,21 @@ class PushNotificationService {
     try {
       await Supabase.instance.client
           .from('users')
-          .update({'fcm_token': token})
+          .update({'fcm_token': token, 'android_sdk': await _androidSdk()})
           .eq('id', user.id);
     } catch (e) {
       debugPrint('Failed to save FCM token: $e');
+    }
+  }
+
+  /// Lets the `push` function pick a delivery style this device can honour
+  /// (see supabase/users_add_android_sdk.sql). Null off Android.
+  static Future<int?> _androidSdk() async {
+    if (!Platform.isAndroid) return null;
+    try {
+      return (await DeviceInfoPlugin().androidInfo).version.sdkInt;
+    } catch (_) {
+      return null;
     }
   }
 

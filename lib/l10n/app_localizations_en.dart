@@ -1263,6 +1263,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get updateYourApp => 'Update your App';
 
   @override
+  String updateAvailableMessage(String current, String build) {
+    return 'A new version of the app is available.\nInstalled: $current\nNew build: $build';
+  }
+
+  @override
+  String get skip => 'Skip';
+
+  @override
+  String get update => 'Update';
+
+  @override
   String get updateReadyTitle => 'Update ready';
 
   @override
@@ -1396,4 +1407,104 @@ class AppLocalizationsEn extends AppLocalizations {
   String reportUserTitle(String name) {
     return 'Report $name';
   }
+
+  @override
+  String get aboutTagline => 'Give what you don\'t need. Get what you do.';
+
+  @override
+  String get aboutPurposeTitle => 'Our purpose';
+
+  @override
+  String get aboutPurposeBody =>
+      'PAO is a give-away marketplace. Instead of throwing away things you no longer need, post them for free so someone who needs them can have them. Browse what others are giving away, send a request, and arrange the handoff through in-app chat. Our goal is to reduce waste and help communities support each other.';
+
+  @override
+  String aboutVersionLabel(String version) {
+    return 'Version $version';
+  }
+
+  @override
+  String get aboutVersionHistory => 'Version history';
+
+  @override
+  String get aboutLatest => 'Latest';
+
+  @override
+  String get aboutWhatsNew => 'What\'s new';
+
+  @override
+  String get c100a =>
+      'First release: post items for free and browse what others give away';
+
+  @override
+  String get c100b => 'Hosted Privacy Policy and Delete Account pages';
+
+  @override
+  String get c110a => 'English and Urdu language support';
+
+  @override
+  String get c110b => 'Password reset links now open inside the app';
+
+  @override
+  String get c110c => 'New users go straight to Home after sign up';
+
+  @override
+  String get c110d => 'Added the \"Used\" condition and the \"Other\" category';
+
+  @override
+  String get c111a => 'Live updates for chat, requests and posts';
+
+  @override
+  String get c111b => 'Faster listings with server-side pagination';
+
+  @override
+  String get c111c => 'Edit and delete your own posts';
+
+  @override
+  String get c120a => 'Push notifications';
+
+  @override
+  String get c120b => 'New floating bottom navigation bar';
+
+  @override
+  String get c120c => 'Improved profile tabs';
+
+  @override
+  String get c140a => 'Redesigned chat with unread badges and online presence';
+
+  @override
+  String get c140b => 'Send photos, videos and voice messages';
+
+  @override
+  String get c140c => 'New Bugs & Features report screen';
+
+  @override
+  String get c140d => 'Notifications on/off toggle';
+
+  @override
+  String get c140e => 'Branded dialogs and avatar ring style';
+
+  @override
+  String get c150a => 'New Donors tab';
+
+  @override
+  String get c150b => 'Chat request cards';
+
+  @override
+  String get c150c => 'Media compression for faster uploads';
+
+  @override
+  String get c150d => 'Local caching for smoother loading';
+
+  @override
+  String get c152a => 'Onboarding tour for new users';
+
+  @override
+  String get c152b => 'Chat safety: block and report users';
+
+  @override
+  String get c152c => 'Chat photos and videos available offline';
+
+  @override
+  String get c152d => 'Updated Privacy Policy';
 }
