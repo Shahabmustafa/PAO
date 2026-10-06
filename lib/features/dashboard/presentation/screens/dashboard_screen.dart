@@ -308,12 +308,19 @@ class _NavItem extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 11,
-                color: color,
-                fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+            // One line, and capped scaling, so long labels or a large system
+            // font size still fit the fixed-height bar.
+            MediaQuery.withClampedTextScaling(
+              maxScaleFactor: 1.3,
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: color,
+                  fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+                ),
               ),
             ),
           ],

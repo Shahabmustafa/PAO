@@ -49,7 +49,9 @@ class AuthRepository {
         code: 'account_banned',
       );
     }
-    return UserModel.fromSupabaseUser(user);
+    // The sign-in may have restored the saved name into the metadata,
+    // so prefer the refreshed current user over the sign-in response.
+    return UserModel.fromSupabaseUser(_dataSource.currentUser ?? user);
   }
 
   /// Returns the created [UserModel], or `null` when email confirmation is

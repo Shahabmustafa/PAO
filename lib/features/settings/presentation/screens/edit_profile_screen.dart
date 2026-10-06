@@ -225,15 +225,6 @@ class _EditProfileViewState extends State<_EditProfileView> {
                         hint: context.l10n.enterYourEmail,
                         keyboardType: TextInputType.emailAddress,
                         enabled: false,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return context.l10n.emailRequired;
-                          }
-                          if (!value.contains('@')) {
-                            return context.l10n.enterValidEmail;
-                          }
-                          return null;
-                        },
                       ),
                       const SizedBox(height: 6),
                       Text(

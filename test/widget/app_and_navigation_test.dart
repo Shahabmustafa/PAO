@@ -4,10 +4,12 @@ import 'package:pao/core/theme/theme_controller.dart';
 import 'package:pao/core/widgets/app_icon.dart';
 import 'package:pao/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:pao/features/home/data/product_store.dart';
+import 'package:pao/features/onboarding/data/onboarding_store.dart';
 import 'package:pao/features/requests/data/request_store.dart';
 import 'package:pao/features/requests/presentation/screens/requests_screen.dart';
 import 'package:pao/features/splash/presentation/screens/splash_screen.dart';
 import 'package:pao/main.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/fakes.dart';
 import '../helpers/test_app.dart';
@@ -26,6 +28,15 @@ void main() {
   });
 
   group('MyApp / SplashScreen', () {
+    // A returning user: the first-install intro and what's-new are done,
+    // so a signed-out launch goes straight to the login screen.
+    setUp(() {
+      SharedPreferences.setMockInitialValues({
+        'onboarding_version': OnboardingStore.onboardingVersion,
+        'last_seen_whats_new_version': OnboardingStore.whatsNewVersion,
+      });
+    });
+
     testWidgets('launches on the splash screen with the logo and a spinner', (
       tester,
     ) async {
@@ -213,7 +224,9 @@ void main() {
         await tester.pump();
         expect(badge('1'), findsOneWidget);
 
-        RequestStore.received.value = [makeRequest(id: 'a', status: 'accepted')];
+        RequestStore.received.value = [
+          makeRequest(id: 'a', status: 'accepted'),
+        ];
         await tester.pump();
         expect(badge('1'), findsNothing);
       });

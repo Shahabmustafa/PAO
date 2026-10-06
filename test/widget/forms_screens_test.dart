@@ -308,7 +308,7 @@ void main() {
       );
     });
 
-    testWidgets('name and email are required', (tester) async {
+    testWidgets('the name is required', (tester) async {
       await pumpEdit(tester);
 
       await tester.ensureVisible(find.text('Save Changes'));
@@ -316,32 +316,25 @@ void main() {
       await tester.pump();
 
       expect(find.text('Name is required'), findsOneWidget);
-      expect(find.text('Email is required'), findsOneWidget);
     });
 
-    testWidgets('email must look valid', (tester) async {
+    testWidgets('the email is shown but cannot be edited', (tester) async {
       await pumpEdit(tester);
 
-      await tester.enterText(byHint('Enter your full name'), 'Ali');
-      await tester.enterText(byHint('Enter your email'), 'nope');
-      await tester.ensureVisible(find.text('Save Changes'));
-      await tester.tap(find.text('Save Changes'));
-      await tester.pump();
-
-      expect(find.text('Enter a valid email'), findsOneWidget);
+      final field = tester.widget<TextField>(byHint('Enter your email'));
+      expect(field.enabled, isFalse);
+      expect(find.text('Email is required'), findsNothing);
     });
 
     testWidgets('phone and bio are optional', (tester) async {
       await pumpEdit(tester);
 
       await tester.enterText(byHint('Enter your full name'), 'Ali');
-      await tester.enterText(byHint('Enter your email'), 'a@b.com');
       await tester.ensureVisible(find.text('Save Changes'));
       await tester.tap(find.text('Save Changes'));
       await tester.pump();
 
       expect(find.text('Name is required'), findsNothing);
-      expect(find.text('Email is required'), findsNothing);
       // Signed out: saving is refused with a toast rather than crashing.
       await pumpUntilToastVisible(tester);
       expect(

@@ -61,10 +61,53 @@ class AuthRemoteDataSource {
     if (idToken == null) {
       throw const AuthException('No ID token from Google.');
     }
-    return _client.auth.signInWithIdToken(
+    final response = await _client.auth.signInWithIdToken(
       provider: OAuthProvider.google,
       idToken: idToken,
     );
+    final user = response.user;
+    if (user != null) await _syncProfileWithAuth(user);
+    return response;
+  }
+
+  /// Supabase rewrites `avatar_url` / `full_name` in the auth metadata with
+  /// Google's values on every Google sign-in, while the profile screen reads
+  /// the `users` row, so the two are brought back in line here. Google's
+  /// photo wins (it's copied into the row); for the name, whatever the user
+  /// saved in the row wins and is put back into the metadata. Anything the
+  /// row is missing is filled from Google.
+  /// Best-effort: a failure here must not block signing in.
+  Future<void> _syncProfileWithAuth(User user) async {
+    try {
+      final row = await _client
+          .from('users')
+          .select('full_name, avatar_url')
+          .eq('id', user.id)
+          .maybeSingle();
+      if (row == null) return;
+
+      final restoreMeta = <String, dynamic>{};
+      final fillRow = <String, dynamic>{};
+      for (final key in const ['full_name', 'avatar_url']) {
+        final saved = row[key] as String?;
+        final fromGoogle = user.userMetadata?[key] as String?;
+        final hasSaved = saved != null && saved.isNotEmpty;
+        final hasGoogle = fromGoogle != null && fromGoogle.isNotEmpty;
+        if (saved == fromGoogle) continue;
+        if (hasGoogle && (key == 'avatar_url' || !hasSaved)) {
+          fillRow[key] = fromGoogle;
+        } else if (hasSaved) {
+          restoreMeta[key] = saved;
+        }
+      }
+
+      if (restoreMeta.isNotEmpty) {
+        await _client.auth.updateUser(UserAttributes(data: restoreMeta));
+      }
+      if (fillRow.isNotEmpty) {
+        await _client.from('users').update(fillRow).eq('id', user.id);
+      }
+    } catch (_) {}
   }
 
   Future<void> signOut() async {
