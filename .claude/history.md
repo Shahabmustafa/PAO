@@ -10,7 +10,7 @@ Newest first. One entry per finished task (see CLAUDE.md → Work history).
 
 ### 2026-10-07 — Release 1.5.7+15 (first automated Play release)
 - Committed the pending home redesign: category sections (`home_sections_provider.dart`), new `category_products_screen.dart`, l10n strings, updated `home_widgets_test.dart`. Commit `267b3e7`.
-- Bumped `pubspec.yaml` to `1.5.7+15`, pushed tag `v1.5.7` → GitHub Actions run 37622056178 succeeded; AAB uploaded to Play production, but Play showed "Not yet sent for review" — user must press "Send for review" in Publishing overview (check if this repeats on every release).
+- Bumped `pubspec.yaml` to `1.5.7+15`, pushed tag `v1.5.7` → GitHub Actions run 37622056178 succeeded; AAB uploaded to Play production, Play auto-submitted it for review (submission 17, 5:45 PM); the brief "Not yet sent for review" status was just pre-review quick checks. No manual Play Console step is needed per release.
 - Before release: `flutter analyze` (info-only), `flutter test` all 511 passed.
 - Pending: `app_release.dart` version history not updated since 1.5.3.
 
