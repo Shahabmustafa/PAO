@@ -2,6 +2,9 @@
 
 Newest first. One entry per finished task (see CLAUDE.md → Work history).
 
+### 2026-10-07 — Keep privacy policy & terms in sync with features
+- Added a CLAUDE.md rule: after every feature, check whether it affects the privacy policy/terms and update all copies (`docs/privacy_policy.html`, `PAO_Privacy_Policy.txt`, in-app `privacy*`/`terms*` ARB strings, `docs/terms.html`, `docs/delete-account.html`) plus the "Last updated" date, and flag Play Console Data safety changes.
+
 ### 2026-10-07 — CLAUDE.md, work history and /release skill
 - Added `CLAUDE.md`, this history file (imported into every session) and the `/release` skill (`.claude/skills/release/SKILL.md`).
 

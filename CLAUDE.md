@@ -27,6 +27,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Every user-facing string goes in both `lib/l10n/app_en.arb` and `lib/l10n/app_ur.arb`. Generated `lib/l10n/app_localizations*.dart` are committed — run `flutter gen-l10n` after editing the ARB files and commit the output.
 - Tests run offline against fakes in `test/helpers/fakes.dart` and `test/helpers/test_app.dart`; no Supabase needed. Run `flutter analyze` and `flutter test` before committing.
 
+## Privacy policy & terms — keep in sync with features
+
+After adding or changing any feature, check whether it touches the privacy policy or terms: new data collected or stored, new permission (camera, mic, location, contacts…), new third-party SDK/service, new sharing between users, new notification type, or a change to account deletion / data retention. If it does, update **every** copy in the same change and bump the "Last updated" date in each:
+
+- `docs/privacy_policy.html` — public page (GitHub Pages) linked from Play Console
+- `PAO_Privacy_Policy.txt`
+- In-app screen: `privacy*Title` / `privacy*Body` / `privacyDate` keys in both `app_en.arb` and `app_ur.arb` (rendered by `privacy_policy_screen.dart`; a new section also needs a `LegalSection` line there), then `flutter gen-l10n`
+- Terms equivalents if rules for users change: `docs/terms.html`, `terms*Title` / `terms*Body` / `legalDate` ARB keys, `terms_conditions_screen.dart`
+- Account/data deletion changes: `docs/delete-account.html`
+
+Then tell the user whether the Play Console **Data safety** form also needs a manual update (it cannot be changed from the repo). If the feature does not touch the policy, say so in one line.
+
 ## Releasing
 
 - Version lives in `pubspec.yaml` as `x.y.z+build`; the build number must increase on every Play upload.
