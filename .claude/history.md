@@ -10,7 +10,7 @@ Newest first. One entry per finished task (see CLAUDE.md → Work history).
 
 ### 2026-10-07 — Release 1.5.7+15 (first automated Play release)
 - Committed the pending home redesign: category sections (`home_sections_provider.dart`), new `category_products_screen.dart`, l10n strings, updated `home_widgets_test.dart`. Commit `267b3e7`.
-- Bumped `pubspec.yaml` to `1.5.7+15`, pushed tag `v1.5.7` → GitHub Actions run 37622056178 started.
+- Bumped `pubspec.yaml` to `1.5.7+15`, pushed tag `v1.5.7` → GitHub Actions run 37622056178 succeeded; AAB uploaded to Play production (pending Google review).
 - Before release: `flutter analyze` (info-only), `flutter test` all 511 passed.
 - Pending: `app_release.dart` version history not updated since 1.5.3.
 
