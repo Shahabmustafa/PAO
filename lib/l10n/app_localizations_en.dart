@@ -320,6 +320,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get categoryOther => 'Other';
 
   @override
+  String get viewAll => 'View all';
+
+  @override
   String get conditionNew => 'New';
 
   @override

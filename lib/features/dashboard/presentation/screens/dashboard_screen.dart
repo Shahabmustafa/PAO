@@ -54,17 +54,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final l10n = context.l10n;
     return [
       TourStep(
-        key: TourKeys.homeSearch,
-        title: l10n.tourSearchTitle,
-        body: l10n.tourSearchBody,
-      ),
-      TourStep(
-        key: TourKeys.homeFilter,
-        title: l10n.tourFilterTitle,
-        body: l10n.tourFilterBody,
-        circle: true,
-      ),
-      TourStep(
         key: TourKeys.navWishlist,
         title: l10n.tourWishlistTitle,
         body: l10n.tourWishlistBody,

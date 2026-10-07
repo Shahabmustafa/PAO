@@ -22,8 +22,10 @@ class HomeProvider extends ChangeNotifier {
   HomeProvider({
     AuthRepository? authRepository,
     PostRepository? postRepository,
+    String? category,
     Duration searchDebounce = const Duration(milliseconds: 400),
-  }) : _authRepository = authRepository ?? AuthRepository(),
+  }) : selectedCategory = category ?? kHomeCategories.first,
+       _authRepository = authRepository ?? AuthRepository(),
        _postRepository = postRepository ?? PostRepository(),
        _searchDebounce = searchDebounce {
     // Wishlist and Requests look products up in [ProductStore], and it is
@@ -43,7 +45,7 @@ class HomeProvider extends ChangeNotifier {
   final PostRepository _postRepository;
   final Duration _searchDebounce;
 
-  String selectedCategory = kHomeCategories.first;
+  String selectedCategory;
   FilterOptions filters = const FilterOptions();
   String searchQuery = '';
 
@@ -94,7 +96,15 @@ class HomeProvider extends ChangeNotifier {
   Future<void> refresh() => _loadFirstPage(clear: false);
 
   Future<void> loadMore() async {
-    if (isLoading || isLoadingMore || !hasMore || _products.isEmpty) return;
+    // While the first page is loading, cached products may be on screen;
+    // paging after them would race the first page's response.
+    if (isLoading ||
+        _loadingFirstPage ||
+        isLoadingMore ||
+        !hasMore ||
+        _products.isEmpty) {
+      return;
+    }
     final generation = _generation;
     isLoadingMore = true;
     loadMoreFailed = false;
@@ -220,6 +230,9 @@ class HomeProvider extends ChangeNotifier {
   }
 
   /// The plain feed (no search / category / condition) from the cache.
+  /// A single category isn't served from it: the cache holds the newest
+  /// posts overall, so it would show only a few of that category and a
+  /// half-empty grid before the real page arrives.
   List<Product> _cachedFirstPage() {
     if (hasActiveSearch) return const [];
     final me = _authRepository.currentUser?.id;

@@ -324,6 +324,9 @@ class AppLocalizationsUr extends AppLocalizations {
   String get categoryOther => 'دیگر';
 
   @override
+  String get viewAll => 'سب دیکھیں';
+
+  @override
   String get conditionNew => 'نیا';
 
   @override

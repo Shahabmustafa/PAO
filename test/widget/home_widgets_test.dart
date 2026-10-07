@@ -5,10 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pao/core/theme/app_colors.dart';
 import 'package:pao/core/widgets/app_icon.dart';
+import 'package:pao/core/widgets/app_shimmer.dart';
 import 'package:pao/features/add_item/data/model/post_model.dart';
 import 'package:pao/features/home/data/product_store.dart';
 import 'package:pao/features/home/domain/filter_options.dart';
 import 'package:pao/features/home/domain/product.dart';
+import 'package:pao/features/home/presentation/provider/home_sections_provider.dart';
+import 'package:pao/features/home/presentation/screens/category_products_screen.dart';
 import 'package:pao/features/home/presentation/screens/home_screen.dart';
 import 'package:pao/features/home/presentation/screens/product_detail_screen.dart';
 import 'package:pao/features/home/presentation/widgets/filter_bottom_sheet.dart';
@@ -358,6 +361,127 @@ void main() {
 
     setUp(() => repo = FakePostRepository());
 
+    Future<void> pumpHome(
+      WidgetTester tester, {
+      ThemeMode themeMode = ThemeMode.light,
+    }) async {
+      tester.view.physicalSize = const Size(600, 1400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(
+        testApp(HomeScreen(postRepository: repo), themeMode: themeMode),
+      );
+      await tester.pump();
+      await tester.pump();
+    }
+
+    testWidgets('shows one row per category with products, no search', (
+      tester,
+    ) async {
+      repo.available = [
+        makePost(id: '1', title: 'Headphones'),
+        makePost(id: '2', title: 'Novel', category: 'Books'),
+      ];
+
+      await pumpHome(tester);
+
+      expect(find.text('Welcome back 👋'), findsOneWidget);
+      expect(find.byType(TextField), findsNothing);
+      // Row titles (each product card also names its category).
+      expect(find.text('Electronics'), findsWidgets);
+      expect(find.text('Books'), findsWidgets);
+      expect(find.text('Fashion'), findsNothing, reason: 'empty row hidden');
+      expect(find.text('View all'), findsNWidgets(2));
+      expect(find.text('Headphones'), findsOneWidget);
+      expect(find.text('Novel'), findsOneWidget);
+    });
+
+    testWidgets('asks for a short page of each category', (tester) async {
+      await pumpHome(tester);
+
+      expect(
+        repo.pageCalls.map((call) => call.category),
+        containsAll(['Electronics', 'Books', 'Other']),
+      );
+      expect(
+        repo.pageCalls.every(
+          (call) => call.limit == HomeSectionsProvider.sectionSize,
+        ),
+        isTrue,
+      );
+    });
+
+    testWidgets('"View all" opens the grid of that category', (tester) async {
+      repo.available = [
+        makePost(id: '1', title: 'Headphones'),
+        makePost(id: '2', title: 'Novel', category: 'Books'),
+      ];
+      await pumpHome(tester);
+
+      final booksRow = find.ancestor(
+        of: find.text('Books'),
+        matching: find.byType(Row),
+      );
+      await tester.tap(
+        find.descendant(of: booksRow.first, matching: find.text('View all')),
+      );
+      // Not pumpAndSettle: the cards' fade-in keeps frames coming.
+      for (var i = 0; i < 5; i++) {
+        await tester.pump(const Duration(milliseconds: 300));
+      }
+
+      expect(find.byType(CategoryProductsScreen), findsOneWidget);
+      expect(repo.pageCalls.last.category, 'Books');
+      expect(
+        find.descendant(
+          of: find.byType(CategoryProductsScreen),
+          matching: find.text('Novel'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(CategoryProductsScreen),
+          matching: find.text('Headphones'),
+        ),
+        findsNothing,
+      );
+    });
+
+    testWidgets('no products shows the empty state', (tester) async {
+      await pumpHome(tester);
+
+      expect(find.text('No products found'), findsOneWidget);
+    });
+
+    testWidgets('given-away products never appear', (tester) async {
+      repo.available = [
+        makePost(id: '1', title: 'Available'),
+        makePost(id: '2', title: 'Gone', isGiven: true),
+      ];
+
+      await pumpHome(tester);
+
+      expect(find.text('Available'), findsOneWidget);
+      expect(find.text('Gone'), findsNothing);
+    });
+
+    testWidgets('renders in dark mode without layout errors', (tester) async {
+      repo.available = [makePost(id: '1', title: 'Headphones')];
+
+      await pumpHome(tester, themeMode: ThemeMode.dark);
+
+      expect(find.text('Headphones'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('CategoryProductsScreen', () {
+    late FakePostRepository repo;
+
+    setUp(() => repo = FakePostRepository());
+
     /// [count] available posts: "Item 1" .. "Item N", newest first.
     List<PostModel> items(int count) => [
       for (var i = 1; i <= count; i++)
@@ -374,7 +498,10 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
       await tester.pumpWidget(
-        testApp(HomeScreen(postRepository: repo), themeMode: themeMode),
+        testApp(
+          CategoryProductsScreen(category: 'Electronics', postRepository: repo),
+          themeMode: themeMode,
+        ),
       );
       await tester.pump();
     }
@@ -383,7 +510,7 @@ void main() {
     // only load once the user scrolls.
     const shortScreen = Size(600, 800);
 
-    // The grid's own scrollable, not the search field's horizontal one.
+    // The grid's own vertical scrollable.
     Finder scrollArea() => find.byWidgetPredicate(
       (widget) =>
           widget is Scrollable && widget.axisDirection == AxisDirection.down,
@@ -397,74 +524,6 @@ void main() {
         await tester.pump();
       }
     }
-
-    testWidgets('shows the greeting, search and the product grid', (
-      tester,
-    ) async {
-      repo.available = [
-        makePost(id: '1', title: 'Headphones'),
-        makePost(id: '2', title: 'Novel', category: 'Books'),
-      ];
-
-      await pumpHome(tester);
-
-      expect(find.text('Welcome back 👋'), findsOneWidget);
-      expect(find.byType(TextField), findsOneWidget);
-      expect(find.text('Headphones'), findsOneWidget);
-      expect(find.text('Novel'), findsOneWidget);
-    });
-
-    testWidgets('search narrows the grid', (tester) async {
-      repo.available = [
-        makePost(id: '1', title: 'Headphones'),
-        makePost(id: '2', title: 'Novel', category: 'Books'),
-      ];
-      await pumpHome(tester);
-
-      await tester.enterText(find.byType(TextField), 'nov');
-      await tester.pump(const Duration(milliseconds: 500)); // debounce
-      await tester.pump();
-
-      expect(repo.pageCalls.last.search, 'nov');
-      expect(find.text('Novel'), findsOneWidget);
-      expect(find.text('Headphones'), findsNothing);
-    });
-
-    testWidgets('no match shows the empty state, and Clear search restores', (
-      tester,
-    ) async {
-      repo.available = [makePost(id: '1', title: 'Headphones')];
-      await pumpHome(tester);
-
-      await tester.enterText(find.byType(TextField), 'zzz');
-      await tester.pump(const Duration(milliseconds: 500));
-      await tester.pump();
-
-      expect(find.text('No products found'), findsOneWidget);
-      expect(
-        find.text('Try a different search term or clear your filters'),
-        findsOneWidget,
-      );
-
-      await tester.tap(find.text('Clear search'));
-      await tester.pump();
-      await tester.pump();
-
-      expect(find.text('Headphones'), findsOneWidget);
-      expect(find.text('No products found'), findsNothing);
-    });
-
-    testWidgets('given-away products never appear', (tester) async {
-      repo.available = [
-        makePost(id: '1', title: 'Available'),
-        makePost(id: '2', title: 'Gone', isGiven: true),
-      ];
-
-      await pumpHome(tester);
-
-      expect(find.text('Available'), findsOneWidget);
-      expect(find.text('Gone'), findsNothing);
-    });
 
     testWidgets('shows a loading skeleton until the first page arrives', (
       tester,
@@ -481,6 +540,44 @@ void main() {
       await tester.pump();
 
       expect(find.byType(ProductCard), findsNWidgets(3));
+    });
+
+    testWidgets('a full-screen skeleton, not cached posts, until the page '
+        'arrives', (tester) async {
+      // The home feed's cache has one post of this category.
+      ProductStore.items.value = [product('c1', 'Cached Radio')];
+      repo.available = items(8);
+      repo.pageGate = Completer<void>();
+
+      await pumpHome(tester);
+
+      expect(find.text('Cached Radio'), findsNothing);
+      expect(find.byType(ProductCard), findsNothing);
+      expect(find.byType(AppShimmer), findsAtLeastNWidgets(8));
+      expect(repo.pageCalls, hasLength(1), reason: 'no paging meanwhile');
+
+      repo.pageGate!.complete();
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.byType(ProductCard), findsWidgets);
+      expect(find.text('Item 1'), findsOneWidget);
+    });
+
+    testWidgets('shows the category title and only its products', (
+      tester,
+    ) async {
+      repo.available = [
+        makePost(id: '1', title: 'Headphones'),
+        makePost(id: '2', title: 'Novel', category: 'Books'),
+      ];
+
+      await pumpHome(tester);
+
+      expect(find.text('Electronics'), findsWidgets);
+      expect(find.text('Headphones'), findsOneWidget);
+      expect(find.text('Novel'), findsNothing);
+      expect(repo.pageCalls.single.category, 'Electronics');
     });
 
     testWidgets('loads only one page of products at first', (tester) async {
@@ -526,14 +623,13 @@ void main() {
       repo.available = items(25);
       await pumpHome(tester, size: shortScreen);
 
-      await tester.drag(scrollArea().first, const Offset(0, -20000));
-      await tester.pump();
-      await tester.pump();
-      expect(repo.pageCalls, hasLength(2));
-
-      await tester.drag(scrollArea().first, const Offset(0, -20000));
-      await tester.pump();
-      await tester.pump();
+      for (var i = 0; i < 6; i++) {
+        await tester.fling(scrollArea().first, const Offset(0, -2000), 3000);
+        // Not pumpAndSettle: the loading skeleton shimmers forever.
+        for (var j = 0; j < 10; j++) {
+          await tester.pump(const Duration(milliseconds: 200));
+        }
+      }
 
       expect(repo.pageCalls, hasLength(2), reason: 'page of 5 was the last');
       expect(find.text('Item 25'), findsOneWidget);

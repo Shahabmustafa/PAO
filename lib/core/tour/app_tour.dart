@@ -9,8 +9,6 @@ import '../theme/app_colors.dart';
 class TourKeys {
   TourKeys._();
 
-  static final homeSearch = GlobalKey(debugLabel: 'tour.homeSearch');
-  static final homeFilter = GlobalKey(debugLabel: 'tour.homeFilter');
   static final navWishlist = GlobalKey(debugLabel: 'tour.navWishlist');
   static final navAdd = GlobalKey(debugLabel: 'tour.navAdd');
   static final navRequests = GlobalKey(debugLabel: 'tour.navRequests');
