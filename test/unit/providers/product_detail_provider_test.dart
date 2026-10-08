@@ -119,32 +119,6 @@ void main() {
     });
   });
 
-  group('markAsGiven', () {
-    test('marks the post in the database and the local store', () async {
-      auth.user = const UserModel(id: 'owner-1');
-      final provider = build();
-
-      final ok = await provider.markAsGiven();
-
-      expect(ok, isTrue);
-      expect(posts.markedGiven, ['p1']);
-      expect(ProductStore.items.value.single.isGiven, isTrue);
-      expect(provider.isMarkingGiven, isFalse);
-    });
-
-    test('a failure leaves the store unchanged and shows a message', () async {
-      posts.markGivenError = Exception('offline');
-      final provider = build();
-
-      final ok = await provider.markAsGiven();
-
-      expect(ok, isFalse);
-      expect(provider.errorMessage, 'Failed to update. Please try again.');
-      expect(ProductStore.items.value.single.isGiven, isFalse);
-      expect(provider.isMarkingGiven, isFalse);
-    });
-  });
-
   group('deleteProduct', () {
     test('deletes the post and forgets it locally', () async {
       auth.user = const UserModel(id: 'owner-1');

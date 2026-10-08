@@ -363,17 +363,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cantRequestOwnItem => 'You can\'t request your own item.';
 
   @override
-  String get markAsGiven => 'Mark as Given';
-
-  @override
-  String markAsGivenConfirm(String name) {
-    return 'Have you given \"$name\" to someone? It will be removed from the listing.';
-  }
-
-  @override
-  String get yesGiven => 'Yes, Given';
-
-  @override
   String get messageOwner => 'Message Owner';
 
   @override

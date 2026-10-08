@@ -126,16 +126,6 @@
   },
   "failedToSendRequest": "Failed to send request. Please try again.",
   "cantRequestOwnItem": "You can't request your own item.",
-  "markAsGiven": "Mark as Given",
-  "markAsGivenConfirm": "Have you given \"{name}\" to someone? It will be removed from the listing.",
-  "@markAsGivenConfirm": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "yesGiven": "Yes, Given",
   "messageOwner": "Message Owner",
   "giveMe": "Give Me",
   "postedBy": "Posted by",

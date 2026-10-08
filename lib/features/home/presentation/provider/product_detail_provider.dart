@@ -30,7 +30,6 @@ class ProductDetailProvider extends ChangeNotifier {
   final ProfileRepository _profileRepository;
 
   bool isLoadingPoster = true;
-  bool isMarkingGiven = false;
   bool isRequesting = false;
   bool isDeleting = false;
   ProfileModel? posterProfile;
@@ -91,23 +90,6 @@ class ProductDetailProvider extends ChangeNotifier {
       return false;
     } finally {
       isRequesting = false;
-      notifyListeners();
-    }
-  }
-
-  Future<bool> markAsGiven() async {
-    isMarkingGiven = true;
-    errorMessage = null;
-    notifyListeners();
-    try {
-      await _postRepository.markAsGiven(product.id);
-      ProductStore.markAsGiven(product.id);
-      return true;
-    } catch (_) {
-      errorMessage = l10nNow.failedToUpdate;
-      return false;
-    } finally {
-      isMarkingGiven = false;
       notifyListeners();
     }
   }

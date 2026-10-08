@@ -752,24 +752,6 @@ abstract class AppLocalizations {
   /// **'You can\'t request your own item.'**
   String get cantRequestOwnItem;
 
-  /// No description provided for @markAsGiven.
-  ///
-  /// In en, this message translates to:
-  /// **'Mark as Given'**
-  String get markAsGiven;
-
-  /// No description provided for @markAsGivenConfirm.
-  ///
-  /// In en, this message translates to:
-  /// **'Have you given \"{name}\" to someone? It will be removed from the listing.'**
-  String markAsGivenConfirm(String name);
-
-  /// No description provided for @yesGiven.
-  ///
-  /// In en, this message translates to:
-  /// **'Yes, Given'**
-  String get yesGiven;
-
   /// No description provided for @messageOwner.
   ///
   /// In en, this message translates to:

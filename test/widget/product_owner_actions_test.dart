@@ -100,6 +100,22 @@ void main() {
       expect(find.text('Delete'), findsOneWidget);
     });
 
+    testWidgets('the owner sees no Give Me / Mark as Given button', (
+      tester,
+    ) async {
+      await openDetail(tester);
+
+      expect(find.text('Give Me'), findsNothing);
+      expect(find.text('Mark as Given'), findsNothing);
+    });
+
+    testWidgets('someone else gets "Give Me"', (tester) async {
+      auth.user = const UserModel(id: 'someone-else');
+      await openDetail(tester);
+
+      expect(find.widgetWithText(ElevatedButton, 'Give Me'), findsOneWidget);
+    });
+
     testWidgets('someone else does not', (tester) async {
       auth.user = const UserModel(id: 'someone-else');
       await openDetail(tester);
@@ -118,6 +134,22 @@ void main() {
       await openDetail(tester, product: lamp(isGiven: true));
 
       expect(find.byIcon(Icons.more_vert), findsNothing);
+    });
+
+    testWidgets('a given-away post offers no Give Me to others', (
+      tester,
+    ) async {
+      auth.user = const UserModel(id: 'someone-else');
+      ProductStore.items.value = [lamp(isGiven: true)];
+      posts.byId['p1'] = makePost(
+        id: 'p1',
+        userId: 'owner-1',
+        isGiven: true,
+        imageUrls: const [],
+      );
+      await openDetail(tester, product: lamp(isGiven: true));
+
+      expect(find.text('Give Me'), findsNothing);
     });
   });
 

@@ -148,49 +148,18 @@ class _ProductDetailView extends StatelessWidget {
     }
   }
 
-  Future<void> _onMarkAsGivenPressed(BuildContext context) async {
-    final confirmed = await AppDialog.confirm(
-      context,
-      title: context.l10n.markAsGiven,
-      message: context.l10n.markAsGivenConfirm(product.name),
-      confirmText: context.l10n.yesGiven,
-      cancelText: context.l10n.cancel,
-      icon: AppIcons.checkCircle,
-    );
-    if (!confirmed) return;
-    if (!context.mounted) return;
-
-    final provider = context.read<ProductDetailProvider>();
-    final success = await provider.markAsGiven();
-    if (!context.mounted) return;
-
-    if (success) {
-      Navigator.pop(context);
-    } else {
-      AppSnackbar.show(
-        context,
-        provider.errorMessage ?? context.l10n.failedToUpdate,
-        icon: Icons.error_outline,
-        color: AppColors.error,
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<ProductDetailProvider>();
 
     return Scaffold(
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
-          child: provider.isOwner
-              ? PrimaryButton(
-                  label: context.l10n.markAsGiven,
-                  isLoading: provider.isMarkingGiven,
-                  onPressed: () => _onMarkAsGivenPressed(context),
-                )
-              : ValueListenableBuilder<List<RequestModel>>(
+      // The owner and a post already given away get no request action.
+      bottomNavigationBar: provider.isOwner || product.isGiven
+          ? null
+          : SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+                child: ValueListenableBuilder<List<RequestModel>>(
                   valueListenable: RequestStore.sent,
                   builder: (context, sent, _) {
                     final existing = sent.where((r) => r.postId == product.id);
@@ -208,8 +177,8 @@ class _ProductDetailView extends StatelessWidget {
                     );
                   },
                 ),
-        ),
-      ),
+              ),
+            ),
       body: SafeArea(
         child: ListView(
           padding: EdgeInsets.zero,

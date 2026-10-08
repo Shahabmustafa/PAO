@@ -2,6 +2,10 @@
 
 Newest first. One entry per finished task (see CLAUDE.md → Work history).
 
+### 2026-10-08 — Hide request buttons on own / given-away posts
+- Product detail: the owner no longer sees a bottom button ("Mark as Given" removed; items are still given by accepting a request in chat), and a given-away post shows no "Give Me" to others. `product_detail_screen.dart`, `product_detail_provider.dart`.
+- Removed unused `markAsGiven*` / `yesGiven` ARB strings + regenerated l10n; tests updated in `product_owner_actions_test.dart`. 512 tests pass.
+
 ### 2026-10-07 — Keep privacy policy & terms in sync with features
 - Added a CLAUDE.md rule: after every feature, check whether it affects the privacy policy/terms and update all copies (`docs/privacy_policy.html`, `PAO_Privacy_Policy.txt`, in-app `privacy*`/`terms*` ARB strings, `docs/terms.html`, `docs/delete-account.html`) plus the "Last updated" date, and flag Play Console Data safety changes.
 

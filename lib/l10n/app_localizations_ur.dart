@@ -368,17 +368,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String get cantRequestOwnItem => 'آپ اپنی ہی چیز کی درخواست نہیں کر سکتے۔';
 
   @override
-  String get markAsGiven => 'دی ہوئی نشان زد کریں';
-
-  @override
-  String markAsGivenConfirm(String name) {
-    return 'کیا آپ نے \"$name\" کسی کو دے دی ہے؟ اسے فہرست سے ہٹا دیا جائے گا۔';
-  }
-
-  @override
-  String get yesGiven => 'جی، دے دی';
-
-  @override
   String get messageOwner => 'مالک کو پیغام بھیجیں';
 
   @override
