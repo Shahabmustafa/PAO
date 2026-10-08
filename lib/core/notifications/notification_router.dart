@@ -18,6 +18,7 @@ class NotificationRouter {
   /// pending. Matches the tab order in `DashboardScreen._screens`.
   static final ValueNotifier<int?> requestedTab = ValueNotifier<int?>(null);
 
+  static const int homeTabIndex = 0;
   static const int requestsTabIndex = 3;
 
   /// Lands on the Requests tab, then opens the specific chat a message/

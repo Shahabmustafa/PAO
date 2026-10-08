@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#aef503">
+<meta name="robots" content="noindex">
+<meta name="description" content="Someone shared an item on PAO with you. Open it in the PAO app.">
+<meta property="og:title" content="An item on PAO">
+<meta property="og:description" content="Someone is giving this away for free on PAO. Tap to open it in the app.">
+<meta property="og:image" content="https://shahabmustafa.github.io/PAO/logo.png">
+<title>PAO – Shared item</title>
+<link rel="icon" href="logo.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="brand">
+      <img class="logo" src="logo.png" alt="PAO logo" width="76" height="76">
+      <div>
+        <h1>Opening in PAO…</h1>
+        <p class="sub">PAO (پاؤ) &middot; Give and get things for free</p>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="wrap sheet">
+  <p class="lead">
+    Someone shared an item with you. If PAO is installed it opens straight away; otherwise get the app from
+    Google Play and open this link again.
+  </p>
+  <p>
+    <a class="btn" id="open" href="#">Open in PAO</a>
+    &nbsp;
+    <a class="btn" id="store" href="https://play.google.com/store/apps/details?id=com.pao.pao">Get PAO on Google Play</a>
+  </p>
+</main>
+
+<script>
+  // Hands the link to the installed app (lib/core/deep_links/post_links.dart)
+  // as com.pao.pao://post?id=<id>. On Android, Chrome's intent: URL falls
+  // back to the Play Store when the app isn't installed.
+  (function () {
+    var id = new URLSearchParams(location.search).get('id') || '';
+    var store = 'https://play.google.com/store/apps/details?id=com.pao.pao';
+    var appLink = 'com.pao.pao://post?id=' + encodeURIComponent(id);
+    var isAndroid = /android/i.test(navigator.userAgent);
+    var target = isAndroid
+      ? 'intent://post?id=' + encodeURIComponent(id) +
+        '#Intent;scheme=com.pao.pao;package=com.pao.pao;S.browser_fallback_url=' +
+        encodeURIComponent(store) + ';end'
+      : appLink;
+    var open = document.getElementById('open');
+    open.href = target;
+    if (id && isAndroid) location.replace(target);
+  })();
+</script>
+</body>
+</html>

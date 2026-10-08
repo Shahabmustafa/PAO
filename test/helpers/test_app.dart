@@ -35,8 +35,10 @@ Widget testApp(
   Locale locale = const Locale('en'),
   Route<dynamic>? Function(RouteSettings)? onGenerateRoute,
   Map<String, WidgetBuilder>? routes,
+  GlobalKey<NavigatorState>? navigatorKey,
 }) {
   return MaterialApp(
+    navigatorKey: navigatorKey,
     debugShowCheckedModeBanner: false,
     theme: AppTheme.lightTheme,
     darkTheme: AppTheme.darkTheme,

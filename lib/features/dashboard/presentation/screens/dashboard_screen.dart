@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
+import '../../../../core/deep_links/post_links.dart';
 import '../../../../core/notifications/notification_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/tour/app_tour.dart';
@@ -48,6 +49,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     AppTour.replayRequests.addListener(_onReplayRequested);
     // First launch: walk the user through the main buttons.
     WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowTour());
+    // A shared post link that arrived before the user got here (cold start,
+    // or still logging in) opens now.
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => PostLinks.dashboardShown(),
+    );
   }
 
   List<TourStep> _mainTourSteps(BuildContext context) {
@@ -96,6 +102,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   void dispose() {
+    PostLinks.dashboardHidden();
     NotificationRouter.requestedTab.removeListener(_onTabRequested);
     AppTour.replayRequests.removeListener(_onReplayRequested);
     _barController.dispose();

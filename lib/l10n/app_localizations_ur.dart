@@ -351,6 +351,17 @@ class AppLocalizationsUr extends AppLocalizations {
   String get condition => 'حالت';
 
   @override
+  String get postLinkGivenAway =>
+      'یہ چیز پہلے ہی دی جا چکی ہے۔ باقی دستیاب چیزیں دیکھیں!';
+
+  @override
+  String get postLinkNotFound => 'یہ پوسٹ اب دستیاب نہیں ہے۔';
+
+  @override
+  String get postLinkFailed =>
+      'شیئر کی گئی پوسٹ نہیں کھل سکی۔ براہِ کرم اپنا انٹرنیٹ چیک کریں۔';
+
+  @override
   String shareProduct(String name) {
     return 'PAO پر \"$name\" دیکھیں!';
   }

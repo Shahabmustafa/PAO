@@ -728,6 +728,24 @@ abstract class AppLocalizations {
   /// **'Condition'**
   String get condition;
 
+  /// No description provided for @postLinkGivenAway.
+  ///
+  /// In en, this message translates to:
+  /// **'This item has already been given away. Have a look at what else is available!'**
+  String get postLinkGivenAway;
+
+  /// No description provided for @postLinkNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'This post is no longer available.'**
+  String get postLinkNotFound;
+
+  /// No description provided for @postLinkFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t open the shared post. Please check your connection.'**
+  String get postLinkFailed;
+
   /// No description provided for @shareProduct.
   ///
   /// In en, this message translates to:

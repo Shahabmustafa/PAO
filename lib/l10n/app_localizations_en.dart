@@ -347,6 +347,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get condition => 'Condition';
 
   @override
+  String get postLinkGivenAway =>
+      'This item has already been given away. Have a look at what else is available!';
+
+  @override
+  String get postLinkNotFound => 'This post is no longer available.';
+
+  @override
+  String get postLinkFailed =>
+      'Couldn\'t open the shared post. Please check your connection.';
+
+  @override
   String shareProduct(String name) {
     return 'Check out \"$name\" on PAO!';
   }

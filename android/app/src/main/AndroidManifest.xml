@@ -40,6 +40,21 @@
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="com.pao.pao" android:host="reset-callback"/>
             </intent-filter>
+            <!-- Shared post links (PostLinks). The https link opens the app
+                 directly once assetlinks.json is served from the domain root;
+                 until then docs/post.html forwards to the custom scheme. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="https" android:host="shahabmustafa.github.io" android:path="/PAO/post.html"/>
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="com.pao.pao" android:host="post"/>
+            </intent-filter>
             <!-- supabase_flutter handles the link itself; stop Flutter from
                  also treating it as a route to push. -->
             <meta-data android:name="flutter_deeplinking_enabled" android:value="false"/>

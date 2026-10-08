@@ -108,6 +108,9 @@
   "category": "Category",
   "sortBy": "Sort By",
   "condition": "Condition",
+  "postLinkGivenAway": "This item has already been given away. Have a look at what else is available!",
+  "postLinkNotFound": "This post is no longer available.",
+  "postLinkFailed": "Couldn't open the shared post. Please check your connection.",
   "shareProduct": "Check out \"{name}\" on PAO!",
   "@shareProduct": {
     "placeholders": {

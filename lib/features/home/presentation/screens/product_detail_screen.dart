@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
-import '../../../../core/config/app_links.dart';
+import '../../../../core/deep_links/post_links.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_icons.dart';
 import '../../../../core/widgets/app_avatar.dart';
@@ -71,7 +71,7 @@ class _ProductDetailView extends StatelessWidget {
     SharePlus.instance.share(
       ShareParams(
         text:
-            '${context.l10n.shareProduct(product.name)}\n${AppLinks.playStore}',
+            '${context.l10n.shareProduct(product.name)}\n${PostLinks.urlFor(product.id)}',
       ),
     );
   }
