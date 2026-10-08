@@ -2,10 +2,15 @@
 
 Newest first. One entry per finished task (see CLAUDE.md → Work history).
 
+### 2026-10-08 — Release 1.5.9+17 (shared post links)
+- Bumped `pubspec.yaml` to `1.5.9+17`, commit `44b1c66`, pushed `main` + tag `v1.5.9`.
+- GitHub Actions run 37787930432 succeeded → AAB uploaded to Play production; Pages deploy also succeeded (`post.html` live).
+- In-app version history (`app_release.dart`) not updated.
+
 ### 2026-10-08 — Shared post links open the post in the app
 - Share now sends `https://shahabmustafa.github.io/PAO/post.html?id=<id>`; `docs/post.html` forwards to the app (`com.pao.pao://post?id=`) or the Play Store. Handler: `lib/core/deep_links/post_links.dart` (`app_links`), wired in `main.dart` + `dashboard_screen.dart`, intent filters in `AndroidManifest.xml`.
 - Available post → detail screen; given-away / deleted post → Home tab + toast (`postLink*` ARB strings). Waits for login/dashboard on cold start. Tests: `test/widget/post_links_test.dart` (519 pass).
-- Pending: push to `main` so GitHub Pages serves `post.html`; ship in next release. Optional: `assetlinks.json` at `shahabmustafa.github.io/.well-known/` (needs a `Shahabmustafa.github.io` repo) to skip the browser hop.
+- Shipped in 1.5.9. Optional: `assetlinks.json` at `shahabmustafa.github.io/.well-known/` (needs a `Shahabmustafa.github.io` repo) to skip the browser hop.
 
 ### 2026-10-08 — Hide request buttons on own / given-away posts
 - Product detail: the owner no longer sees a bottom button ("Mark as Given" removed; items are still given by accepting a request in chat), and a given-away post shows no "Give Me" to others. `product_detail_screen.dart`, `product_detail_provider.dart`.
